@@ -23,12 +23,15 @@
 }
 
 /* ── Body / Shell ─────────────────────────────────────────────── */
-body {
+html, body {
+  margin: 0;
+  padding: 0;
   width: 360px;
+  height: fit-content;  /* collapse to actual content — kills the phantom gap */
+  overflow: hidden;
   background: var(--bg);
   font-family: var(--font-body);
   color: var(--text);
-  overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
