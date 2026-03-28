@@ -20,19 +20,51 @@
     <header class="header">
       <div class="logo">
         <div class="logo-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="url(#g1)"/>
-            <path d="M8 12l2.5 2.5L16 9" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0"/>
-            <path d="M12 7v5l3 3" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity="0"/>
-            <!-- Gemini-like star shape -->
-            <path d="M12 4 C12 4, 13.5 9, 18 10 C13.5 11, 12 16, 12 16 C12 16, 10.5 11, 6 10 C10.5 9, 12 4, 12 4Z" fill="white" opacity="0.95"/>
+          <svg width="26" height="26" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <linearGradient id="g1" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stop-color="#4A90E2"/>
-                <stop offset="50%" stop-color="#7C5FEB"/>
-                <stop offset="100%" stop-color="#E85D9B"/>
+              <!-- Bubble fill: soft white with a faint blue tint -->
+              <linearGradient id="bubbleG" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#f5f3ff"/>
+                <stop offset="100%" stop-color="#e8e4ff"/>
               </linearGradient>
+              <!-- Star glow filter -->
+              <filter id="starGlow" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur stdDeviation="1.4" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
             </defs>
+
+            <!-- ── Speech bubble body ── -->
+            <rect x="3" y="7" width="22" height="16" rx="4.5" ry="4.5"
+                  fill="url(#bubbleG)" opacity="0.96"/>
+
+            <!-- ── Tail (bottom-left) ── -->
+            <path d="M8 23 L6 29 L13 23 Z" fill="url(#bubbleG)" opacity="0.96"/>
+
+            <!-- ── Three thinking dots ── -->
+            <circle cx="10.5" cy="15" r="1.6" fill="#6c4bc8"/>
+            <circle cx="14"   cy="15" r="1.9" fill="#6c4bc8"/>
+            <circle cx="17.5" cy="15" r="1.4" fill="#6c4bc8"/>
+
+            <!-- ── 4-point sparkle star (top-right, overlapping bubble edge) ── -->
+            <g filter="url(#starGlow)">
+              <!-- outer glow disc -->
+              <circle cx="27" cy="9" r="5" fill="#c084fc" opacity="0.25"/>
+              <!-- star shape -->
+              <path d="
+                M27 3
+                C27 3 27.9 6.9 30.5 8
+                C27.9 9.1 27 13 27 13
+                C27 13 26.1 9.1 23.5 8
+                C26.1 6.9 27 3 27 3Z"
+                fill="#e8d5ff"/>
+              <!-- bright centre dot -->
+              <circle cx="27" cy="8" r="1.2" fill="#ffffff"/>
+            </g>
+
+            <!-- ── Tiny secondary sparkle (lower-left, subtle) ── -->
+            <path d="M2 21 C2 21 2.5 22.9 4 23.5 C2.5 24.1 2 26 2 26 C2 26 1.5 24.1 0 23.5 C1.5 22.9 2 21 2 21Z"
+                  fill="#b8a4f0" opacity="0.7"/>
           </svg>
         </div>
         <div class="logo-text">
