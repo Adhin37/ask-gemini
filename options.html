@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ask Gemini — Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+
+  <!-- Ambient blobs -->
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+
+  <div class="page">
+
+    <!-- ── Sidebar ── -->
+    <nav class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="26" height="26" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="bubbleG2" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#f5f3ff"/>
+                <stop offset="100%" stop-color="#e8e4ff"/>
+              </linearGradient>
+              <filter id="starGlow2" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur stdDeviation="1.4" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <rect x="3" y="7" width="22" height="16" rx="4.5" ry="4.5" fill="url(#bubbleG2)" opacity="0.96"/>
+            <path d="M8 23 L6 29 L13 23 Z" fill="url(#bubbleG2)" opacity="0.96"/>
+            <circle cx="10.5" cy="15" r="1.6" fill="#6c4bc8"/>
+            <circle cx="14"   cy="15" r="1.9" fill="#6c4bc8"/>
+            <circle cx="17.5" cy="15" r="1.4" fill="#6c4bc8"/>
+            <g filter="url(#starGlow2)">
+              <circle cx="27" cy="9" r="5" fill="#c084fc" opacity="0.25"/>
+              <path d="M27 3 C27 3 27.9 6.9 30.5 8 C27.9 9.1 27 13 27 13 C27 13 26.1 9.1 23.5 8 C26.1 6.9 27 3 27 3Z" fill="#e8d5ff"/>
+              <circle cx="27" cy="8" r="1.2" fill="#ffffff"/>
+            </g>
+            <path d="M2 21 C2 21 2.5 22.9 4 23.5 C2.5 24.1 2 26 2 26 C2 26 1.5 24.1 0 23.5 C1.5 22.9 2 21 2 21Z" fill="#b8a4f0" opacity="0.7"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">Ask Gemini</div>
+          <div class="brand-ver" id="extVersion">v1.1.0</div>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <a class="nav-item active" data-section="history" href="#">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          History
+        </a>
+        <a class="nav-item" data-section="shortcut" href="#">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <rect x="2" y="6" width="20" height="14" rx="3" stroke="currentColor" stroke-width="2"/>
+            <path d="M8 10h8M8 14h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Shortcut
+        </a>
+        <a class="nav-item" data-section="about" href="#">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <line x1="12" y1="8" x2="12" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="12" y1="12" x2="12" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          About
+        </a>
+      </nav>
+
+      <a href="https://ko-fi.com/adhin" target="_blank" class="kofi-side">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+          <path d="M18 8h1a4 4 0 010 8h-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="6" y1="1" x2="6" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="10" y1="1" x2="10" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="14" y1="1" x2="14" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        Buy me a coffee
+      </a>
+    </nav>
+
+    <!-- ── Main content ── -->
+    <main class="content">
+
+      <!-- ══ HISTORY SECTION ══ -->
+      <section class="section active" id="section-history">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Prompt History</h1>
+            <p class="section-desc">Your last 20 queries, most recent first. Click any entry to re-use it.</p>
+          </div>
+          <button class="btn-ghost btn-danger" id="clearHistoryBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            Clear all
+          </button>
+        </div>
+
+        <!-- Search bar -->
+        <div class="search-wrap">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <input type="text" id="historySearch" class="search-input" placeholder="Filter history…" />
+        </div>
+
+        <div class="history-list" id="historyList">
+          <!-- populated by options.js -->
+        </div>
+
+        <div class="empty-state" id="emptyState" style="display:none">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
+            <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+          </svg>
+          <p>No history yet.</p>
+          <span>Questions you send to Gemini will appear here.</span>
+        </div>
+      </section>
+
+      <!-- ══ SHORTCUT SECTION ══ -->
+      <section class="section" id="section-shortcut">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Keyboard Shortcut</h1>
+            <p class="section-desc">Open the Ask Gemini popup from anywhere in your browser.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="shortcut-row">
+            <div class="shortcut-info">
+              <span class="shortcut-label">Open popup</span>
+              <span class="shortcut-sub">Works on any page, even without the toolbar visible</span>
+            </div>
+            <div class="keys" id="shortcutDisplay">
+              <kbd>Ctrl</kbd><span class="key-sep">+</span><kbd>Shift</kbd><span class="key-sep">+</span><kbd>G</kbd>
+            </div>
+          </div>
+          <div class="card-hint">
+            To change the shortcut, go to
+            <a href="#" id="shortcutPageLink" class="inline-link">chrome://extensions/shortcuts</a>
+            and find <strong>Ask Gemini</strong>.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="shortcut-row">
+            <div class="shortcut-info">
+              <span class="shortcut-label">Right-click on selected text</span>
+              <span class="shortcut-sub">Auto-fills the popup with your selection</span>
+            </div>
+            <div class="keys">
+              <kbd>Right-click</kbd>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="shortcut-row">
+            <div class="shortcut-info">
+              <span class="shortcut-label">Open Gemini directly</span>
+              <span class="shortcut-sub">Right-click the extension icon in the toolbar</span>
+            </div>
+            <div class="keys">
+              <kbd>Right-click icon</kbd>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ ABOUT SECTION ══ -->
+      <section class="section" id="section-about">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">About</h1>
+            <p class="section-desc">Ask Gemini — a lean, open-source Chrome extension.</p>
+          </div>
+        </div>
+
+        <div class="card about-card">
+          <div class="about-logo">
+            <svg width="48" height="48" viewBox="0 0 36 36" fill="none">
+              <defs>
+                <linearGradient id="bubbleG3" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#f5f3ff"/>
+                  <stop offset="100%" stop-color="#e8e4ff"/>
+                </linearGradient>
+              </defs>
+              <rect x="3" y="7" width="22" height="16" rx="4.5" ry="4.5" fill="url(#bubbleG3)" opacity="0.96"/>
+              <path d="M8 23 L6 29 L13 23 Z" fill="url(#bubbleG3)" opacity="0.96"/>
+              <circle cx="10.5" cy="15" r="1.6" fill="#6c4bc8"/>
+              <circle cx="14"   cy="15" r="1.9" fill="#6c4bc8"/>
+              <circle cx="17.5" cy="15" r="1.4" fill="#6c4bc8"/>
+              <path d="M27 3 C27 3 27.9 6.9 30.5 8 C27.9 9.1 27 13 27 13 C27 13 26.1 9.1 23.5 8 C26.1 6.9 27 3 27 3Z" fill="#e8d5ff"/>
+              <circle cx="27" cy="8" r="1.2" fill="#ffffff"/>
+            </svg>
+          </div>
+          <div class="about-info">
+            <div class="about-name">Ask Gemini</div>
+            <div class="about-version" id="aboutVersion">Version 1.1.0</div>
+            <p class="about-desc">
+              Instantly send questions to Google Gemini from your toolbar.
+              No API key, no account needed — just type and go.
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="about-feature-list">
+            <div class="feat-row">
+              <span class="feat-dot"></span>
+              <span><strong>Left-click</strong> the icon to open the popup</span>
+            </div>
+            <div class="feat-row">
+              <span class="feat-dot"></span>
+              <span><strong>Right-click</strong> the icon to open Gemini directly</span>
+            </div>
+            <div class="feat-row">
+              <span class="feat-dot"></span>
+              <span><strong>Select text</strong> on any page, then open the popup — it auto-fills</span>
+            </div>
+            <div class="feat-row">
+              <span class="feat-dot"></span>
+              <span><strong>Ctrl+Shift+G</strong> opens the popup from anywhere</span>
+            </div>
+            <div class="feat-row">
+              <span class="feat-dot"></span>
+              <span>Your last 20 prompts are saved in history (this page)</span>
+            </div>
+          </div>
+        </div>
+
+        <a href="https://ko-fi.com/adhin" target="_blank" class="kofi-card">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M18 8h1a4 4 0 010 8h-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="6" y1="1" x2="6" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="10" y1="1" x2="10" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="14" y1="1" x2="14" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <div>
+            <div class="kofi-card-title">Support the developer</div>
+            <div class="kofi-card-sub">ko-fi.com/adhin — every coffee helps ☕</div>
+          </div>
+          <svg class="kofi-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Confirm dialog -->
+  <div class="dialog-overlay" id="confirmOverlay">
+    <div class="dialog">
+      <h3 class="dialog-title">Clear history?</h3>
+      <p class="dialog-body">All 20 saved prompts will be permanently deleted. This cannot be undone.</p>
+      <div class="dialog-actions">
+        <button class="btn-ghost" id="confirmCancel">Cancel</button>
+        <button class="btn-danger" id="confirmOk">Clear all</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

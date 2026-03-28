@@ -330,3 +330,69 @@ html, body {
 }
 .char-count.warn { color: #f0a04b; }
 .char-count.over { color: #f05050; }
+
+/* ── Selection banner ──────────────────────────────────────────────── */
+.sel-banner {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  background: rgba(124, 106, 247, 0.10);
+  border: 1px solid rgba(124, 106, 247, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+  animation: fadeSlideIn 0.18s ease both;
+}
+.sel-banner.visible { display: flex; }
+
+.sel-banner svg { color: var(--accent); flex-shrink: 0; opacity: 0.8; }
+
+.sel-label {
+  color: var(--accent);
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sel-text {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.sel-clear {
+  background: none;
+  border: none;
+  color: var(--text-hint);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+}
+.sel-clear:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+
+/* ── Settings button (footer) ─────────────────────────────────────── */
+.settings-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--text-hint);
+  font-family: var(--font-body);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 5px 8px;
+  border-radius: 6px;
+  transition: color 0.18s, background 0.18s;
+  letter-spacing: 0.15px;
+}
+.settings-btn:hover { color: var(--text); background: rgba(255,255,255,0.05); }

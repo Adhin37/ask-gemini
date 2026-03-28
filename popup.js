@@ -1,82 +1,110 @@
-// ── popup.js ───────────────────────────────────────────────────────
-// Handles popup interactions: send question to Gemini, open directly
+// ── popup.js v1.1 ──────────────────────────────────────────────────
+// Features: send to Gemini, selected-text auto-fill, history saving,
+//           draft persistence, settings shortcut
 
-const GEMINI_URL = "https://gemini.google.com/app";
+const GEMINI_URL  = "https://gemini.google.com/app";
 const MAX_CHARS   = 2000;
+const MAX_HISTORY = 20;
 
-const input   = document.getElementById("questionInput");
-const sendBtn = document.getElementById("sendBtn");
-const openBtn = document.getElementById("openBtn");
-const hint    = document.querySelector(".hint");
+const input       = document.getElementById("questionInput");
+const sendBtn     = document.getElementById("sendBtn");
+const openBtn     = document.getElementById("openBtn");
+const settingsBtn = document.getElementById("settingsBtn");
+const hint        = document.querySelector(".hint");
+const selBanner   = document.getElementById("selectionBanner");
+const selText     = document.getElementById("selectionText");
+const selClear    = document.getElementById("selectionClear");
 
-// ── Auto-resize textarea ───────────────────────────────────────────
+// ── 1. Selected-text auto-fill ─────────────────────────────────────
+async function tryAutoFillSelection() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id || tab.url?.startsWith("chrome://") || tab.url?.startsWith("chrome-extension://")) return;
+
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => window.getSelection()?.toString().trim() ?? "",
+    });
+
+    const selected = results?.[0]?.result;
+    if (selected && selected.length > 0 && selected.length <= MAX_CHARS) {
+      const draft = sessionStorage.getItem("ask-gemini-draft");
+      if (!draft) {
+        input.value = selected;
+        input.dispatchEvent(new Event("input"));
+        input.select();
+        const preview = selected.length > 58 ? selected.slice(0, 58) + "…" : selected;
+        selText.textContent = `"${preview}"`;
+        selBanner.classList.add("visible");
+      }
+    }
+  } catch (_) { /* tab not scriptable — silently ignore */ }
+}
+
+selClear.addEventListener("click", () => {
+  selBanner.classList.remove("visible");
+  input.value = "";
+  sessionStorage.removeItem("ask-gemini-draft");
+  input.dispatchEvent(new Event("input"));
+  input.focus();
+});
+
+// ── 2. History helpers ─────────────────────────────────────────────
+async function saveToHistory(message) {
+  const { askGeminiHistory = [] } = await chrome.storage.local.get("askGeminiHistory");
+  const deduped = askGeminiHistory.filter(h => h.text !== message);
+  deduped.unshift({ text: message, ts: Date.now() });
+  await chrome.storage.local.set({ askGeminiHistory: deduped.slice(0, MAX_HISTORY) });
+}
+
+// ── 3. Input behaviour ─────────────────────────────────────────────
 input.addEventListener("input", () => {
-  // Resize textarea to content
   input.style.height = "auto";
   input.style.height = Math.min(input.scrollHeight, 180) + "px";
 
-  // Update hint / char count
   const len = input.value.length;
   if (len > MAX_CHARS * 0.8) {
-    const remaining = MAX_CHARS - len;
-    hint.textContent = remaining >= 0
-      ? `${remaining} chars left`
-      : `${Math.abs(remaining)} over limit`;
-    hint.style.color = remaining < 0 ? "#f05050" : remaining < 200 ? "#f0a04b" : "var(--text-hint)";
+    const rem = MAX_CHARS - len;
+    hint.textContent = rem >= 0 ? `${rem} chars left` : `${Math.abs(rem)} over limit`;
+    hint.style.color = rem < 0 ? "#f05050" : rem < 200 ? "#f0a04b" : "var(--text-hint)";
   } else {
-    hint.textContent = "↵ Enter to send";
+    hint.textContent = "↵ Enter";
     hint.style.color = "";
   }
 
-  // Enable/disable send button
   sendBtn.disabled = input.value.trim().length === 0 || len > MAX_CHARS;
+  sessionStorage.setItem("ask-gemini-draft", input.value);
 });
 
-// ── Keyboard: Enter sends, Shift+Enter = newline ───────────────────
 input.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    askGemini();
-  }
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); askGemini(); }
 });
 
-// ── Send button click ──────────────────────────────────────────────
+// ── 4. Send ────────────────────────────────────────────────────────
 sendBtn.addEventListener("click", () => askGemini());
 
-// ── Open directly ──────────────────────────────────────────────────
-openBtn.addEventListener("click", () => {
-  chrome.tabs.create({ url: GEMINI_URL });
-  window.close();
-});
-
-// ── Core: store message → open Gemini ─────────────────────────────
 async function askGemini() {
   const message = input.value.trim();
   if (!message || message.length > MAX_CHARS) return;
 
-  // Visual feedback
   sendBtn.classList.add("sending");
   sendBtn.disabled = true;
   input.disabled   = true;
 
   try {
-    // Store message; content script on gemini.google.com will pick it up
     await chrome.storage.local.set({ pendingMessage: message });
+    await saveToHistory(message);
+    sessionStorage.removeItem("ask-gemini-draft");
 
-    // Check if a Gemini tab is already open; if so, reload it; otherwise open new
     const tabs = await chrome.tabs.query({ url: "https://gemini.google.com/*" });
-
     if (tabs.length > 0) {
-      // Navigate existing tab to fresh Gemini page so content script fires again
       await chrome.tabs.update(tabs[0].id, { url: GEMINI_URL, active: true });
-      // Bring the window into focus
       chrome.windows.update(tabs[0].windowId, { focused: true });
     } else {
       chrome.tabs.create({ url: GEMINI_URL });
     }
   } catch (err) {
     console.error("Ask Gemini error:", err);
-    // Reset UI on error
     sendBtn.classList.remove("sending");
     sendBtn.disabled = false;
     input.disabled   = false;
@@ -84,27 +112,30 @@ async function askGemini() {
     return;
   }
 
-  // Close popup after a tiny delay for feedback
   setTimeout(() => window.close(), 120);
 }
 
-// ── Init: focus input, disable send if empty ──────────────────────
-input.focus();
+// ── 5. Direct open ─────────────────────────────────────────────────
+openBtn.addEventListener("click", () => {
+  chrome.tabs.create({ url: GEMINI_URL });
+  window.close();
+});
+
+// ── 6. Settings page ───────────────────────────────────────────────
+settingsBtn.addEventListener("click", () => {
+  chrome.runtime.openOptionsPage();
+  window.close();
+});
+
+// ── 7. Init ────────────────────────────────────────────────────────
 sendBtn.disabled = true;
 
-// Restore any previously typed (but not sent) text from session storage
 const draft = sessionStorage.getItem("ask-gemini-draft");
 if (draft) {
   input.value = draft;
-  input.dispatchEvent(new Event("input")); // trigger resize + btn state
+  input.dispatchEvent(new Event("input"));
   input.selectionStart = input.selectionEnd = draft.length;
 }
 
-// Save draft as user types
-input.addEventListener("input", () => {
-  sessionStorage.setItem("ask-gemini-draft", input.value);
-});
-
-// Clear draft once sent
-async function clearDraft() { sessionStorage.removeItem("ask-gemini-draft"); }
-sendBtn.addEventListener("click", clearDraft, { once: true });
+input.focus();
+tryAutoFillSelection();

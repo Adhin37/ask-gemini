@@ -1,24 +1,39 @@
 {
   "manifest_version": 3,
   "name": "Ask Gemini",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Instantly send questions to Google Gemini from your browser.",
   "permissions": [
     "storage",
     "contextMenus",
-    "tabs"
+    "tabs",
+    "scripting",
+    "activeTab"
   ],
   "host_permissions": [
     "https://gemini.google.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Ask Gemini",
+    "default_title": "Ask Gemini (Ctrl+Shift+G)",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+G",
+        "mac": "MacCtrl+Shift+G"
+      },
+      "description": "Open Ask Gemini popup"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
   },
   "background": {
     "service_worker": "background.js"
