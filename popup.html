@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ask Gemini</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="popup">
+
+    <!-- Ambient glow blobs -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <!-- ── Header ── -->
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="url(#g1)"/>
+            <path d="M8 12l2.5 2.5L16 9" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity="0"/>
+            <path d="M12 7v5l3 3" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity="0"/>
+            <!-- Gemini-like star shape -->
+            <path d="M12 4 C12 4, 13.5 9, 18 10 C13.5 11, 12 16, 12 16 C12 16, 10.5 11, 6 10 C10.5 9, 12 4, 12 4Z" fill="white" opacity="0.95"/>
+            <defs>
+              <linearGradient id="g1" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#4A90E2"/>
+                <stop offset="50%" stop-color="#7C5FEB"/>
+                <stop offset="100%" stop-color="#E85D9B"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <span class="logo-name">Ask Gemini</span>
+          <span class="logo-tag">AI Assistant</span>
+        </div>
+      </div>
+
+      <!-- Ko-fi donation button -->
+      <div class="kofi-wrap">
+        <a href="https://ko-fi.com/adhin" target="_blank" class="kofi-btn" id="kofiBtn" title="Buy me a coffee ☕">
+          <svg class="kofi-icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M18 8h1a4 4 0 010 8h-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="6" y1="1" x2="6" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="10" y1="1" x2="10" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="14" y1="1" x2="14" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span class="kofi-tooltip">Support on Ko-fi ☕</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- ── Input area ── -->
+    <main class="main">
+      <div class="input-wrapper" id="inputWrapper">
+        <textarea
+          id="questionInput"
+          class="question-input"
+          placeholder="Ask anything…"
+          rows="3"
+          autofocus
+        ></textarea>
+        <div class="input-footer">
+          <span class="hint">↵ Enter to send</span>
+          <button class="send-btn" id="sendBtn" title="Send to Gemini">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M22 2L15 22 11 13 2 9l20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Ask</span>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- ── Quick-open button ── -->
+    <footer class="footer">
+      <button class="open-btn" id="openBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="15,3 21,3 21,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Open Gemini directly
+      </button>
+    </footer>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
