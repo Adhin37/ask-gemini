@@ -1,5 +1,10 @@
 # Ask Gemini — Chrome Extension
 
+![License](https://img.shields.io/badge/license-Apache_2.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.0.0-informational?style=flat-square)
+![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-coming_soon-yellow?style=flat-square&logo=googlechrome&logoColor=white)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-support_me-FF5E5B?style=flat-square&logo=kofi&logoColor=white)](https://ko-fi.com/adhin/tip)
+
 Instantly send questions to Google Gemini right from your browser toolbar.
 
 ![Promo banner](src/img/ask-gemini-marquee-1400x560.png)
@@ -63,11 +68,3 @@ ask-gemini-extension/
 | `contextMenus` | Adds the right-click "Open Gemini" menu items |
 | `tabs` | Opens / focuses the Gemini tab |
 | `host_permissions: gemini.google.com` | Allows the content script to run on Gemini |
-
----
-
-## Support
-
-If you find this extension useful, a coffee is always appreciated! ☕
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/adhin/tip)
