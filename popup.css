@@ -35,7 +35,7 @@ body {
 .popup {
   position: relative;
   padding: 18px 18px 14px;
-  overflow: hidden;
+  /* overflow intentionally NOT hidden — lets the Ko-fi tooltip escape */
   animation: fadeSlideIn 0.22s ease both;
 }
 
@@ -151,11 +151,12 @@ body {
 
 .kofi-icon { flex-shrink: 0; }
 
-/* Tooltip */
+/* Tooltip — opens to the LEFT of the button */
 .kofi-tooltip {
   position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
+  right: calc(100% + 10px); /* sit to the left of the button */
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
   background: #1e2030;
   border: 1px solid rgba(240,160,75,0.3);
   color: #f0c070;
@@ -166,23 +167,24 @@ body {
   border-radius: 6px;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(-4px);
   transition: opacity 0.18s, transform 0.18s;
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
 }
 
+/* Arrow pointing RIGHT toward the button */
 .kofi-tooltip::before {
   content: '';
   position: absolute;
-  top: -5px; right: 10px;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-bottom: 5px solid rgba(240,160,75,0.3);
+  top: 50%; right: -5px;
+  transform: translateY(-50%);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 5px solid rgba(240,160,75,0.3);
 }
 
 .kofi-btn:hover .kofi-tooltip {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(-50%) translateX(0);
 }
 
 /* ── Main / Input ──────────────────────────────────────────────── */
