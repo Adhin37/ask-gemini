@@ -63,3 +63,11 @@ ask-gemini-extension/
 | `contextMenus` | Adds the right-click "Open Gemini" menu items |
 | `tabs` | Opens / focuses the Gemini tab |
 | `host_permissions: gemini.google.com` | Allows the content script to run on Gemini |
+
+---
+
+## Support
+
+If you find this extension useful, a coffee is always appreciated! ☕
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/adhin/tip)
