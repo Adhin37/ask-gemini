@@ -18,7 +18,7 @@ Instantly send questions to Google Gemini right from your browser toolbar.
 | **Left-click** the extension icon | Opens the popup — type your question, press **Enter** or click **Ask** |
 | **Right-click** the extension icon | Shows context menu → *Open Gemini* (goes directly, no popup) |
 | **Right-click selected text** on any page | *Ask Gemini: "…"* — opens Gemini pre-filled with your selection |
-| **Ko-fi button** (☕ top-right of popup) | Support the developer at ko-fi.com/adhin |
+| **Ko-fi button** (☕ top-right of popup) | Support the developer at ko-fi.com/adhin/tip |
 
 ---
 
