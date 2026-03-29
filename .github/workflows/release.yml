@@ -5,50 +5,63 @@ on:
     tags:
       - 'v[0-9].[0-9]*.[0-9]*'
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    runs-on: ubuntu-latest  # GitHub's fastest standard runner
+    runs-on: ubuntu-latest
+    container: alpine:latest
     permissions:
-      contents: write # Required to create the release and upload assets
+      contents: write
 
     steps:
+      - name: Install dependencies (Alpine)
+        run: |
+          apk add --no-cache git zip jq bash
+
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetches all history for the changelog
+          fetch-depth: 0
 
-      - name: Install Dependencies
-        run: sudo apt-get update && sudo apt-get install -y zip jq
+      - name: Validate tag
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid tag format: $TAG"
+            exit 1
+          fi
 
       - name: Update Manifest Version
         run: |
           NEW_VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
           jq ".version = \"$NEW_VERSION\"" manifest.json > manifest.tmp && mv manifest.tmp manifest.json
 
-      - name: Generate Changelog
+      - name: Generate Changelog (current release only)
         run: |
-          echo "## Release ${{ github.ref_name }}" > CHANGELOG.md
-          PREV_TAG=$(git describe --tags --abbrev=0 ${{ github.ref_name }}^ 2>/dev/null || echo "")
-          if [ -z "$PREV_TAG" ]; then RANGE="HEAD"; else RANGE="$PREV_TAG..${{ github.ref_name }}"; fi
-          
-          echo "### ✨ Features" >> CHANGELOG.md
-          git log $RANGE --grep="^feat" --format="* %s (%h)" >> CHANGELOG.md || echo "* No new features" >> CHANGELOG.md
-          
-          echo -e "\n### 🐛 Bug Fixes" >> CHANGELOG.md
-          git log $RANGE --grep="^fix" --format="* %s (%h)" >> CHANGELOG.md || echo "* No bug fixes" >> CHANGELOG.md
-          
-          echo -e "\n### ⚙️ Maintenance" >> CHANGELOG.md
-          git log $RANGE --grep="^chore\|^refactor" --format="* %s (%h)" >> CHANGELOG.md || echo "* No maintenance" >> CHANGELOG.md
+          npm install -g conventional-changelog-cli
+          conventional-changelog -p angular -r 1 > CHANGELOG.md
 
       - name: Run Packaging Script
         run: |
+          set -euo pipefail
           chmod +x package.sh
           ./package.sh
+          test -s ask-gemini-extension.zip
+
+      - name: Generate checksum
+        run: sha256sum ask-gemini-extension.zip > ask-gemini-extension.zip.sha256
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          name: Release ${{ github.ref_name }}
           body_path: CHANGELOG.md
-          files: ask-gemini-extension.zip
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            ask-gemini-extension.zip
+            ask-gemini-extension.zip.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
