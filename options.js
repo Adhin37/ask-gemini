@@ -196,7 +196,7 @@ function renderHistory(items, query = "") {
 }
 
 async function sendPrompt(text) {
-  await chrome.storage.local.set({ pendingMessage: text });
+  await chrome.storage.local.set({ pendingMessage: text, pendingModel: currentModel });
   const tabs = await chrome.tabs.query({ url: "https://gemini.google.com/*" });
   if (tabs.length > 0) {
     chrome.tabs.update(tabs[0].id, { url: GEMINI_URL, active: true });

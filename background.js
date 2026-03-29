@@ -32,10 +32,13 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
   // Handle both the direct icon click and the page background click
   if (info.menuItemId === "open-gemini-direct" || info.menuItemId === "open-gemini-page") {
     chrome.tabs.create({ url: GEMINI_URL });
-
   } else if (info.menuItemId === "ask-gemini-selection" && info.selectionText) {
-    // Store the text and open Gemini
-    await chrome.storage.local.set({ pendingMessage: info.selectionText.trim() });
+    // Read the saved model preference so content.js uses the right model
+    const { askGeminiModel = "flash" } = await chrome.storage.local.get("askGeminiModel");
+    await chrome.storage.local.set({
+      pendingMessage: info.selectionText.trim(),
+      pendingModel: askGeminiModel,
+    });
     chrome.tabs.create({ url: GEMINI_URL });
   }
 });
