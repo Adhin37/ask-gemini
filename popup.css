@@ -102,8 +102,29 @@ body.light .blob { opacity: 0.28; }
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 0 20px rgba(124,106,247,0.2);
   flex-shrink: 0;
-  transition: background 0.22s;
+  /* Updated transitions for a "snappier" feel */
+  transition: 
+    transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), 
+    background 0.3s, 
+    border-color 0.3s, 
+    box-shadow 0.3s;
+  transform-origin: center;
 }
+/* Lift, Rotate, and Glow */
+.logo:hover .logo-icon {
+  transform: scale(1.12) rotate(-6deg) translateY(-2px);
+  border-color: var(--accent);
+  background: linear-gradient(135deg, #252840, #2c3050);
+  box-shadow: 
+    0 8px 25px var(--accent-glow),
+    inset 0 0 12px rgba(124,106,247,0.3);
+}
+
+/* Make the internal star "pulse" when hovered */
+.logo:hover .logo-icon svg g[filter="url(#starGlow)"] {
+  animation: starPulse 1.5s ease-in-out infinite;
+}
+
 body.light .logo-icon { background: linear-gradient(135deg, #e8e4ff, #d8d0ff); }
 
 .logo-text { display: flex; flex-direction: column; gap: 1px; }
@@ -475,3 +496,8 @@ body.light .theme-btn:hover { background: rgba(0,0,0,0.04); }
 }
 .settings-btn:hover { color: var(--text); background: rgba(255,255,255,0.05); }
 body.light .settings-btn:hover { background: rgba(0,0,0,0.04); }
+
+@keyframes starPulse {
+  0%, 100% { opacity: 1; transform: scale(1); filter: brightness(1); }
+  50% { opacity: 0.8; transform: scale(1.1); filter: brightness(1.5); }
+}
