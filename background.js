@@ -3,22 +3,24 @@
 
 const GEMINI_URL = "https://gemini.google.com/app";
 
-// ── Context menu: right-click on the extension icon ───────────────
 chrome.runtime.onInstalled.addListener(() => {
+  // 1. Context for the toolbar icon
   chrome.contextMenus.create({
     id: "open-gemini-direct",
-    title: "Open Gemini",
-    contexts: ["action"]          // shown when right-clicking the toolbar icon
+    title: "Ask Gemini",
+    contexts: ["action"]
   });
 
-  // Also available from any page via right-click on page content
+  // 2. Context for right-clicking the page background (NO selection)
+  // By removing "selection" from here, we avoid the sub-menu conflict.
   chrome.contextMenus.create({
     id: "open-gemini-page",
-    title: "Open Gemini",
-    contexts: ["page", "selection"]
+    title: "Ask Gemini",
+    contexts: ["page"] 
   });
 
-  // If user right-clicks on selected text → pre-fill Gemini with it
+  // 3. Context for when text IS selected
+  // The %s placeholder will automatically insert the selected text.
   chrome.contextMenus.create({
     id: "ask-gemini-selection",
     title: 'Ask Gemini: "%s"',
@@ -27,10 +29,12 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.contextMenus.onClicked.addListener(async (info) => {
+  // Handle both the direct icon click and the page background click
   if (info.menuItemId === "open-gemini-direct" || info.menuItemId === "open-gemini-page") {
     chrome.tabs.create({ url: GEMINI_URL });
 
   } else if (info.menuItemId === "ask-gemini-selection" && info.selectionText) {
+    // Store the text and open Gemini
     await chrome.storage.local.set({ pendingMessage: info.selectionText.trim() });
     chrome.tabs.create({ url: GEMINI_URL });
   }
