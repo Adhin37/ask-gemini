@@ -50,15 +50,25 @@
       </div>
 
       <div class="header-right">
-        <!-- Model switcher -->
-        <div class="model-switcher" id="modelSwitcher" title="Gemini model">
-          <button class="model-opt" data-model="flash">Flash</button>
-          <button class="model-opt" data-model="pro">Pro</button>
+        <!--
+          Model switcher: 3 buttons.
+          Inactive → only .model-char shows (single letter, compact).
+          Active   → .model-char + .model-tail visible (animates width).
+        -->
+        <div class="model-switcher" id="modelSwitcher">
+          <button class="model-opt" data-model="flash" title="Gemini Flash — fast, default">
+            <span class="model-char">F</span><span class="model-tail">lash</span>
+          </button>
+          <button class="model-opt" data-model="thinking" title="Gemini Thinking — deep reasoning">
+            <span class="model-char">T</span><span class="model-tail">hink</span>
+          </button>
+          <button class="model-opt" data-model="pro" title="Gemini Pro — advanced">
+            <span class="model-char">P</span><span class="model-tail">ro</span>
+          </button>
         </div>
 
-        <!-- Ko-fi -->
         <div class="kofi-wrap">
-          <a href="https://ko-fi.com/adhin/tip" target="_blank" class="kofi-btn" id="kofiBtn">
+          <a href="https://ko-fi.com/adhin/tip" target="_blank" class="kofi-btn">
             <svg class="kofi-icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path d="M18 8h1a4 4 0 010 8h-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -83,7 +93,7 @@
       <button class="sel-clear" id="selectionClear" title="Clear">&#x2715;</button>
     </div>
 
-    <!-- ── Template dropdown ── -->
+    <!-- ── Template dropdown (button-triggered only) ── -->
     <div class="tmpl-dropdown" id="tmplDropdown">
       <div class="tmpl-dropdown-header">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
@@ -93,19 +103,16 @@
           <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/>
         </svg>
         <span>Templates</span>
-        <kbd class="tmpl-key">/</kbd>
         <button class="tmpl-close-btn" id="tmplCloseBtn" title="Close">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
           </svg>
         </button>
       </div>
-      <div class="tmpl-list" id="tmplList">
-        <!-- populated by popup.js -->
-      </div>
+      <div class="tmpl-list" id="tmplList"></div>
       <div class="tmpl-empty" id="tmplEmpty">
-        No templates yet —
-        <button class="tmpl-settings-link" id="tmplSettingsLink">add some in Settings</button>
+        No templates —
+        <button class="tmpl-settings-link" id="tmplSettingsLink">add in Settings</button>
       </div>
     </div>
 
@@ -115,13 +122,25 @@
         <textarea
           id="questionInput"
           class="question-input"
-          placeholder="Ask anything… (type / for templates)"
+          placeholder="Ask anything… (/ for templates)"
           rows="3"
           autofocus
         ></textarea>
+
+        <!--
+          Inline AC strip — hidden by default.
+          Slides in above the footer inside the input-wrapper.
+          No layout shift: height animates from 0 → 28px.
+        -->
+        <div class="ac-strip" id="acStrip" aria-live="polite">
+          <kbd class="ac-key">↹</kbd>
+          <span class="ac-ghost" id="acGhost"></span>
+          <span class="ac-counter" id="acCounter"></span>
+          <span class="ac-esc">esc</span>
+        </div>
+
         <div class="input-footer">
           <span class="hint" id="hint">↵ Enter to send</span>
-          <!-- Template trigger -->
           <button class="tmpl-trigger-btn" id="tmplTriggerBtn" title="Templates (/)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
               <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/>
@@ -151,10 +170,7 @@
         </svg>
         Open Gemini
       </button>
-      <button class="theme-btn" id="themeBtn" title="Toggle theme" style="display: none">
-        <!-- icon injected by popup.js -->
-      </button>
-      <button class="settings-btn" id="settingsBtn" title="Settings">
+      <button class="settings-btn" id="settingsBtn" title="Settings>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
           <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="2"/>

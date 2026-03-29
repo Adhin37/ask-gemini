@@ -1,21 +1,21 @@
-// ── content.js ───────────────────────────────────────────────
-// Runs on gemini.google.com — reads any pending message from storage,
-// optionally switches the model, then injects & submits.
+// ── content.js v1.3 ───────────────────────────────────────────────
+// Runs on gemini.google.com — reads pending message + model pref,
+// optionally switches model, then injects & submits.
 
 (async () => {
   const data = await chrome.storage.local.get(["pendingMessage", "pendingModel"]);
   if (!data.pendingMessage) return;
 
-  const message    = data.pendingMessage;
-  const modelPref  = data.pendingModel || "flash"; // 'flash' | 'pro'
+  const message   = data.pendingMessage;
+  const modelPref = data.pendingModel || "flash"; // 'flash' | 'pro' | 'thinking'
   await chrome.storage.local.remove(["pendingMessage", "pendingModel"]);
 
-  // Give the SPA a moment to fully render before interacting
+  // Give the SPA a moment to fully render
   await sleep(1200);
 
-  // 1. Optionally switch model (best-effort; Gemini's DOM may vary)
-  if (modelPref === "pro") {
-    await trySelectModel("pro");
+  // 1. Best-effort model switch (only for pro / thinking)
+  if (modelPref !== "flash") {
+    await trySelectModel(modelPref);
   }
 
   // 2. Inject text and submit
@@ -25,7 +25,6 @@
   const tryInject = async () => {
     attempts++;
 
-    // Gemini uses a shadow-DOM rich textarea — try several selectors
     const input =
       document.querySelector("rich-textarea div[contenteditable='true']") ||
       document.querySelector("div[contenteditable='true'][data-testid]") ||
@@ -50,11 +49,11 @@
     await sleep(600);
 
     const sendBtn =
-      document.querySelector('button[aria-label*="Send"]')            ||
-      document.querySelector('button[aria-label*="send"]')            ||
-      document.querySelector('button[data-mat-icon-name="send"]')     ||
-      document.querySelector('button.send-button')                    ||
-      document.querySelector('[jsname="Jt9E5"] button')               ||
+      document.querySelector('button[aria-label*="Send"]') ||
+      document.querySelector('button[aria-label*="send"]') ||
+      document.querySelector('button[data-mat-icon-name="send"]') ||
+      document.querySelector('button.send-button') ||
+      document.querySelector('[jsname="Jt9E5"] button') ||
       document.querySelector('button[jsaction*="send"]');
 
     if (sendBtn && !sendBtn.disabled) {
@@ -71,42 +70,40 @@
 
 // ── Model selector (best-effort) ──────────────────────────────────
 async function trySelectModel(target) {
-  // Attempt 1: look for a model chip / selector button in the toolbar
-  const modelTriggerSelectors = [
+  // Terms to look for in dropdown options per model
+  const targetTerms = {
+    pro:      ["pro", "advanced", "1.5 pro", "2.0 pro", "2.5 pro"],
+    thinking: ["think", "reasoning", "deep think", "flash thinking"],
+  };
+  const terms = targetTerms[target] || [];
+  if (terms.length === 0) return;
+
+  // Try to open a model selector button
+  const triggerSelectors = [
     'button[aria-label*="model" i]',
     'button[data-test-id*="model" i]',
     '[class*="model-selector"] button',
     '[class*="ModelSelector"] button',
-    'button[jsaction*="model" i]',
     'mat-select[aria-label*="model" i]',
+    'button[jsaction*="model" i]',
   ];
 
   let triggerBtn = null;
-  for (const sel of modelTriggerSelectors) {
+  for (const sel of triggerSelectors) {
     const el = document.querySelector(sel);
     if (el) { triggerBtn = el; break; }
   }
-
-  if (!triggerBtn) return; // selector unavailable — proceed with default
+  if (!triggerBtn) return;
 
   triggerBtn.click();
   await sleep(500);
 
-  // Attempt 2: find the "Pro" / "Advanced" option in any open dropdown/menu
-  const optionSelectors = [
-    '[role="option"]',
-    '[role="menuitem"]',
-    '[role="listitem"]',
-    'li[data-value]',
-  ];
-
-  const proTerms = ["pro", "advanced", "1.5 pro", "2.0 pro", "ultra"];
-
+  // Find the matching option in any open dropdown/menu
+  const optionSelectors = ['[role="option"]', '[role="menuitem"]', '[role="listitem"]', 'li[data-value]'];
   for (const sel of optionSelectors) {
-    const opts = document.querySelectorAll(sel);
-    for (const opt of opts) {
+    for (const opt of document.querySelectorAll(sel)) {
       const label = opt.textContent.toLowerCase();
-      if (proTerms.some(t => label.includes(t))) {
+      if (terms.some(t => label.includes(t))) {
         opt.click();
         await sleep(400);
         return;
@@ -114,11 +111,9 @@ async function trySelectModel(target) {
     }
   }
 
-  // If no Pro option found, close the dropdown (press Escape) and continue
+  // No match — close dropdown gracefully
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   await sleep(200);
 }
 
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
-}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }

@@ -1,6 +1,6 @@
-// ── popup.js ──────────────────────────────────────────────────
-// Features: send to Gemini, selected-text auto-fill, history saving,
-//           draft persistence, prompt templates, model switcher, theme
+// ── popup.js v1.3 ──────────────────────────────────────────────────
+// Model switcher (Flash/Pro/Think), inline autocomplete, theme, history
+
 const GEMINI_URL  = "https://gemini.google.com/app";
 const MAX_CHARS   = 2000;
 const MAX_HISTORY = 20;
@@ -14,27 +14,33 @@ const DEFAULT_TEMPLATES = [
 ];
 
 // ── DOM refs ───────────────────────────────────────────────────────
-const input         = document.getElementById("questionInput");
-const sendBtn       = document.getElementById("sendBtn");
-const openBtn       = document.getElementById("openBtn");
-const settingsBtn   = document.getElementById("settingsBtn");
-const hint          = document.getElementById("hint");
-const selBanner     = document.getElementById("selectionBanner");
-const selText       = document.getElementById("selectionText");
-const selClear      = document.getElementById("selectionClear");
-const modelSwitcher = document.getElementById("modelSwitcher");
-const tmplDropdown  = document.getElementById("tmplDropdown");
-const tmplList      = document.getElementById("tmplList");
-const tmplEmpty     = document.getElementById("tmplEmpty");
-const tmplCloseBtn  = document.getElementById("tmplCloseBtn");
-const tmplTriggerBtn= document.getElementById("tmplTriggerBtn");
+const input          = document.getElementById("questionInput");
+const sendBtn        = document.getElementById("sendBtn");
+const openBtn        = document.getElementById("openBtn");
+const settingsBtn    = document.getElementById("settingsBtn");
+const hint           = document.getElementById("hint");
+const selBanner      = document.getElementById("selectionBanner");
+const selText        = document.getElementById("selectionText");
+const selClear       = document.getElementById("selectionClear");
+const modelSwitcher  = document.getElementById("modelSwitcher");
+const inputWrapper   = document.getElementById("inputWrapper");
+// Dropdown (button-triggered)
+const tmplDropdown   = document.getElementById("tmplDropdown");
+const tmplList       = document.getElementById("tmplList");
+const tmplEmpty      = document.getElementById("tmplEmpty");
+const tmplCloseBtn   = document.getElementById("tmplCloseBtn");
+const tmplTriggerBtn = document.getElementById("tmplTriggerBtn");
 const tmplSettingsLink = document.getElementById("tmplSettingsLink");
+// Inline AC strip
+const acStrip        = document.getElementById("acStrip");
+const acGhost        = document.getElementById("acGhost");
+const acCounter      = document.getElementById("acCounter");
 
 // ══════════════════════════════════════════════════════════════════
 // 1. THEME
 // ══════════════════════════════════════════════════════════════════
 
-let currentTheme = 'auto'; // 'auto' | 'dark' | 'light'
+let currentTheme = 'auto';
 
 function resolveTheme(pref) {
   if (pref === 'light') return 'light';
@@ -48,16 +54,15 @@ function applyTheme(pref) {
   document.body.classList.toggle('light', resolved === 'light');
 }
 
-// Respond to OS theme change when in 'auto' mode
 window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
   if (currentTheme === 'auto') applyTheme('auto');
 });
 
 // ══════════════════════════════════════════════════════════════════
-// 2. MODEL SWITCHER
+// 2. MODEL SWITCHER  (flash | pro | thinking)
 // ══════════════════════════════════════════════════════════════════
 
-let currentModel = 'flash'; // 'flash' | 'pro'
+let currentModel = 'flash';
 
 function applyModel(model) {
   currentModel = model || 'flash';
@@ -68,37 +73,31 @@ function applyModel(model) {
 
 modelSwitcher.addEventListener('click', async (e) => {
   const btn = e.target.closest('.model-opt');
-  if (!btn) return;
-  const model = btn.dataset.model;
-  if (model === currentModel) return;
-  await chrome.storage.local.set({ askGeminiModel: model });
-  applyModel(model);
+  if (!btn || btn.dataset.model === currentModel) return;
+  await chrome.storage.local.set({ askGeminiModel: btn.dataset.model });
+  applyModel(btn.dataset.model);
 });
 
 // ══════════════════════════════════════════════════════════════════
-// 3. PROMPT TEMPLATES
+// 3. TEMPLATES — storage & button-triggered dropdown
 // ══════════════════════════════════════════════════════════════════
 
 let templates = [];
 
 async function loadTemplates() {
   const { askGeminiTemplates } = await chrome.storage.local.get('askGeminiTemplates');
-  // First run: seed defaults into storage
   if (!askGeminiTemplates) {
     await chrome.storage.local.set({ askGeminiTemplates: DEFAULT_TEMPLATES });
-    templates = DEFAULT_TEMPLATES;
+    templates = [...DEFAULT_TEMPLATES];
   } else {
     templates = askGeminiTemplates;
   }
-  renderTemplateList();
+  renderDropdownList();
 }
 
-function renderTemplateList() {
+function renderDropdownList() {
   tmplList.innerHTML = '';
-  if (templates.length === 0) {
-    tmplEmpty.classList.add('visible');
-    return;
-  }
+  if (templates.length === 0) { tmplEmpty.classList.add('visible'); return; }
   tmplEmpty.classList.remove('visible');
 
   templates.forEach(tpl => {
@@ -109,138 +108,193 @@ function renderTemplateList() {
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
         <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <span class="tmpl-item-text">${escapeHtml(display)}</span>
-    `;
-    el.addEventListener('click', () => insertTemplate(tpl));
+      <span class="tmpl-item-text">${escapeHtml(display)}</span>`;
+    el.addEventListener('click', () => { insertTemplate(tpl); closeDropdown(); });
     tmplList.appendChild(el);
   });
 }
 
 function insertTemplate(tpl) {
-  // If input starts with '/', replace the slash with the template
-  const val = input.value;
-  if (val === '/' || val === '') {
-    input.value = tpl;
-  } else {
-    // Prepend template on its own line, or just replace
-    input.value = tpl;
-  }
+  input.value = tpl;
   input.dispatchEvent(new Event('input'));
-  // Place cursor at end
   input.selectionStart = input.selectionEnd = input.value.length;
-  closeTemplateDropdown();
   input.focus();
 }
 
-function openTemplateDropdown() {
-  tmplDropdown.classList.add('visible');
-  tmplTriggerBtn.classList.add('active');
-}
+// Dropdown open/close
+function openDropdown() { tmplDropdown.classList.add('visible'); tmplTriggerBtn.classList.add('active'); }
+function closeDropdown() { tmplDropdown.classList.remove('visible'); tmplTriggerBtn.classList.remove('active'); }
+function toggleDropdown() { tmplDropdown.classList.contains('visible') ? closeDropdown() : openDropdown(); }
 
-function closeTemplateDropdown() {
-  tmplDropdown.classList.remove('visible');
-  tmplTriggerBtn.classList.remove('active');
-}
-
-function toggleTemplateDropdown() {
-  if (tmplDropdown.classList.contains('visible')) {
-    closeTemplateDropdown();
-  } else {
-    openTemplateDropdown();
-  }
-}
-
-tmplTriggerBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  toggleTemplateDropdown();
-});
-
-tmplCloseBtn.addEventListener('click', () => closeTemplateDropdown());
-
-tmplSettingsLink.addEventListener('click', () => {
-  closeTemplateDropdown();
-  chrome.runtime.openOptionsPage();
-  window.close();
-});
-
-// Close on click outside
+tmplTriggerBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(); });
+tmplCloseBtn.addEventListener('click', () => closeDropdown());
+tmplSettingsLink.addEventListener('click', () => { closeDropdown(); chrome.runtime.openOptionsPage(); window.close(); });
 document.addEventListener('click', (e) => {
-  if (!tmplDropdown.contains(e.target) && e.target !== tmplTriggerBtn) {
-    closeTemplateDropdown();
-  }
-});
-
-// ── / trigger ─────────────────────────────────────────────────────
-input.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    if (tmplDropdown.classList.contains('visible')) {
-      e.preventDefault();
-      closeTemplateDropdown();
-      return;
-    }
-  }
-  if (e.key === 'Enter' && !e.shiftKey) {
-    if (tmplDropdown.classList.contains('visible')) {
-      // Don't send if dropdown is open; close it first
-      e.preventDefault();
-      closeTemplateDropdown();
-      return;
-    }
-    e.preventDefault();
-    askGemini();
-  }
+  if (!tmplDropdown.contains(e.target) && e.target !== tmplTriggerBtn) closeDropdown();
 });
 
 // ══════════════════════════════════════════════════════════════════
-// 4. SELECTED-TEXT AUTO-FILL
+// 4. INLINE AUTOCOMPLETE  (typing-mode)
+//
+//  Triggers when:
+//    • The first non-whitespace character on the current line is '/'
+//    • The cursor is not inside a fenced code block  (``` … ```)
+//    • At least one template matches the text after '/'
+//
+//  Keys:
+//    Tab   — cycle to next match (or accept if only one)
+//    Enter — accept current match (don't submit)
+//    Esc   — dismiss without accepting
+//
+//  Any other keystroke re-filters live; if no match → dismiss.
 // ══════════════════════════════════════════════════════════════════
 
-async function tryAutoFillSelection() {
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id || tab.url?.startsWith('chrome://') || tab.url?.startsWith('chrome-extension://')) return;
+const ac = {
+  active:    false,
+  lineStart: 0,     // index in textarea.value where current line begins
+  matches:   [],    // filtered template strings
+  idx:       0,     // currently highlighted match
+};
 
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: () => window.getSelection()?.toString().trim() ?? '',
-    });
+// ── helpers ───────────────────────────────────────────────────────
 
-    const selected = results?.[0]?.result;
-    if (selected && selected.length > 0 && selected.length <= MAX_CHARS) {
-      const draft = sessionStorage.getItem('ask-gemini-draft');
-      if (!draft) {
-        input.value = selected;
-        input.dispatchEvent(new Event('input'));
-        input.select();
-        const preview = selected.length > 58 ? selected.slice(0, 58) + '…' : selected;
-        selText.textContent = `"${preview}"`;
-        selBanner.classList.add('visible');
-      }
-    }
-  } catch (_) { /* tab not scriptable */ }
+function isInsideCodeBlock(text, pos) {
+  // Count ``` fence markers before cursor; odd count = inside block
+  let count = 0, search = 0;
+  while (true) {
+    const found = text.indexOf('```', search);
+    if (found === -1 || found >= pos) break;
+    count++;
+    search = found + 3;
+  }
+  return (count % 2) !== 0;
 }
 
-selClear.addEventListener('click', () => {
-  selBanner.classList.remove('visible');
-  input.value = '';
-  sessionStorage.removeItem('ask-gemini-draft');
+/**
+ * Returns null if AC should not fire, or
+ * { lineStart, query } where query is the text after '/' on the line.
+ */
+function getACContext() {
+  const val = input.value;
+  const pos = input.selectionStart;
+
+  // Only trigger when cursor is at end of selection (no selection range)
+  if (input.selectionEnd !== pos) return null;
+
+  // Find start of current line
+  const lineStart = val.lastIndexOf('\n', pos - 1) + 1;
+  const lineContent = val.substring(lineStart, pos);
+
+  // Line must start with '/' (allowing leading spaces is intentionally excluded
+  // so it's truly "start of line" semantics, like a terminal command)
+  if (!lineContent.startsWith('/')) return null;
+
+  // Must not be inside a fenced code block
+  if (isInsideCodeBlock(val, pos)) return null;
+
+  // The query is everything after the '/'
+  const query = lineContent.slice(1);
+
+  return { lineStart, query };
+}
+
+function filterTemplates(query) {
+  const q = query.toLowerCase();
+  // Match templates whose text (after trimming) starts with the query
+  // Case-insensitive prefix match
+  return templates.filter(t => t.toLowerCase().startsWith(q));
+}
+
+// ── AC state changes ──────────────────────────────────────────────
+
+function openAC(lineStart, matches, idx = 0) {
+  ac.active    = true;
+  ac.lineStart = lineStart;
+  ac.matches   = matches;
+  ac.idx       = idx;
+  inputWrapper.classList.add('ac-active');
+  acStrip.classList.add('visible');
+  renderACStrip();
+}
+
+function renderACStrip() {
+  const match = ac.matches[ac.idx];
+  const typedLen = input.value.length - ac.lineStart - 1; // chars typed after '/'
+
+  // Split the match into the part already typed (green) and the rest (ghost)
+  const typed      = match.slice(0, typedLen);           // what's already there sans '/'
+  const completion = match.slice(typedLen);              // what tab would add
+
+  // Display with newline symbol
+  const typedHtml      = escapeHtml(typed.replace(/\n/g, '↵'));
+  const completionHtml = escapeHtml(completion.replace(/\n/g, '↵'));
+
+  acGhost.innerHTML = `<span class="ac-typed">/${typedHtml}</span><span class="ac-completion">${completionHtml}</span>`;
+
+  acCounter.textContent = ac.matches.length > 1
+    ? `${ac.idx + 1}/${ac.matches.length}`
+    : '';
+}
+
+function dismissAC() {
+  if (!ac.active) return;
+  ac.active = false;
+  acStrip.classList.remove('visible');
+  inputWrapper.classList.remove('ac-active');
+  acGhost.innerHTML  = '';
+  acCounter.textContent = '';
+}
+
+function acceptAC() {
+  if (!ac.active || ac.matches.length === 0) return;
+
+  const val    = input.value;
+  const match  = ac.matches[ac.idx];
+  const pos    = input.selectionStart;
+
+  // Replace from lineStart to current cursor with the template
+  const before = val.substring(0, ac.lineStart);
+  const after  = val.substring(pos);
+  input.value  = before + match + after;
+
+  // Place cursor at end of inserted template
+  const newPos = ac.lineStart + match.length;
+  input.selectionStart = input.selectionEnd = newPos;
+
   input.dispatchEvent(new Event('input'));
-  input.focus();
-});
+  dismissAC();
+}
 
-// ══════════════════════════════════════════════════════════════════
-// 5. HISTORY
-// ══════════════════════════════════════════════════════════════════
+function cycleAC() {
+  ac.idx = (ac.idx + 1) % ac.matches.length;
+  renderACStrip();
+}
 
-async function saveToHistory(message) {
-  const { askGeminiHistory = [] } = await chrome.storage.local.get('askGeminiHistory');
-  const deduped = askGeminiHistory.filter(h => h.text !== message);
-  deduped.unshift({ text: message, ts: Date.now() });
-  await chrome.storage.local.set({ askGeminiHistory: deduped.slice(0, MAX_HISTORY) });
+// ── the main AC update — called on every 'input' event ───────────
+
+function updateAC() {
+  const ctx = getACContext();
+
+  if (!ctx) { dismissAC(); return; }
+
+  const { lineStart, query } = ctx;
+  const matches = filterTemplates(query);
+
+  if (matches.length === 0) { dismissAC(); return; }
+
+  if (ac.active) {
+    // Update in place — preserve idx if possible
+    ac.lineStart = lineStart;
+    ac.matches   = matches;
+    ac.idx       = Math.min(ac.idx, matches.length - 1);
+    renderACStrip();
+  } else {
+    openAC(lineStart, matches, 0);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════
-// 6. INPUT BEHAVIOUR
+// 5. INPUT EVENTS
 // ══════════════════════════════════════════════════════════════════
 
 input.addEventListener('input', () => {
@@ -262,14 +316,94 @@ input.addEventListener('input', () => {
   sendBtn.disabled = input.value.trim().length === 0 || len > MAX_CHARS;
   sessionStorage.setItem('ask-gemini-draft', input.value);
 
-  // / trigger: show templates if '/' is the only char
-  if (input.value === '/') {
-    openTemplateDropdown();
+  updateAC();
+});
+
+input.addEventListener('keydown', (e) => {
+  // ── AC key handling (highest priority) ───────────────────────
+  if (ac.active) {
+    if (e.key === 'Tab') {
+      e.preventDefault(); // never insert tab
+      if (ac.matches.length === 1) {
+        acceptAC();
+      } else {
+        cycleAC();
+      }
+      return;
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault(); // accept, don't submit
+      acceptAC();
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      dismissAC();
+      return;
+    }
+    // Any other key: let it through, updateAC() will re-evaluate on 'input'
+    return;
+  }
+
+  // ── Normal key handling ───────────────────────────────────────
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    askGemini();
+  }
+  if (e.key === 'Escape') {
+    closeDropdown();
   }
 });
 
 // ══════════════════════════════════════════════════════════════════
-// 7. SEND
+// 6. SELECTED-TEXT AUTO-FILL
+// ══════════════════════════════════════════════════════════════════
+
+async function tryAutoFillSelection() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id || tab.url?.startsWith('chrome://') || tab.url?.startsWith('chrome-extension://')) return;
+
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => window.getSelection()?.toString().trim() ?? '',
+    });
+
+    const selected = results?.[0]?.result;
+    if (selected && selected.length > 0 && selected.length <= MAX_CHARS) {
+      if (!sessionStorage.getItem('ask-gemini-draft')) {
+        input.value = selected;
+        input.dispatchEvent(new Event('input'));
+        input.select();
+        const preview = selected.length > 58 ? selected.slice(0, 58) + '…' : selected;
+        selText.textContent = `"${preview}"`;
+        selBanner.classList.add('visible');
+      }
+    }
+  } catch (_) { /* tab not scriptable */ }
+}
+
+selClear.addEventListener('click', () => {
+  selBanner.classList.remove('visible');
+  input.value = '';
+  sessionStorage.removeItem('ask-gemini-draft');
+  input.dispatchEvent(new Event('input'));
+  input.focus();
+});
+
+// ══════════════════════════════════════════════════════════════════
+// 7. HISTORY
+// ══════════════════════════════════════════════════════════════════
+
+async function saveToHistory(message) {
+  const { askGeminiHistory = [] } = await chrome.storage.local.get('askGeminiHistory');
+  const deduped = askGeminiHistory.filter(h => h.text !== message);
+  deduped.unshift({ text: message, ts: Date.now() });
+  await chrome.storage.local.set({ askGeminiHistory: deduped.slice(0, MAX_HISTORY) });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// 8. SEND
 // ══════════════════════════════════════════════════════════════════
 
 sendBtn.addEventListener('click', () => askGemini());
@@ -281,12 +415,10 @@ async function askGemini() {
   sendBtn.classList.add('sending');
   sendBtn.disabled = true;
   input.disabled   = true;
+  dismissAC();
 
   try {
-    await chrome.storage.local.set({
-      pendingMessage: message,
-      pendingModel:   currentModel,
-    });
+    await chrome.storage.local.set({ pendingMessage: message, pendingModel: currentModel });
     await saveToHistory(message);
     sessionStorage.removeItem('ask-gemini-draft');
 
@@ -305,26 +437,18 @@ async function askGemini() {
     input.focus();
     return;
   }
-
   setTimeout(() => window.close(), 120);
 }
 
 // ══════════════════════════════════════════════════════════════════
-// 8. FOOTER BUTTONS
+// 9. FOOTER BUTTONS
 // ══════════════════════════════════════════════════════════════════
 
-openBtn.addEventListener('click', () => {
-  chrome.tabs.create({ url: GEMINI_URL });
-  window.close();
-});
-
-settingsBtn.addEventListener('click', () => {
-  chrome.runtime.openOptionsPage();
-  window.close();
-});
+openBtn.addEventListener('click', () => { chrome.tabs.create({ url: GEMINI_URL }); window.close(); });
+settingsBtn.addEventListener('click', () => { chrome.runtime.openOptionsPage(); window.close(); });
 
 // ══════════════════════════════════════════════════════════════════
-// 9. HELPERS
+// 10. HELPERS
 // ══════════════════════════════════════════════════════════════════
 
 function escapeHtml(s) {
@@ -332,20 +456,25 @@ function escapeHtml(s) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// 10. INIT
+// 11. INIT
 // ══════════════════════════════════════════════════════════════════
 
 sendBtn.disabled = true;
 
 (async () => {
-  // Load all preferences in one call
   const data = await chrome.storage.local.get(['askGeminiTheme', 'askGeminiModel', 'askGeminiTemplates']);
 
   applyTheme(data.askGeminiTheme || 'auto');
   applyModel(data.askGeminiModel || 'flash');
 
-  // Templates (don't block on storage — loadTemplates handles first-run seeding)
-  await loadTemplates();
+  // Seed templates
+  if (data.askGeminiTemplates) {
+    templates = data.askGeminiTemplates;
+  } else {
+    await chrome.storage.local.set({ askGeminiTemplates: DEFAULT_TEMPLATES });
+    templates = [...DEFAULT_TEMPLATES];
+  }
+  renderDropdownList();
 
   // Restore draft
   const draft = sessionStorage.getItem('ask-gemini-draft');

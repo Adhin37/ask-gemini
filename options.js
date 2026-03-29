@@ -100,7 +100,8 @@ document.getElementById('modelControl')?.addEventListener('click', async (e) => 
   if (val === currentModel) return;
   await chrome.storage.local.set({ askGeminiModel: val });
   applyModel(val);
-  showToast(`Model set to ${val === 'flash' ? 'Flash' : 'Pro'}`);
+  const labels = { flash: 'Flash', pro: 'Pro', thinking: 'Think' };
+  showToast(`Model set to ${labels[val] || val}`);
 });
 
 // ══════════════════════════════════════════════════════════════════
