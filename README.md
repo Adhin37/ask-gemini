@@ -1,7 +1,7 @@
 # Ask Gemini — Chrome Extension
 
 ![License](https://img.shields.io/badge/license-Apache_2.0-blue?style=flat-square)
-![Version](https://img.shields.io/badge/version-1.1.0-informational?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.2.0-informational?style=flat-square)
 ![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-coming_soon-yellow?style=flat-square&logo=googlechrome&logoColor=white)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-support_me-FF5E5B?style=flat-square&logo=kofi&logoColor=white)](https://ko-fi.com/adhin/tip)
 
@@ -34,9 +34,9 @@ Instantly send questions to Google Gemini right from your browser toolbar.
 
 ## How the message injection works
 
-1. Your question is saved to `chrome.storage.local`.
+1. Your question is saved to `chrome.storage.local` along with your selected model preference.
 2. Gemini opens (or an existing tab refreshes to a fresh session).
-3. The content script (`content.js`) runs on `gemini.google.com`, reads the stored message, injects it into Gemini's input field, and fires a submit event.
+3. The content script (`content.js`) runs on `gemini.google.com`, reads the stored message and model, optionally switches the Gemini model, then injects the message into Gemini's input field and fires a submit event.
 
 > **Note:** Gemini is a complex React SPA. If the message isn't auto-submitted on the first try (Google occasionally changes their DOM), you can still paste it manually — your question is always in your clipboard flow via storage.
 
@@ -50,6 +50,9 @@ ask-gemini-extension/
 ├── popup.html         Popup UI
 ├── popup.css          Popup styles
 ├── popup.js           Popup logic
+├── options.html       Settings page UI
+├── options.css        Settings page styles
+├── options.js         Settings page logic
 ├── background.js      Service worker — context menus
 ├── content.js         Gemini page script — message injection
 └── icons/
@@ -64,7 +67,9 @@ ask-gemini-extension/
 
 | Permission | Why |
 |---|---|
-| `storage` | Temporarily stores your question to pass it to the Gemini tab |
+| `storage` | Stores your question and model preference to pass them to the Gemini tab, and persists settings across browser restarts |
 | `contextMenus` | Adds the right-click "Open Gemini" menu items |
 | `tabs` | Opens / focuses the Gemini tab |
+| `scripting` | Reads the selected text on the current page to auto-fill the popup |
+| `activeTab` | Required alongside `scripting` for selected-text access |
 | `host_permissions: gemini.google.com` | Allows the content script to run on Gemini |
