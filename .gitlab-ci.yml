@@ -1,0 +1,35 @@
+stages:
+  - build-release
+
+package-extension:
+  stage: build-release
+  image: alpine:latest
+  rules:
+    - if: $CI_COMMIT_TAG
+  before_script:
+    # apk is much faster than apt
+    - apk add --no-cache zip jq bash
+    - chmod +x package.sh
+  script:
+    # 1. Sync manifest version
+    - NEW_VERSION=$(echo $CI_COMMIT_TAG | sed 's/^v//')
+    - jq ".version = \"$NEW_VERSION\"" manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+    
+    # 2. Run packaging script
+    - ./package.sh
+    
+    # 3. Prepare artifact
+    - mv extension.zip ask-gemini-extension.zip
+    
+  artifacts:
+    paths:
+      - ask-gemini-extension.zip
+    expire_in: never
+
+  release:
+    tag_name: $CI_COMMIT_TAG
+    description: "Automated release for version $CI_COMMIT_TAG"
+    assets:
+      links:
+        - name: "ask-gemini-extension.zip"
+          url: "${CI_PROJECT_URL}/-/jobs/${CI_JOB_ID}/artifacts/file/ask-gemini-extension.zip"
