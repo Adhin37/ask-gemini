@@ -7,6 +7,7 @@ OUTPUT_ZIP="ask-gemini-extension.zip"
 FILES=(
     "background.js"
     "content.js"
+    "LICENSE"
     "manifest.json"
     "options.css"
     "options.html"
