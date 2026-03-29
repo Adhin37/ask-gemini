@@ -60,22 +60,32 @@ async function waitForModelTrigger(timeoutMs = 10_000) {
 function findModelTrigger() {
   const selectors = [
     'button[aria-label*="model" i]',
+    'button[data-test-id*="model" i]',
     '[class*="model-selector" i] button',
+    '[class*="ModelSelector"] button',
+    'mat-select[aria-label*="model" i]',
+    'button[jsaction*="model" i]',
+    '[data-model-id] button',
     'button[aria-haspopup="listbox"]',
-    'button[aria-haspopup="menu"]'
+    'button[aria-haspopup="menu"]',
   ];
-  
-  const MODEL_VOCAB = ["flash", "fast", "pro", "think", "reason", "gemini 1.5"];
+
+  // Vocabulary that must appear in the button's text for it to qualify
+  const MODEL_VOCAB = ["flash", "fast", "pro", "think", "reason", "advanced", "gemini", "quick"];
 
   for (const sel of selectors) {
     for (const el of document.querySelectorAll(sel)) {
-      // STRICT BLOCK: Ignore anything in the sidebar or history lists
-      if (el.closest('nav, [class*="conversation"], [class*="side-nav"]')) continue;
-
-      const text = (el.textContent + " " + (el.getAttribute("aria-label") || "")).toLowerCase();
+      const text = el.textContent.toLowerCase();
       if (MODEL_VOCAB.some(w => text.includes(w))) return el;
     }
   }
+
+  // Last-resort: any button whose aria-label or title smells like a model picker
+  for (const el of document.querySelectorAll("button")) {
+    const label = (el.getAttribute("aria-label") || el.getAttribute("title") || "").toLowerCase();
+    if (MODEL_VOCAB.some(w => label.includes(w))) return el;
+  }
+
   return null;
 }
 
@@ -204,14 +214,18 @@ async function detectCurrentModel() {
  *      other options don't have that child, so child-count differs)
  */
 function isSelectedOption(el) {
-  const cls = (el.className || "").toLowerCase();
-  if (cls.includes("is-selected") || cls.includes("mat-selected") || cls.includes("active")) return true;
-  
   if (el.getAttribute("aria-selected") === "true") return true;
   if (el.getAttribute("aria-checked") === "true") return true;
+
+  const cls = (el.className || "").toLowerCase();
+  if (cls.includes("selected") || cls.includes("active") || cls.includes("focused")) return true;
+
+  // Gemini usually renders a 'check' or 'radio_button_checked' icon only for the active model.
+  const hasCheckIcon = el.querySelector('mat-icon, svg, .icon, [class*="icon"]') !== null;
   
-  // Checkmark heuristic
-  if (el.querySelector('svg, mat-icon, [class*="check"]')) return true;
+  // In many Gemini versions, the UNSELECTED items have no SVG/Icon, 
+  // while the SELECTED item has one.
+  if (hasCheckIcon) return true;
 
   return false;
 }
@@ -226,22 +240,26 @@ function isSelectedOption(el) {
  * Returns true if the correct model is confirmed at any point.
  */
 async function ensureModel(target) {
-  const current = await detectCurrentModel();
-  
-  if (current === target) {
-    console.debug(`[Ask Gemini] Model already correct: "${target}"`);
-    return true; 
+  const MAX_ATTEMPTS = 3;
+  const SETTLE_MS    = 800;
+
+  for (let i = 1; i <= MAX_ATTEMPTS; i++) {
+    const current = await detectCurrentModel();
+
+    console.debug(`[Ask Gemini] ensureModel (${i}/${MAX_ATTEMPTS}): current="${current}" target="${target}"`);
+
+    if (current === target) return true;
+
+    // Couldn't detect on last attempt — give up
+    if (current === null && i === MAX_ATTEMPTS) return false;
+
+    await performModelSwitch(target);
+    await sleep(SETTLE_MS);
   }
 
-  // If not correct, try switching exactly ONCE.
-  const clicked = await performModelSwitch(target);
-  if (clicked) {
-    console.debug(`[Ask Gemini] Clicked "${target}". Assuming success to prevent loops.`);
-    await sleep(800); // Give the UI a moment to settle before injection
-    return true;
-  }
-
-  return false;
+  // One last check after the final switch
+  const final = await detectCurrentModel();
+  return final === target;
 }
 
 /**
@@ -250,27 +268,38 @@ async function ensureModel(target) {
  */
 async function performModelSwitch(target) {
   const triggerBtn = findModelTrigger();
-  if (!triggerBtn) return false;
+  if (!triggerBtn) {
+    console.debug("[Ask Gemini] performModelSwitch: trigger not found");
+    return;
+  }
 
   triggerBtn.click();
   await sleep(500);
 
-  const optionSelectors = ['[role="menuitem"]', '[role="option"]', 'li[data-value]'];
+  const optionSelectors = [
+    '[role="option"]',
+    '[role="menuitem"]',
+    '[role="listitem"]',
+    'li[data-value]',
+    '[class*="model-item" i]',
+    '[class*="ModelOption"]',
+  ];
 
   for (const sel of optionSelectors) {
     for (const opt of document.querySelectorAll(sel)) {
       if (matchesTarget(opt.textContent, target)) {
+        console.debug(`[Ask Gemini] Clicking: "${opt.textContent.trim()}" for target="${target}"`);
         opt.click();
         await sleep(400);
-        return true; // Return true indicating a successful click
+        return;
       }
     }
   }
 
-  // Close if no match
+  // No match — close dropdown to leave page clean
+  console.debug(`[Ask Gemini] No option matched "${target}" — closing dropdown`);
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   await sleep(200);
-  return false;
 }
 
 
