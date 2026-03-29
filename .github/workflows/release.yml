@@ -39,6 +39,9 @@ jobs:
           NEW_VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
           jq ".version = \"$NEW_VERSION\"" manifest.json > manifest.tmp && mv manifest.tmp manifest.json
 
+      - name: Fix Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Generate Changelog (current release only)
         run: |
           npx -p conventional-changelog -p conventional-changelog-angular \
