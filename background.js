@@ -7,7 +7,7 @@ chrome.runtime.onInstalled.addListener(() => {
   // 1. Context for the toolbar icon
   chrome.contextMenus.create({
     id: "open-gemini-direct",
-    title: "Ask Gemini",
+    title: "Open Gemini",
     contexts: ["action"]
   });
 
