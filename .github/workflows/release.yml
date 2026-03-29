@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Install dependencies (Alpine)
         run: |
-          apk add --no-cache git zip jq bash
+          apk add --no-cache git zip jq bash nodejs npm
 
       - name: Checkout Code
         uses: actions/checkout@v4
