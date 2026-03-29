@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Install dependencies (Alpine)
         run: |
-          apk add --no-cache git zip jq bash nodejs npm
+          apk add --no-cache git zip jq bash
 
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -39,13 +39,11 @@ jobs:
           NEW_VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
           jq ".version = \"$NEW_VERSION\"" manifest.json > manifest.tmp && mv manifest.tmp manifest.json
 
-      - name: Fix Git Safe Directory
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      - name: Generate Changelog (current release only)
+      - name: Generate Manual Changelog
         run: |
-          npx -p conventional-changelog -p conventional-changelog-angular \
-            conventional-changelog -p angular -r 1 > CHANGELOG.md
+          chmod +x generate-changelog.sh
+          ./generate-changelog.sh
+          test -s CHANGELOG.md
 
       - name: Run Packaging Script
         run: |
@@ -54,17 +52,12 @@ jobs:
           ./package.sh
           test -s ask-gemini-extension.zip
 
-      - name: Generate checksum
-        run: sha256sum ask-gemini-extension.zip > ask-gemini-extension.zip.sha256
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ github.ref_name }}
           body_path: CHANGELOG.md
           prerelease: ${{ contains(github.ref_name, '-') }}
-          files: |
-            ask-gemini-extension.zip
-            ask-gemini-extension.zip.sha256
+          files: ask-gemini-extension.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
