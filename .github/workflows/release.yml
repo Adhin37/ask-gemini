@@ -41,8 +41,7 @@ jobs:
 
       - name: Generate Changelog (current release only)
         run: |
-          npm install -g conventional-changelog-cli
-          conventional-changelog -p angular -r 1 > CHANGELOG.md
+          npx conventional-changelog-cli -p angular -r 1 > CHANGELOG.md
 
       - name: Run Packaging Script
         run: |
