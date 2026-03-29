@@ -1,0 +1,54 @@
+name: Build and Release Extension
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on tags starting with v (e.g., v1.0.0)
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # GitHub's fastest standard runner
+    permissions:
+      contents: write # Required to create the release and upload assets
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches all history for the changelog
+
+      - name: Install Dependencies
+        run: sudo apt-get update && sudo apt-get install -y zip jq
+
+      - name: Update Manifest Version
+        run: |
+          NEW_VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
+          jq ".version = \"$NEW_VERSION\"" manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+
+      - name: Generate Changelog
+        run: |
+          echo "## Release ${{ github.ref_name }}" > CHANGELOG.md
+          PREV_TAG=$(git describe --tags --abbrev=0 ${{ github.ref_name }}^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then RANGE="HEAD"; else RANGE="$PREV_TAG..${{ github.ref_name }}"; fi
+          
+          echo "### ✨ Features" >> CHANGELOG.md
+          git log $RANGE --grep="^feat" --format="* %s (%h)" >> CHANGELOG.md || echo "* No new features" >> CHANGELOG.md
+          
+          echo -e "\n### 🐛 Bug Fixes" >> CHANGELOG.md
+          git log $RANGE --grep="^fix" --format="* %s (%h)" >> CHANGELOG.md || echo "* No bug fixes" >> CHANGELOG.md
+          
+          echo -e "\n### ⚙️ Maintenance" >> CHANGELOG.md
+          git log $RANGE --grep="^chore\|^refactor" --format="* %s (%h)" >> CHANGELOG.md || echo "* No maintenance" >> CHANGELOG.md
+
+      - name: Run Packaging Script
+        run: |
+          chmod +x package.sh
+          ./package.sh
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: CHANGELOG.md
+          files: ask-gemini-extension.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
