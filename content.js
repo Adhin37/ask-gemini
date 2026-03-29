@@ -1,4 +1,4 @@
-// ── content.js v1.3 ───────────────────────────────────────────────
+// ── content.js ───────────────────────────────────────────────
 // Runs on gemini.google.com — reads pending message + model pref,
 // optionally switches model, then injects & submits.
 

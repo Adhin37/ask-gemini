@@ -1,4 +1,4 @@
-// ── popup.js v1.3 ──────────────────────────────────────────────────
+// ── popup.js ──────────────────────────────────────────────────
 // Model switcher (Flash/Pro/Think), inline autocomplete, theme, history
 
 const GEMINI_URL  = "https://gemini.google.com/app";
