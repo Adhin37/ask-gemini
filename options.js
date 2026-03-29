@@ -1,46 +1,122 @@
-// ── options.js ─────────────────────────────────────────────────────
-// Settings page: history management, section navigation
+// ── options.js ────────────────────────────────────────────────
+// Settings page: history, templates, appearance (theme + model), shortcut, about
 
 const GEMINI_URL = "https://gemini.google.com/app";
 
-// ── Section navigation ─────────────────────────────────────────────
+const DEFAULT_TEMPLATES = [
+  "Summarise: ",
+  "Translate to English: ",
+  "Fix this code:\n",
+  "Explain simply: ",
+  "Pros and cons of: ",
+];
+
+// ══════════════════════════════════════════════════════════════════
+// 1. SECTION NAVIGATION
+// ══════════════════════════════════════════════════════════════════
+
 document.querySelectorAll(".nav-item").forEach(link => {
   link.addEventListener("click", (e) => {
     e.preventDefault();
     const target = link.dataset.section;
-
     document.querySelectorAll(".nav-item").forEach(l => l.classList.remove("active"));
     document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
-
     link.classList.add("active");
     document.getElementById(`section-${target}`)?.classList.add("active");
   });
 });
 
-// ── Version display ────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+// 2. VERSION
+// ══════════════════════════════════════════════════════════════════
+
 const manifest = chrome.runtime.getManifest();
 const ver = `v${manifest.version}`;
-document.getElementById("extVersion").textContent  = ver;
+document.getElementById("extVersion").textContent   = ver;
 document.getElementById("aboutVersion").textContent = `Version ${manifest.version}`;
 
-// ── Shortcut page link ─────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+// 3. SHORTCUT PAGE LINK
+// ══════════════════════════════════════════════════════════════════
+
 document.getElementById("shortcutPageLink")?.addEventListener("click", (e) => {
   e.preventDefault();
   chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
 });
 
-// ── History ────────────────────────────────────────────────────────
-const historyList  = document.getElementById("historyList");
-const emptyState   = document.getElementById("emptyState");
-const searchInput  = document.getElementById("historySearch");
-const clearBtn     = document.getElementById("clearHistoryBtn");
-const overlay      = document.getElementById("confirmOverlay");
-const confirmOk    = document.getElementById("confirmOk");
-const confirmCancel= document.getElementById("confirmCancel");
+// ══════════════════════════════════════════════════════════════════
+// 4. THEME
+// ══════════════════════════════════════════════════════════════════
 
-let allHistory = [];  // cache for filtering
+let currentTheme = 'auto';
 
-// ── Load & render ──────────────────────────────────────────────────
+function resolveTheme(pref) {
+  if (pref === 'light') return 'light';
+  if (pref === 'dark')  return 'dark';
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
+function applyTheme(pref) {
+  currentTheme = pref || 'auto';
+  const resolved = resolveTheme(currentTheme);
+  document.body.classList.toggle('light', resolved === 'light');
+
+  // Sync segmented control
+  document.querySelectorAll('#themeControl .seg-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === currentTheme);
+  });
+}
+
+document.getElementById('themeControl')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.seg-btn');
+  if (!btn) return;
+  const val = btn.dataset.value;
+  if (val === currentTheme) return;
+  await chrome.storage.local.set({ askGeminiTheme: val });
+  applyTheme(val);
+});
+
+window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+  if (currentTheme === 'auto') applyTheme('auto');
+});
+
+// ══════════════════════════════════════════════════════════════════
+// 5. MODEL PREFERENCE
+// ══════════════════════════════════════════════════════════════════
+
+let currentModel = 'flash';
+
+function applyModel(model) {
+  currentModel = model || 'flash';
+  document.querySelectorAll('#modelControl .seg-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === currentModel);
+  });
+}
+
+document.getElementById('modelControl')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.seg-btn');
+  if (!btn) return;
+  const val = btn.dataset.value;
+  if (val === currentModel) return;
+  await chrome.storage.local.set({ askGeminiModel: val });
+  applyModel(val);
+  showToast(`Model set to ${val === 'flash' ? 'Flash' : 'Pro'}`);
+});
+
+// ══════════════════════════════════════════════════════════════════
+// 6. HISTORY
+// ══════════════════════════════════════════════════════════════════
+
+const historyList   = document.getElementById("historyList");
+const emptyState    = document.getElementById("emptyState");
+const searchInput   = document.getElementById("historySearch");
+const clearBtn      = document.getElementById("clearHistoryBtn");
+const overlay       = document.getElementById("confirmOverlay");
+const confirmOk     = document.getElementById("confirmOk");
+const confirmCancel = document.getElementById("confirmCancel");
+
+let allHistory = [];
+
 async function loadHistory() {
   const { askGeminiHistory = [] } = await chrome.storage.local.get("askGeminiHistory");
   allHistory = askGeminiHistory;
@@ -55,13 +131,12 @@ function renderHistory(items, query = "") {
 
   if (filtered.length === 0) {
     emptyState.style.display = "flex";
-    emptyState.querySelector("p").textContent  = query ? "No matches." : "No history yet.";
+    emptyState.querySelector("p").textContent   = query ? "No matches." : "No history yet.";
     emptyState.querySelector("span").textContent = query
       ? `No prompts containing "${query}".`
       : "Questions you send to Gemini will appear here.";
     return;
   }
-
   emptyState.style.display = "none";
 
   filtered.forEach((item, idx) => {
@@ -69,9 +144,7 @@ function renderHistory(items, query = "") {
     el.className = "history-item";
     el.style.animationDelay = `${idx * 18}ms`;
 
-    const displayText = query
-      ? highlightMatch(item.text, query)
-      : escapeHtml(item.text);
+    const displayText = query ? highlightMatch(item.text, query) : escapeHtml(item.text);
 
     el.innerHTML = `
       <span class="history-idx">${idx + 1}</span>
@@ -101,22 +174,19 @@ function renderHistory(items, query = "") {
       </div>
     `;
 
-    // Click row = send
     el.addEventListener("click", (e) => {
-      if (e.target.closest(".hist-btn")) return; // handled below
+      if (e.target.closest(".hist-btn")) return;
       sendPrompt(item.text);
     });
 
-    // Action buttons
     el.querySelectorAll(".hist-btn").forEach(btn => {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
-        const text = btn.dataset.text;
+        const text   = btn.dataset.text;
         const action = btn.dataset.action;
-
         if (action === "send")   sendPrompt(text);
         if (action === "copy")   await copyToClipboard(text, btn);
-        if (action === "delete") await deleteItem(text);
+        if (action === "delete") await deleteHistoryItem(text);
       });
     });
 
@@ -124,7 +194,6 @@ function renderHistory(items, query = "") {
   });
 }
 
-// ── Send a prompt ──────────────────────────────────────────────────
 async function sendPrompt(text) {
   await chrome.storage.local.set({ pendingMessage: text });
   const tabs = await chrome.tabs.query({ url: "https://gemini.google.com/*" });
@@ -136,7 +205,6 @@ async function sendPrompt(text) {
   }
 }
 
-// ── Copy ───────────────────────────────────────────────────────────
 async function copyToClipboard(text, btn) {
   try {
     await navigator.clipboard.writeText(text);
@@ -147,8 +215,7 @@ async function copyToClipboard(text, btn) {
   } catch (_) { showToast("Copy failed"); }
 }
 
-// ── Delete single ──────────────────────────────────────────────────
-async function deleteItem(text) {
+async function deleteHistoryItem(text) {
   const { askGeminiHistory = [] } = await chrome.storage.local.get("askGeminiHistory");
   const updated = askGeminiHistory.filter(h => h.text !== text);
   await chrome.storage.local.set({ askGeminiHistory: updated });
@@ -157,7 +224,6 @@ async function deleteItem(text) {
   showToast("Entry removed");
 }
 
-// ── Clear all (with confirm) ───────────────────────────────────────
 clearBtn.addEventListener("click", () => {
   if (allHistory.length === 0) return;
   overlay.classList.add("visible");
@@ -174,12 +240,198 @@ confirmOk.addEventListener("click", async () => {
   showToast("History cleared");
 });
 
-// ── Search / filter ────────────────────────────────────────────────
 searchInput.addEventListener("input", () => {
   renderHistory(allHistory, searchInput.value.trim());
 });
 
-// ── Helpers ────────────────────────────────────────────────────────
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.askGeminiHistory) {
+    allHistory = changes.askGeminiHistory.newValue ?? [];
+    renderHistory(allHistory, searchInput.value.trim());
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════
+// 7. TEMPLATES
+// ══════════════════════════════════════════════════════════════════
+
+const addTemplateBtn    = document.getElementById("addTemplateBtn");
+const tmplFormCard      = document.getElementById("tmplFormCard");
+const tmplFormLabel     = document.getElementById("tmplFormLabel");
+const tmplTextarea      = document.getElementById("tmplTextarea");
+const tmplCharCount     = document.getElementById("tmplCharCount");
+const tmplCancelBtn     = document.getElementById("tmplCancelBtn");
+const tmplSaveBtn       = document.getElementById("tmplSaveBtn");
+const tmplCardList      = document.getElementById("tmplCardList");
+const tmplEmptyState    = document.getElementById("tmplEmptyState");
+const tmplDeleteOverlay = document.getElementById("tmplDeleteOverlay");
+const tmplDeleteBody    = document.getElementById("tmplDeleteBody");
+const tmplDeleteCancel  = document.getElementById("tmplDeleteCancel");
+const tmplDeleteConfirm = document.getElementById("tmplDeleteConfirm");
+
+let allTemplates   = [];
+let editingIndex   = -1; // -1 = new, ≥0 = editing
+let pendingDeleteIndex = -1;
+
+async function loadTemplates() {
+  const { askGeminiTemplates } = await chrome.storage.local.get("askGeminiTemplates");
+  if (!askGeminiTemplates) {
+    await chrome.storage.local.set({ askGeminiTemplates: DEFAULT_TEMPLATES });
+    allTemplates = [...DEFAULT_TEMPLATES];
+  } else {
+    allTemplates = askGeminiTemplates;
+  }
+  renderTemplates();
+}
+
+function renderTemplates() {
+  tmplCardList.innerHTML = "";
+
+  if (allTemplates.length === 0) {
+    tmplEmptyState.style.display = "flex";
+    return;
+  }
+  tmplEmptyState.style.display = "none";
+
+  allTemplates.forEach((tpl, idx) => {
+    const el = document.createElement("div");
+    el.className = "tmpl-card";
+    el.style.animationDelay = `${idx * 18}ms`;
+
+    // Display with ↵ for newlines
+    const displayHtml = escapeHtml(tpl).replace(/\n/g, '<span class="newline-sym">↵\n</span>');
+
+    el.innerHTML = `
+      <span class="tmpl-card-idx">${idx + 1}</span>
+      <div class="tmpl-card-text">${displayHtml}</div>
+      <div class="tmpl-card-actions">
+        <button class="hist-btn" title="Edit" data-action="edit" data-idx="${idx}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="hist-btn danger" title="Delete" data-action="delete" data-idx="${idx}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    `;
+
+    el.querySelectorAll(".hist-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const action = btn.dataset.action;
+        const i      = parseInt(btn.dataset.idx, 10);
+        if (action === "edit")   openEditForm(i);
+        if (action === "delete") confirmDeleteTemplate(i);
+      });
+    });
+
+    tmplCardList.appendChild(el);
+  });
+}
+
+// ── Add button ──────────────────────────────────────────────────
+addTemplateBtn.addEventListener("click", () => {
+  editingIndex = -1;
+  tmplFormLabel.textContent = "New template";
+  tmplTextarea.value = "";
+  tmplSaveBtn.disabled = true;
+  updateCharCount();
+  tmplFormCard.style.display = "block";
+  tmplTextarea.focus();
+  tmplFormCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
+
+// ── Edit form open ───────────────────────────────────────────────
+function openEditForm(idx) {
+  editingIndex = idx;
+  tmplFormLabel.textContent = `Edit template ${idx + 1}`;
+  tmplTextarea.value = allTemplates[idx];
+  updateCharCount();
+  tmplSaveBtn.disabled = tmplTextarea.value.trim().length === 0;
+  tmplFormCard.style.display = "block";
+  tmplTextarea.focus();
+  tmplFormCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+// ── Char counter ─────────────────────────────────────────────────
+function updateCharCount() {
+  const len = tmplTextarea.value.length;
+  const max = 400;
+  tmplCharCount.textContent = `${len} / ${max}`;
+  tmplCharCount.classList.toggle("warn", len > max * 0.8 && len <= max);
+  tmplCharCount.classList.toggle("over", len > max);
+}
+
+tmplTextarea.addEventListener("input", () => {
+  updateCharCount();
+  tmplSaveBtn.disabled = tmplTextarea.value.trim().length === 0 || tmplTextarea.value.length > 400;
+});
+
+// ── Cancel ───────────────────────────────────────────────────────
+tmplCancelBtn.addEventListener("click", () => {
+  tmplFormCard.style.display = "none";
+  tmplTextarea.value = "";
+  editingIndex = -1;
+});
+
+// ── Save ─────────────────────────────────────────────────────────
+tmplSaveBtn.addEventListener("click", async () => {
+  const val = tmplTextarea.value;
+  if (!val.trim() || val.length > 400) return;
+
+  if (editingIndex >= 0) {
+    allTemplates[editingIndex] = val;
+  } else {
+    allTemplates.push(val);
+  }
+
+  await chrome.storage.local.set({ askGeminiTemplates: allTemplates });
+  tmplFormCard.style.display = "none";
+  tmplTextarea.value = "";
+  editingIndex = -1;
+  renderTemplates();
+  showToast(editingIndex >= 0 ? "Template updated" : "Template saved");
+});
+
+// ── Delete (confirm dialog) ──────────────────────────────────────
+function confirmDeleteTemplate(idx) {
+  pendingDeleteIndex = idx;
+  const preview = allTemplates[idx].replace(/\n/g, "↵").slice(0, 60);
+  tmplDeleteBody.textContent = `"${preview}" will be permanently removed.`;
+  tmplDeleteOverlay.classList.add("visible");
+}
+
+tmplDeleteCancel.addEventListener("click", () => {
+  tmplDeleteOverlay.classList.remove("visible");
+  pendingDeleteIndex = -1;
+});
+
+tmplDeleteOverlay.addEventListener("click", (e) => {
+  if (e.target === tmplDeleteOverlay) {
+    tmplDeleteOverlay.classList.remove("visible");
+    pendingDeleteIndex = -1;
+  }
+});
+
+tmplDeleteConfirm.addEventListener("click", async () => {
+  if (pendingDeleteIndex < 0) return;
+  allTemplates.splice(pendingDeleteIndex, 1);
+  await chrome.storage.local.set({ askGeminiTemplates: allTemplates });
+  tmplDeleteOverlay.classList.remove("visible");
+  pendingDeleteIndex = -1;
+  renderTemplates();
+  showToast("Template deleted");
+});
+
+// ══════════════════════════════════════════════════════════════════
+// 8. HELPERS
+// ══════════════════════════════════════════════════════════════════
+
 function escapeHtml(s) {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
@@ -194,16 +446,14 @@ function highlightMatch(text, query) {
 function formatTime(ts) {
   if (!ts) return "";
   const d = new Date(ts);
-  const now = new Date();
-  const diff = now - d;
-  if (diff < 60_000)    return "just now";
-  if (diff < 3_600_000) return `${Math.floor(diff/60_000)}m ago`;
-  if (diff < 86_400_000)return `${Math.floor(diff/3_600_000)}h ago`;
+  const diff = Date.now() - d;
+  if (diff < 60_000)     return "just now";
+  if (diff < 3_600_000)  return `${Math.floor(diff/60_000)}m ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff/3_600_000)}h ago`;
   if (diff < 604_800_000)return `${Math.floor(diff/86_400_000)}d ago`;
   return d.toLocaleDateString(undefined, { month:"short", day:"numeric" });
 }
 
-// ── Toast ──────────────────────────────────────────────────────────
 let toastTimer;
 function showToast(msg) {
   let toast = document.querySelector(".toast");
@@ -218,13 +468,14 @@ function showToast(msg) {
   toastTimer = setTimeout(() => toast.classList.remove("visible"), 2200);
 }
 
-// ── Init ───────────────────────────────────────────────────────────
-loadHistory();
+// ══════════════════════════════════════════════════════════════════
+// 9. INIT
+// ══════════════════════════════════════════════════════════════════
 
-// Live-reload if history changes in another tab/popup
-chrome.storage.onChanged.addListener((changes) => {
-  if (changes.askGeminiHistory) {
-    allHistory = changes.askGeminiHistory.newValue ?? [];
-    renderHistory(allHistory, searchInput.value.trim());
-  }
-});
+(async () => {
+  const data = await chrome.storage.local.get(["askGeminiTheme", "askGeminiModel"]);
+  applyTheme(data.askGeminiTheme || 'auto');
+  applyModel(data.askGeminiModel || 'flash');
+  await loadHistory();
+  await loadTemplates();
+})();

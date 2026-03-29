@@ -1,7 +1,7 @@
 # Ask Gemini — Chrome Extension
 
 ![License](https://img.shields.io/badge/license-Apache_2.0-blue?style=flat-square)
-![Version](https://img.shields.io/badge/version-1.0.0-informational?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.1.0-informational?style=flat-square)
 ![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-coming_soon-yellow?style=flat-square&logo=googlechrome&logoColor=white)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-support_me-FF5E5B?style=flat-square&logo=kofi&logoColor=white)](https://ko-fi.com/adhin/tip)
 

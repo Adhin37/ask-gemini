@@ -11,7 +11,6 @@
 </head>
 <body>
 
-  <!-- Ambient blobs -->
   <div class="blob blob-1"></div>
   <div class="blob blob-2"></div>
   <div class="blob blob-3"></div>
@@ -22,7 +21,7 @@
     <nav class="sidebar">
       <div class="brand">
         <div class="brand-icon">
-          <svg width="26" height="26" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width="26" height="26" viewBox="0 0 36 36" fill="none">
             <defs>
               <linearGradient id="bubbleG2" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stop-color="#f5f3ff"/>
@@ -59,6 +58,22 @@
             <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
           History
+        </a>
+        <a class="nav-item" data-section="templates" href="#">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/>
+            <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          Templates
+        </a>
+        <a class="nav-item" data-section="appearance" href="#">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Appearance
         </a>
         <a class="nav-item" data-section="shortcut" href="#">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
@@ -109,8 +124,6 @@
             Clear all
           </button>
         </div>
-
-        <!-- Search bar -->
         <div class="search-wrap">
           <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none">
             <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
@@ -118,11 +131,7 @@
           </svg>
           <input type="text" id="historySearch" class="search-input" placeholder="Filter history…" />
         </div>
-
-        <div class="history-list" id="historyList">
-          <!-- populated by options.js -->
-        </div>
-
+        <div class="history-list" id="historyList"></div>
         <div class="empty-state" id="emptyState" style="display:none">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
             <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
@@ -130,6 +139,135 @@
           </svg>
           <p>No history yet.</p>
           <span>Questions you send to Gemini will appear here.</span>
+        </div>
+      </section>
+
+      <!-- ══ TEMPLATES SECTION ══ -->
+      <section class="section" id="section-templates">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Templates</h1>
+            <p class="section-desc">Quick prompt snippets — trigger them with <kbd class="inline-kbd">/</kbd> or the grid button in the popup.</p>
+          </div>
+          <button class="btn-ghost" id="addTemplateBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Add template
+          </button>
+        </div>
+
+        <!-- Add / Edit form -->
+        <div class="card tmpl-form-card" id="tmplFormCard" style="display:none">
+          <div class="tmpl-form-label" id="tmplFormLabel">New template</div>
+          <textarea
+            id="tmplTextarea"
+            class="tmpl-textarea"
+            placeholder="e.g.  Summarise: "
+            rows="3"
+            maxlength="400"
+          ></textarea>
+          <div class="tmpl-char-row">
+            <span class="tmpl-char-count" id="tmplCharCount">0 / 400</span>
+          </div>
+          <div class="tmpl-form-actions">
+            <button class="btn-ghost" id="tmplCancelBtn">Cancel</button>
+            <button class="btn-primary" id="tmplSaveBtn" disabled>Save</button>
+          </div>
+        </div>
+
+        <!-- Template list -->
+        <div id="tmplCardList"></div>
+
+        <!-- Empty state -->
+        <div class="empty-state" id="tmplEmptyState" style="display:none">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
+            <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
+          </svg>
+          <p>No templates yet.</p>
+          <span>Click "Add template" to create your first snippet.</span>
+        </div>
+      </section>
+
+      <!-- ══ APPEARANCE SECTION ══ -->
+      <section class="section" id="section-appearance">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Appearance</h1>
+            <p class="section-desc">Theme and model preferences, synced across popup and this page.</p>
+          </div>
+        </div>
+
+        <!-- Theme -->
+        <div class="card">
+          <div class="pref-row">
+            <div class="pref-info">
+              <span class="pref-label">Theme</span>
+              <span class="pref-sub">Choose dark, light, or follow your system setting</span>
+            </div>
+            <div class="seg-control" id="themeControl">
+              <button class="seg-btn" data-value="auto">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <path d="M12 2v20M2 12h20" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+                </svg>
+                Auto
+              </button>
+              <button class="seg-btn" data-value="dark">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Dark
+              </button>
+              <button class="seg-btn" data-value="light">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+                  <line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Light
+              </button>
+            </div>
+          </div>
+          <div class="card-hint">
+            <strong>Auto</strong> follows your OS setting. Changes take effect in both the popup and this page immediately.
+          </div>
+        </div>
+
+        <!-- Model -->
+        <div class="card">
+          <div class="pref-row">
+            <div class="pref-info">
+              <span class="pref-label">Default Gemini model</span>
+              <span class="pref-sub">Which model to target when sending a prompt from the popup</span>
+            </div>
+            <div class="seg-control" id="modelControl">
+              <button class="seg-btn" data-value="flash">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Flash
+              </button>
+              <button class="seg-btn" data-value="pro">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Pro
+              </button>
+            </div>
+          </div>
+          <div class="card-hint">
+            <strong>Flash</strong> is Gemini's default fast model (recommended).
+            <strong>Pro</strong> selects the advanced/pro model in Gemini's UI — requires a Gemini Advanced subscription for full access.
+          </div>
         </div>
       </section>
 
@@ -141,7 +279,6 @@
             <p class="section-desc">Open the Ask Gemini popup from anywhere in your browser.</p>
           </div>
         </div>
-
         <div class="card">
           <div class="shortcut-row">
             <div class="shortcut-info">
@@ -158,28 +295,22 @@
             and find <strong>Ask Gemini</strong>.
           </div>
         </div>
-
         <div class="card">
           <div class="shortcut-row">
             <div class="shortcut-info">
               <span class="shortcut-label">Right-click on selected text</span>
               <span class="shortcut-sub">Auto-fills the popup with your selection</span>
             </div>
-            <div class="keys">
-              <kbd>Right-click</kbd>
-            </div>
+            <div class="keys"><kbd>Right-click</kbd></div>
           </div>
         </div>
-
         <div class="card">
           <div class="shortcut-row">
             <div class="shortcut-info">
               <span class="shortcut-label">Open Gemini directly</span>
               <span class="shortcut-sub">Right-click the extension icon in the toolbar</span>
             </div>
-            <div class="keys">
-              <kbd>Right-click icon</kbd>
-            </div>
+            <div class="keys"><kbd>Right-click icon</kbd></div>
           </div>
         </div>
       </section>
@@ -192,7 +323,6 @@
             <p class="section-desc">Ask Gemini — a lean, open-source Chrome extension.</p>
           </div>
         </div>
-
         <div class="card about-card">
           <div class="about-logo">
             <svg width="48" height="48" viewBox="0 0 36 36" fill="none">
@@ -214,38 +344,19 @@
           <div class="about-info">
             <div class="about-name">Ask Gemini</div>
             <div class="about-version" id="aboutVersion">Version 1.1.0</div>
-            <p class="about-desc">
-              Instantly send questions to Google Gemini from your toolbar.
-              No API key, no account needed — just type and go.
-            </p>
+            <p class="about-desc">Instantly send questions to Google Gemini from your toolbar. No API key, no account needed — just type and go.</p>
           </div>
         </div>
-
         <div class="card">
           <div class="about-feature-list">
-            <div class="feat-row">
-              <span class="feat-dot"></span>
-              <span><strong>Left-click</strong> the icon to open the popup</span>
-            </div>
-            <div class="feat-row">
-              <span class="feat-dot"></span>
-              <span><strong>Right-click</strong> the icon to open Gemini directly</span>
-            </div>
-            <div class="feat-row">
-              <span class="feat-dot"></span>
-              <span><strong>Select text</strong> on any page, then open the popup — it auto-fills</span>
-            </div>
-            <div class="feat-row">
-              <span class="feat-dot"></span>
-              <span><strong>Ctrl+Shift+G</strong> opens the popup from anywhere</span>
-            </div>
-            <div class="feat-row">
-              <span class="feat-dot"></span>
-              <span>Your last 20 prompts are saved in history (this page)</span>
-            </div>
+            <div class="feat-row"><span class="feat-dot"></span><span><strong>Left-click</strong> the icon to open the popup</span></div>
+            <div class="feat-row"><span class="feat-dot"></span><span><strong>Right-click</strong> the icon to open Gemini directly</span></div>
+            <div class="feat-row"><span class="feat-dot"></span><span><strong>Select text</strong> on any page, then open the popup — it auto-fills</span></div>
+            <div class="feat-row"><span class="feat-dot"></span><span><strong>Ctrl+Shift+G</strong> opens the popup from anywhere</span></div>
+            <div class="feat-row"><span class="feat-dot"></span><span>Type <strong>/</strong> in the popup to pick a template snippet</span></div>
+            <div class="feat-row"><span class="feat-dot"></span><span>Your last 20 prompts are saved in History</span></div>
           </div>
         </div>
-
         <a href="https://ko-fi.com/adhin/tip" target="_blank" class="kofi-card">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <path d="M18 8h1a4 4 0 010 8h-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -267,7 +378,7 @@
     </main>
   </div>
 
-  <!-- Confirm dialog -->
+  <!-- Confirm dialog (clear history) -->
   <div class="dialog-overlay" id="confirmOverlay">
     <div class="dialog">
       <h3 class="dialog-title">Clear history?</h3>
@@ -275,6 +386,18 @@
       <div class="dialog-actions">
         <button class="btn-ghost" id="confirmCancel">Cancel</button>
         <button class="btn-danger" id="confirmOk">Clear all</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm dialog (delete template) -->
+  <div class="dialog-overlay" id="tmplDeleteOverlay">
+    <div class="dialog">
+      <h3 class="dialog-title">Delete template?</h3>
+      <p class="dialog-body" id="tmplDeleteBody">This snippet will be permanently removed.</p>
+      <div class="dialog-actions">
+        <button class="btn-ghost" id="tmplDeleteCancel">Cancel</button>
+        <button class="btn-danger" id="tmplDeleteConfirm">Delete</button>
       </div>
     </div>
   </div>
