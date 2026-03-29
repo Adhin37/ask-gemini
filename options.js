@@ -100,7 +100,7 @@ document.getElementById('modelControl')?.addEventListener('click', async (e) => 
   if (val === currentModel) return;
   await chrome.storage.local.set({ askGeminiModel: val });
   applyModel(val);
-  const labels = { flash: 'Flash', pro: 'Pro', thinking: 'Think' };
+  const labels = { flash: 'Fast', pro: 'Pro', thinking: 'Think' };
   showToast(`Model set to ${labels[val] || val}`);
 });
 
@@ -196,7 +196,7 @@ function renderHistory(items, query = "") {
 }
 
 async function sendPrompt(text) {
-  await chrome.storage.local.set({ pendingMessage: text, pendingModel: currentModel });
+  await chrome.storage.local.set({ pendingMessage: text });
   const tabs = await chrome.tabs.query({ url: "https://gemini.google.com/*" });
   if (tabs.length > 0) {
     chrome.tabs.update(tabs[0].id, { url: GEMINI_URL, active: true });
