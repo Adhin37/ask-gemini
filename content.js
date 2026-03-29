@@ -117,17 +117,17 @@ function classifyModelText(text) {
  * Handles "Flash Thinking" ≠ "Flash" and "Fast" = "Flash" explicitly.
  */
 function matchesTarget(optionText, target) {
-  const t       = optionText.toLowerCase();
+  const t = optionText.toLowerCase();
   const hasThink = t.includes("think") || t.includes("reason");
+  const hasPro = t.includes("pro") || t.includes("advanced");
 
   switch (target) {
     case "flash":
-      // "Fast" ✓  "Flash" ✓  "Flash Thinking" ✗  "Thinking" ✗
-      return (t.includes("flash") || t.includes("fast") || t.includes("quick")) && !hasThink;
+      return (t.includes("flash") || t.includes("fast") || t.includes("quick")) && !hasThink && !hasPro;
     case "thinking":
       return hasThink;
     case "pro":
-      return (t.includes("pro") || t.includes("advanced")) && !hasThink;
+      return hasPro;
     default:
       return false;
   }
@@ -158,6 +158,12 @@ function matchesTarget(optionText, target) {
 async function detectCurrentModel() {
   const triggerBtn = findModelTrigger();
   if (!triggerBtn) return null;
+
+  // If the button already displays the target, don't bother opening the menu.
+  const initialText = classifyModelText(triggerBtn.textContent);
+  if (initialText) {
+    console.debug(`[Ask Gemini] Trigger already shows: "${initialText}"`);
+  }
 
   // ── Open the dropdown ──────────────────────────────────────────
   triggerBtn.click();
@@ -208,18 +214,18 @@ async function detectCurrentModel() {
  *      other options don't have that child, so child-count differs)
  */
 function isSelectedOption(el) {
-  if (el.getAttribute("aria-selected") === "true")  return true;
-  if (el.getAttribute("aria-checked")  === "true")  return true;
+  if (el.getAttribute("aria-selected") === "true") return true;
+  if (el.getAttribute("aria-checked") === "true") return true;
 
   const cls = (el.className || "").toLowerCase();
-  if (cls.includes("selected") || cls.includes("mat-selected") ||
-      cls.includes("active")   || cls.includes("mat-active"))    return true;
+  if (cls.includes("selected") || cls.includes("active") || cls.includes("focused")) return true;
 
-  // Look for a child that smells like a checkmark icon
-  // Gemini's checkmark child typically has a class containing "check",
-  // "tick", "done", or "mark", OR is an SVG with a very small viewBox
-  const children = el.querySelectorAll('[class*="check" i], [class*="tick" i], [class*="done" i], [class*="mark" i], [aria-label*="selected" i], [aria-label*="active" i]');
-  if (children.length > 0) return true;
+  // Gemini usually renders a 'check' or 'radio_button_checked' icon only for the active model.
+  const hasCheckIcon = el.querySelector('mat-icon, svg, .icon, [class*="icon"]') !== null;
+  
+  // In many Gemini versions, the UNSELECTED items have no SVG/Icon, 
+  // while the SELECTED item has one.
+  if (hasCheckIcon) return true;
 
   return false;
 }
