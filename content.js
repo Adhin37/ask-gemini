@@ -337,28 +337,67 @@ async function tryInject(message) {
 
     await sleep(600);
 
-    const sendBtn =
-      document.querySelector('button[aria-label*="Send"]')        ||
-      document.querySelector('button[aria-label*="send"]')        ||
-      document.querySelector('button[data-mat-icon-name="send"]') ||
-      document.querySelector('button.send-button')                ||
-      document.querySelector('[jsname="Jt9E5"] button')           ||
-      document.querySelector('button[jsaction*="send"]');
+    // ── Find send button scoped to the input's toolbar, not the whole page ──
+    // Walk up from the input until we find a container that also holds a
+    // send button. This prevents accidentally clicking sidebar buttons.
+    const sendBtn = findSendButton(input);
 
     if (sendBtn && !sendBtn.disabled) {
+      console.debug("[Ask Gemini] Clicking send button:", sendBtn.getAttribute("aria-label") || sendBtn.className);
       sendBtn.click();
     } else {
+      // Keyboard fallback: re-focus the exact input element, dispatch Enter
+      // WITHOUT bubbles so it cannot propagate to sidebar handlers.
+      console.debug("[Ask Gemini] Send button not found — using keyboard fallback");
+      input.focus();
+      await sleep(50);
       input.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: true, cancelable: true })
+        new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: false, cancelable: true })
       );
       await sleep(50);
       input.dispatchEvent(
-        new KeyboardEvent("keyup", { key: "Enter", keyCode: 13, bubbles: true })
+        new KeyboardEvent("keyup", { key: "Enter", keyCode: 13, bubbles: false })
       );
     }
   };
 
   attempt();
+}
+
+/**
+ * Finds the send button by walking UP from the input element and searching
+ * within each ancestor. Stops at the first ancestor that contains a match.
+ * This ensures we only ever click a button that shares a toolbar with the input,
+ * never a button in the sidebar or elsewhere on the page.
+ */
+function findSendButton(inputEl) {
+  // Selectors derived from Gemini's actual DOM:
+  //   aria-label="Send message", class="... send-button ... submit ..."
+  //   mat-icon data-mat-icon-name="send" inside the button
+  const SEND_SELECTORS = [
+    'button.send-button',                        // class is stable across builds
+    'button[aria-label="Send message"]',         // exact aria-label from the DOM
+    'button[aria-label*="Send message" i]',      // case-insensitive variant
+    'button.submit',                             // secondary class on the button
+    'button[data-mat-icon-name="send"]',         // mat-icon attribute
+  ];
+
+  // Walk up from the input element. The send button is a sibling of
+  // rich-textarea, so it will appear in querySelector results one level above.
+  let node = inputEl.parentElement;
+  while (node && node !== document.body) {
+    for (const sel of SEND_SELECTORS) {
+      const btn = node.querySelector(sel);
+      // aria-disabled="false" means enabled; .disabled checks the DOM property
+      if (btn && btn.getAttribute('aria-disabled') !== 'true' && !btn.disabled) {
+        console.debug("[Ask Gemini] findSendButton: found via", sel);
+        return btn;
+      }
+    }
+    node = node.parentElement;
+  }
+
+  return null;
 }
 
 
