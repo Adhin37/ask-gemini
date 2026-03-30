@@ -281,14 +281,34 @@ body.light .kofi-btn { background: rgba(0,0,0,0.03); }
 body.light .sel-clear:hover { background: rgba(0,0,0,0.05); }
 
 /* ── Template dropdown (button-triggered) ─────────────────────── */
+
+@keyframes tmplDropdownIn {
+  0%   { opacity: 0; transform: translateY(-8px) scaleY(0.92); }
+  60%  { opacity: 1; transform: translateY(2px)  scaleY(1.01); }
+  100% { opacity: 1; transform: translateY(0)    scaleY(1);    }
+}
+
+@keyframes tmplDropdownOut {
+  0%   { opacity: 1; transform: translateY(0)    scaleY(1);    }
+  100% { opacity: 0; transform: translateY(-6px) scaleY(0.94); }
+}
+
 .tmpl-dropdown {
   display: none; flex-direction: column;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); margin-bottom: 10px; overflow: hidden;
-  animation: fadeSlideIn 0.16s ease both;
   box-shadow: 0 8px 28px rgba(0,0,0,0.2);
+  transform-origin: top center;
 }
-.tmpl-dropdown.visible { display: flex; }
+.tmpl-dropdown.visible {
+  display: flex;
+  animation: tmplDropdownIn 0.48s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+.tmpl-dropdown.hiding {
+  display: flex;
+  pointer-events: none;
+  animation: tmplDropdownOut 0.18s ease-in forwards;
+}
 
 .tmpl-dropdown-header {
   display: flex; align-items: center; gap: 7px;
@@ -449,6 +469,43 @@ body.light .input-wrapper:focus-within { box-shadow: 0 0 0 3px rgba(100,80,200,0
   color: var(--accent); background: var(--accent-dim);
   border-color: rgba(124,106,247,0.3);
 }
+
+/* ── Template trigger button — flow in / flow out animation ───── */
+
+/* Each rect rotates around its own centre */
+.tmpl-rect {
+  transform-box:    fill-box;
+  transform-origin: center;
+}
+
+@keyframes tmplFlowIn {
+  0%   { opacity: 0; transform: scale(0.25) rotate(60deg); }
+  65%  { opacity: 1; transform: scale(1.18) rotate(-6deg); }
+  100% { opacity: 1; transform: scale(1)    rotate(0deg);  }
+}
+
+@keyframes tmplFlowOut {
+  0%   { opacity: 1; transform: scale(1)    rotate(0deg);   }
+  100% { opacity: 0; transform: scale(0.25) rotate(-60deg); }
+}
+
+/* Flow IN — top-left → bottom-right stagger */
+.tmpl-trigger-btn.tmpl-flow-in .tmpl-rect {
+  animation: tmplFlowIn 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.tmpl-trigger-btn.tmpl-flow-in .tmpl-rect-1 { animation-delay:   0ms; }
+.tmpl-trigger-btn.tmpl-flow-in .tmpl-rect-2 { animation-delay:  55ms; }
+.tmpl-trigger-btn.tmpl-flow-in .tmpl-rect-3 { animation-delay:  55ms; }
+.tmpl-trigger-btn.tmpl-flow-in .tmpl-rect-4 { animation-delay: 110ms; }
+
+/* Flow OUT — bottom-right → top-left stagger */
+.tmpl-trigger-btn.tmpl-flow-out .tmpl-rect {
+  animation: tmplFlowOut 0.22s ease-in both;
+}
+.tmpl-trigger-btn.tmpl-flow-out .tmpl-rect-4 { animation-delay:  0ms; }
+.tmpl-trigger-btn.tmpl-flow-out .tmpl-rect-2 { animation-delay: 35ms; }
+.tmpl-trigger-btn.tmpl-flow-out .tmpl-rect-3 { animation-delay: 35ms; }
+.tmpl-trigger-btn.tmpl-flow-out .tmpl-rect-1 { animation-delay: 70ms; }
 
 /* Send button */
 .send-btn {

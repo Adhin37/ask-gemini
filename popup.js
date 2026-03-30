@@ -121,9 +121,40 @@ function insertTemplate(tpl) {
   input.focus();
 }
 
-// Dropdown open/close
-function openDropdown() { tmplDropdown.classList.add('visible'); tmplTriggerBtn.classList.add('active'); }
-function closeDropdown() { tmplDropdown.classList.remove('visible'); tmplTriggerBtn.classList.remove('active'); }
+// Dropdown open/close — with flow-in / flow-out panel animation
+function animateTriggerBtn(direction) {
+  const addCls    = direction === 'in' ? 'tmpl-flow-in'  : 'tmpl-flow-out';
+  const removeCls = direction === 'in' ? 'tmpl-flow-out' : 'tmpl-flow-in';
+  tmplTriggerBtn.classList.remove(removeCls);
+  void tmplTriggerBtn.offsetWidth;
+  tmplTriggerBtn.classList.add(addCls);
+  const duration = direction === 'in' ? 500 : 300;
+  setTimeout(() => tmplTriggerBtn.classList.remove(addCls), duration);
+}
+
+function openDropdown() {
+  clearTimeout(_closeTimer);
+  tmplDropdown.style.display = '';      // clear any inline display:none
+  tmplDropdown.classList.remove('hiding');
+  tmplDropdown.classList.add('visible');
+  tmplTriggerBtn.classList.add('active');
+  animateTriggerBtn('in');
+}
+
+let _closeTimer = null;
+function closeDropdown() {
+  if (!tmplDropdown.classList.contains('visible')) return;
+  tmplDropdown.classList.remove('visible');
+  tmplDropdown.classList.add('hiding');
+  tmplTriggerBtn.classList.remove('active');
+  animateTriggerBtn('out');
+  clearTimeout(_closeTimer);
+  _closeTimer = setTimeout(() => {
+    tmplDropdown.classList.remove('hiding');
+    tmplDropdown.style.display = 'none';
+  }, 200);
+}
+
 function toggleDropdown() { tmplDropdown.classList.contains('visible') ? closeDropdown() : openDropdown(); }
 
 tmplTriggerBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(); });
