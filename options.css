@@ -701,8 +701,8 @@ body.light .about-name {
 .btn-ghost:hover { background: rgba(255,255,255,0.04); color: var(--text); }
 body.light .btn-ghost:hover { background: rgba(0,0,0,0.04); }
 
-.btn-ghost.btn-danger { color: var(--danger); border-color: rgba(224,80,80,0.25); }
-.btn-ghost.btn-danger:hover { background: var(--danger-dim); border-color: rgba(224,80,80,0.45); }
+.btn-ghost.btn-danger { color: var(--text); border-color: rgba(224,80,80,0.25); }
+.btn-ghost.btn-danger:hover { color: var(--danger); background: var(--danger-dim); border-color: rgba(224,80,80,0.45); }
 
 .btn-primary {
   display: flex; align-items: center; gap: 6px;

@@ -12,6 +12,7 @@ FILES=(
     "options.css"
     "options.html"
     "options.js"
+    "POLICIES.md"
     "popup.css"
     "popup.html"
     "popup.js"
