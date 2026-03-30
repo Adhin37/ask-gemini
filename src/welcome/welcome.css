@@ -1,0 +1,148 @@
+/* ── Variables (Matches Options/Popup) ───────────────────────── */
+:root {
+  --bg:           #0e1016;
+  --surface:      #161922;
+  --surface-2:    #1c2030;
+  --border:       rgba(255,255,255,0.07);
+  --accent:       #7c6af7;
+  --accent-glow:  rgba(124,106,247,0.4);
+  --text:         #e8eaf0;
+  --text-dim:     #6b7080;
+  --font-head:    'Syne', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+  --radius:       24px;
+}
+
+body.light {
+  --bg:           #f4f5f8;
+  --surface:      #ffffff;
+  --surface-2:    #f0f2f7;
+  --border:       rgba(0,0,0,0.06);
+  --text:         #1a1d23;
+  --text-dim:     #646a78;
+}
+
+/* ── Base ────────────────────────────────────────────────────── */
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; margin: 0; overflow: hidden;
+}
+
+/* ── Branding ────────────────────────────────────────────────── */
+.header-group { margin-bottom: 12px; }
+
+h1 { 
+  font-family: var(--font-head); font-size: 32px; 
+  font-weight: 800; margin: 0; 
+}
+
+.brand-text {
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 20px;
+  background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+  margin-top: -4px;
+}
+
+body.light .brand-text {
+  background: linear-gradient(135deg, var(--accent) 0%, #4a38cf 100%);
+  -webkit-background-clip: text;
+}
+
+/* ── The Card ────────────────────────────────────────────────── */
+.welcome-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 48px;
+  max-width: 480px; width: 90%;
+  text-align: center;
+  z-index: 10;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.3);
+}
+
+p { color: var(--text-dim); margin-bottom: 32px; line-height: 1.6; }
+
+/* ── Features ────────────────────────────────────────────────── */
+.feature-grid { text-align: left; margin-bottom: 32px; }
+.feature {
+  display: flex; gap: 16px; margin-bottom: 16px;
+  padding: 16px; background: var(--surface-2); 
+  border-radius: 16px; border: 1px solid var(--border);
+}
+
+.feature-icon { font-size: 20px; }
+.feature-content b { display: block; color: var(--text); font-size: 14px; margin-bottom: 2px; }
+.feature-content span { font-size: 13px; color: var(--text-dim); }
+
+kbd {
+  background: var(--bg); border: 1px solid var(--border);
+  padding: 2px 5px; border-radius: 4px; font-size: 11px;
+}
+
+/* ── Button Design ───────────────────────────────────────────── */
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 30px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px var(--accent-glow);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 25px var(--accent-glow);
+  filter: brightness(1.1);
+}
+
+.btn-primary svg { transition: transform 0.3s ease; }
+.btn-primary:hover svg { transform: translateX(4px); }
+
+/* ── Animations ──────────────────────────────────────────────── */
+.animate-in {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.feature, .btn-row {
+  opacity: 0;
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.anim-delay-1 { animation-delay: 0.2s; }
+.anim-delay-2 { animation-delay: 0.3s; }
+.anim-delay-3 { animation-delay: 0.4s; }
+.anim-delay-4 { animation-delay: 0.6s; }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Background Blobs ────────────────────────────────────────── */
+.blob {
+  position: fixed; width: 400px; height: 400px;
+  background: var(--accent); filter: blur(100px);
+  opacity: 0.12; z-index: 1; border-radius: 50%;
+  animation: float 10s infinite alternate ease-in-out;
+}
+.blob-1 { top: -100px; right: -100px; }
+.blob-2 { bottom: -100px; left: -100px; animation-delay: -5s; }
+
+@keyframes float {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(40px, 40px) scale(1.1); }
+}
