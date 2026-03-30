@@ -151,12 +151,22 @@ body.light .logo-name {
 .header-right { display: flex; align-items: center; gap: 8px; }
 
 /* ═══════════════════════════════════════════════════════════════
-   MODEL SWITCHER
-   — 3 buttons in a pill.
-   — Inactive: only .model-char visible (single letter, 22px wide).
-   — Active: .model-char + .model-tail visible, accent background.
-   — Smooth width transition so the pill "breathes" on switch.
+   MODEL SWITCHER — Tier-colored design
+   — Fast (cyan) < Think (indigo) < Pro (gold)
+   — Inactive: tier bars show hierarchy at a glance.
+   — Active: pill tinted to tier color, bars fully lit + glow.
    ═══════════════════════════════════════════════════════════════ */
+
+/* Per-model tier palette (used by bars + active state) */
+.model-opt[data-model="flash"]    { --tc: #22d3ee; --ta: rgba(34,211,238,0.14);  --tg: rgba(34,211,238,0.28);  --tb: rgba(34,211,238,0.5);  }
+.model-opt[data-model="thinking"] { --tc: #818cf8; --ta: rgba(129,140,248,0.14); --tg: rgba(129,140,248,0.28); --tb: rgba(129,140,248,0.5); }
+.model-opt[data-model="pro"]      { --tc: #f59e0b; --ta: rgba(245,158,11,0.14);  --tg: rgba(245,158,11,0.32);  --tb: rgba(245,158,11,0.55); }
+
+/* Light-mode tier palette */
+body.light .model-opt[data-model="flash"]    { --tc: #0891b2; --ta: rgba(8,145,178,0.12);   --tg: rgba(8,145,178,0.22);   --tb: rgba(8,145,178,0.55);  }
+body.light .model-opt[data-model="thinking"] { --tc: #6655e8; --ta: rgba(102,85,232,0.12);  --tg: rgba(102,85,232,0.22);  --tb: rgba(102,85,232,0.55); }
+body.light .model-opt[data-model="pro"]      { --tc: #d97706; --ta: rgba(217,119,6,0.12);   --tg: rgba(217,119,6,0.26);   --tb: rgba(217,119,6,0.6);   }
+
 .model-switcher {
   display: flex;
   align-items: center;
@@ -172,7 +182,7 @@ body.light .logo-name {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;          /* clips the expanding .model-tail */
+  overflow: hidden;
   border: none;
   border-radius: 5px;
   background: transparent;
@@ -184,15 +194,45 @@ body.light .logo-name {
   line-height: 1;
   letter-spacing: 0.3px;
   padding: 4px 5px;
-  /* Width animates via max-width on the tail; own padding is fixed */
-  transition: background 0.18s, color 0.18s, box-shadow 0.18s, padding 0.18s;
+  gap: 1px;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, padding 0.2s;
 }
 
 .model-opt:hover:not(.active) {
-  color: var(--text);
-  background: rgba(255,255,255,0.05);
+  color: var(--tc);
+  background: var(--ta);
 }
-body.light .model-opt:hover:not(.active) { background: rgba(0,0,0,0.04); }
+
+/* Inactive tier bars — dim, colour-tinted to show count */
+.model-opt[data-model="flash"]    .tier-bar.b1 { background: var(--tc); opacity: 0.55; }
+.model-opt[data-model="flash"]    .tier-bar.b2,
+.model-opt[data-model="flash"]    .tier-bar.b3 { background: var(--text-hint); opacity: 0.22; }
+
+.model-opt[data-model="thinking"] .tier-bar.b1,
+.model-opt[data-model="thinking"] .tier-bar.b2 { background: var(--tc); opacity: 0.55; }
+.model-opt[data-model="thinking"] .tier-bar.b3 { background: var(--text-hint); opacity: 0.22; }
+
+.model-opt[data-model="pro"]      .tier-bar    { background: var(--tc); opacity: 0.55; }
+
+/* Active bar animation — each bar lights up in sequence */
+@keyframes barLightUp {
+  from { opacity: 0; transform: scaleY(0.4); }
+  to   { opacity: 1; transform: scaleY(1); }
+}
+
+.model-opt.active .tier-bar.b1 { animation: barLightUp 0.18s ease 0ms   both; }
+.model-opt.active .tier-bar.b2 { animation: barLightUp 0.18s ease 0.05s both; }
+.model-opt.active .tier-bar.b3 { animation: barLightUp 0.18s ease 0.10s both; }
+
+/* Active bars — full brightness */
+.model-opt[data-model="flash"].active    .tier-bar.b1 { background: var(--tc); opacity: 1; }
+.model-opt[data-model="thinking"].active .tier-bar.b1,
+.model-opt[data-model="thinking"].active .tier-bar.b2 { background: var(--tc); opacity: 1; }
+.model-opt[data-model="pro"].active      .tier-bar    { background: var(--tc); opacity: 1; }
+/* Unlit bars stay dim even when active */
+.model-opt[data-model="flash"].active    .tier-bar.b2,
+.model-opt[data-model="flash"].active    .tier-bar.b3 { background: var(--text-hint); opacity: 0.22; animation: none; }
+.model-opt[data-model="thinking"].active .tier-bar.b3  { background: var(--text-hint); opacity: 0.22; animation: none; }
 
 /* The always-visible single letter */
 .model-char { flex-shrink: 0; }
@@ -204,22 +244,30 @@ body.light .model-opt:hover:not(.active) { background: rgba(0,0,0,0.04); }
   overflow: hidden;
   opacity: 0;
   white-space: nowrap;
-  /* transition: max-width first so letter count out smoothly, then opacity */
   transition: max-width 0.22s ease, opacity 0.14s ease 0.04s;
 }
 
-/* Active state: reveal tail, accent pill */
+/* ── Active state: tier-tinted pill ──────────────────────────── */
 .model-opt.active {
-  background: var(--accent);
-  color: #fff;
+  background: var(--ta);
+  color: var(--tc);
   padding: 4px 8px;
-  box-shadow: 0 2px 8px var(--accent-glow);
+  box-shadow: 0 2px 10px var(--tg), inset 0 0 0 1px var(--tb);
+}
+
+/* Pro gets a subtle shimmer to signal premium */
+@keyframes proShimmer {
+  0%   { box-shadow: 0 2px 10px var(--tg), inset 0 0 0 1px var(--tb); }
+  50%  { box-shadow: 0 2px 16px rgba(245,158,11,0.5), inset 0 0 0 1px rgba(245,158,11,0.7); }
+  100% { box-shadow: 0 2px 10px var(--tg), inset 0 0 0 1px var(--tb); }
+}
+.model-opt[data-model="pro"].active {
+  animation: proShimmer 2.4s ease-in-out infinite;
 }
 
 .model-opt.active .model-tail {
-  max-width: 36px; /* enough for "lash", "ro", "hink" */
+  max-width: 36px;
   opacity: 1;
-  /* reverse transition on entry — expand first, then fade in */
   transition: max-width 0.22s ease, opacity 0.12s ease 0.12s;
 }
 
