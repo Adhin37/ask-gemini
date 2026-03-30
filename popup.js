@@ -314,7 +314,7 @@ input.addEventListener('input', () => {
   }
 
   sendBtn.disabled = input.value.trim().length === 0 || len > MAX_CHARS;
-  chrome.storage.local.set({ askGeminiDraft: input.value });
+  chrome.storage.session.set({ askGeminiDraft: input.value });
 
   updateAC();
 });
@@ -387,7 +387,7 @@ async function tryAutoFillSelection() {
 selClear.addEventListener('click', () => {
   selBanner.classList.remove('visible');
   input.value = '';
-  chrome.storage.local.remove('askGeminiDraft');
+  chrome.storage.session.remove('askGeminiDraft');
   input.dispatchEvent(new Event('input'));
   input.focus();
 });
@@ -421,7 +421,7 @@ async function askGemini() {
   try {
     await chrome.storage.local.set({ pendingMessage: message, pendingModel: currentModel });
     await saveToHistory(message);
-    chrome.storage.local.remove('askGeminiDraft');
+    chrome.storage.session.remove('askGeminiDraft');
     input.value = '';
 
     const tabs = await chrome.tabs.query({ url: 'https://gemini.google.com/*' });
@@ -483,7 +483,7 @@ sendBtn.disabled = true;
   // 2. Only if no selection, restore the saved draft.
   const selectionApplied = await tryAutoFillSelection();
   if (!selectionApplied) {
-    const { askGeminiDraft: draft } = await chrome.storage.local.get('askGeminiDraft');
+    const { askGeminiDraft: draft } = await chrome.storage.session.get('askGeminiDraft');
     if (draft) {
       input.value = draft;
       input.dispatchEvent(new Event('input'));
