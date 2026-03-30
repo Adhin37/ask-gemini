@@ -5,53 +5,120 @@
   if (!data.pendingMessage) return;
 
   const message   = data.pendingMessage;
-  const modelPref = data.pendingModel || "flash"; // 'flash' | 'pro' | 'thinking'
+  const modelPref = data.pendingModel || "flash";
   await chrome.storage.local.remove(["pendingMessage", "pendingModel"]);
 
-  // ── 1. Wait for the page to be ready (trigger button present) ──
-  const ready = await waitForModelTrigger(10_000);
+  // ── 1. Wait for the model trigger button ───────────────────────
+  const ready = await waitForElement(() => findModelTrigger(), 10_000);
+
   if (!ready) {
-    // Page didn't render a model selector in time — inject anyway
     console.warn("[Ask Gemini] Model trigger not found after 10 s — skipping model check");
-    tryInject(message);
+    await injectMessage(message);
     return;
   }
 
   // ── 2. Guarantee the correct model is active ───────────────────
   const confirmed = await ensureModel(modelPref);
-
   if (!confirmed) {
     console.warn(
-      `[Ask Gemini] Could not confirm model "${modelPref}" after retries.` +
-      ` Proceeding with injection anyway.`
+      `[Ask Gemini] Could not confirm model "${modelPref}" after switch. Proceeding anyway.`
     );
   } else {
     console.info(`[Ask Gemini] ✓ Model confirmed: "${modelPref}"`);
   }
 
   // ── 3. Inject the message and submit ───────────────────────────
-  tryInject(message);
+  await injectMessage(message);
 })();
+
+
+// ══════════════════════════════════════════════════════════════════
+// CORE OBSERVER UTILITIES
+// ══════════════════════════════════════════════════════════════════
+
+/**
+ * Waits until `getter()` returns a truthy value, using a MutationObserver
+ * to avoid busy-polling. Falls back to a timeout.
+ *
+ * @param {() => Element|null} getter  — Called on every DOM mutation and once immediately.
+ * @param {number}             timeoutMs
+ * @param {Element}            [root=document.body]  — Subtree to observe.
+ * @returns {Promise<Element|null>}
+ */
+function waitForElement(getter, timeoutMs = 10_000, root = document.body) {
+  return new Promise((resolve) => {
+    // Check synchronously first — element may already be present.
+    const el = getter();
+    if (el) { resolve(el); return; }
+
+    let settled = false;
+
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      observer.disconnect();
+      resolve(value);
+    };
+
+    const timer = setTimeout(() => finish(null), timeoutMs);
+
+    const observer = new MutationObserver(() => {
+      const el = getter();
+      if (el) finish(el);
+    });
+
+    observer.observe(root, {
+      childList:       true,
+      subtree:         true,
+      attributes:      true,
+      attributeFilter: ["aria-disabled", "disabled", "contenteditable", "class", "tabindex"],
+    });
+  });
+}
+
+/**
+ * Waits until `predicate()` returns true, re-evaluated on every mutation
+ * inside `root`. Useful for watching attribute changes on a known element.
+ *
+ * @param {() => boolean} predicate
+ * @param {number}        timeoutMs
+ * @param {Element}       [root=document.body]
+ * @returns {Promise<boolean>}
+ */
+function waitForCondition(predicate, timeoutMs = 5_000, root = document.body) {
+  return new Promise((resolve) => {
+    if (predicate()) { resolve(true); return; }
+
+    let settled = false;
+
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      observer.disconnect();
+      resolve(value);
+    };
+
+    const timer = setTimeout(() => finish(false), timeoutMs);
+
+    const observer = new MutationObserver(() => {
+      if (predicate()) finish(true);
+    });
+
+    observer.observe(root, {
+      childList:       true,
+      subtree:         true,
+      attributes:      true,
+      attributeFilter: ["aria-disabled", "disabled", "class", "tabindex"],
+    });
+  });
+}
 
 
 // ══════════════════════════════════════════════════════════════════
 // WAIT FOR MODEL TRIGGER
 // ══════════════════════════════════════════════════════════════════
-
-/**
- * Polls until findModelTrigger() returns a button, or `timeoutMs` elapses.
- * Returns the button element, or null on timeout.
- */
-async function waitForModelTrigger(timeoutMs = 10_000) {
-  const POLL_MS  = 250;
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const btn = findModelTrigger();
-    if (btn) return btn;
-    await sleep(POLL_MS);
-  }
-  return null;
-}
 
 /**
  * Returns the model-picker trigger button using its stable data-test-id.
@@ -66,21 +133,22 @@ function findModelTrigger() {
 
 /**
  * Reads the active model directly from the button label without opening the
- * dropdown. The current model name ("Fast", "Pro", "Thinking...") is in the
- * first plain <span> inside .logo-pill-label-container.
- * Returns 'flash' | 'pro' | 'thinking' | null.
+ * dropdown. Returns 'flash' | 'pro' | 'thinking' | null.
  */
 function readModelFromButton() {
   const btn = findModelTrigger();
   if (!btn) return null;
+
   const container =
     btn.querySelector('[data-test-id="logo-pill-label-container"]') ||
     btn.querySelector('.logo-pill-label-container');
+
   const span = container
     ? Array.from(container.querySelectorAll('span')).find(
         s => s.textContent.trim() && !s.querySelector('mat-icon')
       )
     : null;
+
   const text = span ? span.textContent.trim() : btn.textContent.trim();
   console.debug('[Ask Gemini] readModelFromButton:', JSON.stringify(text));
   return classifyModelText(text);
@@ -91,17 +159,10 @@ function readModelFromButton() {
 // MODEL CLASSIFICATION
 // ══════════════════════════════════════════════════════════════════
 
-/**
- * Maps a raw text string to one of our three model keys.
- *
- * "thinking" is checked FIRST so "Flash Thinking" is never misread as flash.
- * "fast" / "quick" / "answers quickly" are the real labels Gemini currently
- * uses for its default model — Gemini shows "Fast" not "Flash".
- */
 function classifyModelText(text) {
   const t = text.toLowerCase();
   if (t.includes("think") || t.includes("reason"))               return "thinking";
-  if (t.includes("pro") || t.includes("advanced"))               return "pro";
+  if (t.includes("pro")   || t.includes("advanced"))             return "pro";
   if (t.includes("flash") || t.includes("fast") ||
       t.includes("quick") || t.includes("gemini") ||
       t.includes("default") || t.includes("2.") ||
@@ -109,14 +170,10 @@ function classifyModelText(text) {
   return null;
 }
 
-/**
- * Whether a dropdown option's text matches the desired target.
- * Handles "Flash Thinking" ≠ "Flash" and "Fast" = "Flash" explicitly.
- */
 function matchesTarget(optionText, target) {
-  const t = optionText.toLowerCase();
+  const t        = optionText.toLowerCase();
   const hasThink = t.includes("think") || t.includes("reason");
-  const hasPro = t.includes("pro") || t.includes("advanced");
+  const hasPro   = t.includes("pro")   || t.includes("advanced");
 
   switch (target) {
     case "flash":
@@ -132,122 +189,112 @@ function matchesTarget(optionText, target) {
 
 
 // ══════════════════════════════════════════════════════════════════
-// MODEL DETECTION — dropdown-first, trigger-text fallback
+// MODEL DETECTION — button-text primary, dropdown fallback
 // ══════════════════════════════════════════════════════════════════
 
-/**
- * Returns 'flash' | 'pro' | 'thinking' | null.
- *
- * Primary path: read the model label directly from the button text (no click,
- * no dropdown, no timing issues). The "Fast ▾" / "Pro ▾" / "Thinking ▾" span
- * inside the button is updated by Angular whenever the selection changes.
- *
- * Fallback: open the dropdown, find the checked option, close it.
- * Only used if the button-read returns null (layout not yet rendered).
- */
 async function detectCurrentModel() {
-  // ── Fast path: read label without touching the dropdown ────────
+  // Fast path — read without touching the dropdown.
   const quick = readModelFromButton();
   if (quick) {
     console.debug(`[Ask Gemini] detectCurrentModel (fast path) → "${quick}"`);
     return quick;
   }
 
-  // ── Slow path: open dropdown, inspect selected option ──────────
+  // Slow path — open dropdown, inspect selected option.
   const triggerBtn = findModelTrigger();
   if (!triggerBtn) return null;
 
   triggerBtn.click();
-  await sleep(550);
+
+  // Wait for at least one option to appear in the DOM.
+  const OPTION_SELECTORS = [
+    '[role="option"]', '[role="menuitem"]', '[role="listitem"]',
+    'li[data-value]',  '[class*="model-item" i]',
+  ];
+  const anyOption = () => OPTION_SELECTORS.some(s => document.querySelector(s));
+
+  await waitForCondition(anyOption, 2_000);
 
   let detected = null;
-  const optionRoots = [
-    '[role="option"]', '[role="menuitem"]', '[role="listitem"]',
-    'li[data-value]', '[class*="model-item" i]', '[class*="ModelOption"]',
-  ];
-
-  outer: for (const sel of optionRoots) {
+  for (const sel of OPTION_SELECTORS) {
     for (const opt of document.querySelectorAll(sel)) {
       if (isSelectedOption(opt)) {
         detected = classifyModelText(opt.textContent);
-        break outer;
+        break;
       }
     }
+    if (detected) break;
   }
 
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  await sleep(250);
+
+  // Wait for dropdown to collapse.
+  await waitForCondition(
+    () => !OPTION_SELECTORS.some(s => document.querySelector(s)),
+    1_000
+  );
 
   if (detected === null) detected = readModelFromButton();
-
   console.debug(`[Ask Gemini] detectCurrentModel (slow path) → "${detected}"`);
   return detected;
 }
 
-/**
- * Heuristics for identifying the "selected" option inside Gemini's dropdown.
- *
- * Gemini (Angular/Material) marks the active item with at least one of:
- *   • aria-selected="true"
- *   • aria-checked="true"
- *   • class containing "selected", "active", or "mat-selected"
- *   • A child SVG / element whose class suggests a checkmark/tick
- *     (Gemini renders a filled-circle ✓ as an SVG next to the active model;
- *      other options don't have that child, so child-count differs)
- */
 function isSelectedOption(el) {
   if (el.getAttribute("aria-selected") === "true") return true;
-  if (el.getAttribute("aria-checked") === "true") return true;
+  if (el.getAttribute("aria-checked")  === "true") return true;
 
   const cls = (el.className || "").toLowerCase();
   if (cls.includes("selected") || cls.includes("active") || cls.includes("focused")) return true;
 
-  // Gemini usually renders a 'check' or 'radio_button_checked' icon only for the active model.
-  const hasCheckIcon = el.querySelector('mat-icon, svg, .icon, [class*="icon"]') !== null;
-  
-  // In many Gemini versions, the UNSELECTED items have no SVG/Icon, 
-  // while the SELECTED item has one.
-  if (hasCheckIcon) return true;
+  // Gemini renders a check icon only on the active model option.
+  if (el.querySelector('mat-icon, svg, .icon, [class*="icon"]') !== null) return true;
 
   return false;
 }
 
 
 // ══════════════════════════════════════════════════════════════════
-// MODEL SWITCHING WITH VERIFY LOOP
+// MODEL SWITCHING WITH VERIFY
 // ══════════════════════════════════════════════════════════════════
 
 /**
- * Ensures the correct model is active before message injection.
- *
- * 1. Read the button label (instant, no DOM side-effects).
- *    → Already correct? Return immediately — nothing to do.
- * 2. If wrong (or unreadable), open the dropdown once and click the target.
- * 3. Verify by re-reading the button label after the UI settles.
+ * Ensures the correct model is active.
+ * 1. Read label (zero-cost).
+ * 2. If wrong, open dropdown, click target.
+ * 3. Wait for button label to update (MutationObserver), then verify.
  */
 async function ensureModel(target) {
-  // ── Step 1: zero-cost check via button label ───────────────────
   const current = readModelFromButton();
   console.debug(`[Ask Gemini] ensureModel: current="${current}" target="${target}"`);
 
   if (current === target) {
-    console.info(`[Ask Gemini] Model already correct — no switch needed.`);
+    console.info("[Ask Gemini] Model already correct — no switch needed.");
     return true;
   }
 
-  // ── Step 2: switch once ────────────────────────────────────────
   await performModelSwitch(target);
-  await sleep(900); // let Angular update the button label
 
-  // ── Step 3: verify ─────────────────────────────────────────────
+  // Wait for the button label text to change to the target model.
+  const btn = findModelTrigger();
+  const labelContainer = btn
+    ? btn.querySelector('[data-test-id="logo-pill-label-container"]') ||
+      btn.querySelector('.logo-pill-label-container') ||
+      btn
+    : document.body;
+
+  const switched = await waitForCondition(
+    () => readModelFromButton() === target,
+    3_000,
+    labelContainer
+  );
+
   const after = readModelFromButton();
-  console.debug(`[Ask Gemini] ensureModel after switch: "${after}"`);
+  console.debug(`[Ask Gemini] ensureModel after switch: "${after}" (observer resolved: ${switched})`);
   return after === target;
 }
 
 /**
  * Opens the model dropdown and clicks the option matching `target`.
- * Escapes gracefully if no matching option is found.
  */
 async function performModelSwitch(target) {
   const triggerBtn = findModelTrigger();
@@ -257,32 +304,31 @@ async function performModelSwitch(target) {
   }
 
   triggerBtn.click();
-  await sleep(500);
 
-  const optionSelectors = [
-    '[role="option"]',
-    '[role="menuitem"]',
-    '[role="listitem"]',
-    'li[data-value]',
-    '[class*="model-item" i]',
-    '[class*="ModelOption"]',
+  const OPTION_SELECTORS = [
+    '[role="option"]', '[role="menuitem"]', '[role="listitem"]',
+    'li[data-value]',  '[class*="model-item" i]',
   ];
 
-  for (const sel of optionSelectors) {
+  // Wait for options to appear in the DOM.
+  await waitForElement(
+    () => OPTION_SELECTORS.reduce((found, s) => found || document.querySelector(s), null),
+    2_000
+  );
+
+  for (const sel of OPTION_SELECTORS) {
     for (const opt of document.querySelectorAll(sel)) {
       if (matchesTarget(opt.textContent, target)) {
         console.debug(`[Ask Gemini] Clicking: "${opt.textContent.trim()}" for target="${target}"`);
         opt.click();
-        await sleep(400);
         return;
       }
     }
   }
 
-  // No match — close dropdown to leave page clean
+  // No match — close the dropdown cleanly.
   console.debug(`[Ask Gemini] No option matched "${target}" — closing dropdown`);
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  await sleep(200);
 }
 
 
@@ -290,89 +336,98 @@ async function performModelSwitch(target) {
 // MESSAGE INJECTION & SUBMIT
 // ══════════════════════════════════════════════════════════════════
 
-async function tryInject(message) {
-  const MAX_ATTEMPTS = 40;
-  let attempts = 0;
+/**
+ * Waits for the contenteditable input, injects `message`, then waits
+ * for the send button to become enabled before clicking it.
+ * All waits use MutationObserver — no fixed timeouts.
+ */
+async function injectMessage(message) {
+  // ── Find the textarea ─────────────────────────────────────────
+  const input = await waitForElement(
+    () =>
+      document.querySelector("rich-textarea div.ql-editor[contenteditable='true']") ||
+      document.querySelector("rich-textarea div[contenteditable='true']")           ||
+      document.querySelector("div.ql-editor[contenteditable='true']")               ||
+      document.querySelector("div[contenteditable='true'][aria-label]"),
+    10_000
+  );
 
-  const attempt = async () => {
-    attempts++;
+  if (!input) {
+    console.error("[Ask Gemini] Input field not found within timeout.");
+    return;
+  }
 
-    const input =
-      document.querySelector("rich-textarea div[contenteditable='true']") ||
-      document.querySelector("div[contenteditable='true'][data-testid]")  ||
-      document.querySelector(".ql-editor")                                 ||
-      document.querySelector("div[contenteditable='true']");
+  // ── Inject text ───────────────────────────────────────────────
+  input.focus();
+  input.innerHTML = "";
 
-    if (!input) {
-      if (attempts < MAX_ATTEMPTS) setTimeout(attempt, 300);
-      return;
-    }
+  const inserted = document.execCommand("insertText", false, message);
 
+  if (!inserted || input.innerText.trim() !== message.trim()) {
+    input.innerText = message;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  // ── Wait for send button to become active ─────────────────────
+  // From the DOM: aria-disabled flips from "true" → "false" once Gemini's
+  // Angular state detects the non-empty input.
+  const inputArea =
+    input.closest('[data-node-type="input-area"]') ||
+    input.closest(".input-area")                   ||
+    document.body;
+
+  const sendBtn = await waitForElement(
+    () => {
+      const btn = findSendButton(input);
+      return btn && btn.getAttribute("aria-disabled") !== "true" && !btn.disabled
+        ? btn
+        : null;
+    },
+    5_000,
+    inputArea
+  );
+
+  if (sendBtn) {
+    console.debug(
+      "[Ask Gemini] Clicking send button:",
+      sendBtn.getAttribute("aria-label") || sendBtn.className
+    );
+    sendBtn.click();
+  } else {
+    // Keyboard fallback — dispatch Enter without bubbles to avoid sidebar handlers.
+    console.debug("[Ask Gemini] Send button not ready — using keyboard fallback");
     input.focus();
-    input.innerHTML = "";
-
-    const inserted = document.execCommand("insertText", false, message);
-
-    if (!inserted || input.innerText.trim() !== message.trim()) {
-      input.innerText = message;
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-
-    await sleep(600);
-
-    // ── Find send button scoped to the input's toolbar, not the whole page ──
-    // Walk up from the input until we find a container that also holds a
-    // send button. This prevents accidentally clicking sidebar buttons.
-    const sendBtn = findSendButton(input);
-
-    if (sendBtn && !sendBtn.disabled) {
-      console.debug("[Ask Gemini] Clicking send button:", sendBtn.getAttribute("aria-label") || sendBtn.className);
-      sendBtn.click();
-    } else {
-      // Keyboard fallback: re-focus the exact input element, dispatch Enter
-      // WITHOUT bubbles so it cannot propagate to sidebar handlers.
-      console.debug("[Ask Gemini] Send button not found — using keyboard fallback");
-      input.focus();
-      await sleep(50);
-      input.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: false, cancelable: true })
-      );
-      await sleep(50);
-      input.dispatchEvent(
-        new KeyboardEvent("keyup", { key: "Enter", keyCode: 13, bubbles: false })
-      );
-    }
-  };
-
-  attempt();
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: false, cancelable: true })
+    );
+    input.dispatchEvent(
+      new KeyboardEvent("keyup",   { key: "Enter", keyCode: 13, bubbles: false })
+    );
+  }
 }
 
 /**
- * Finds the send button by walking UP from the input element and searching
- * within each ancestor. Stops at the first ancestor that contains a match.
- * This ensures we only ever click a button that shares a toolbar with the input,
- * never a button in the sidebar or elsewhere on the page.
+ * Walks UP from the input element to find a send button that shares the same
+ * toolbar/input-area ancestor. This prevents accidentally clicking sidebar buttons.
+ *
+ * Selectors derived from the actual Gemini DOM snapshot:
+ *   - button.send-button.submit[aria-label="Send message"]
+ *   - data-mat-icon-name="send" inside the button
  */
 function findSendButton(inputEl) {
-  // Selectors derived from Gemini's actual DOM:
-  //   aria-label="Send message", class="... send-button ... submit ..."
-  //   mat-icon data-mat-icon-name="send" inside the button
   const SEND_SELECTORS = [
-    'button.send-button',                        // class is stable across builds
-    'button[aria-label="Send message"]',         // exact aria-label from the DOM
-    'button[aria-label*="Send message" i]',      // case-insensitive variant
-    'button.submit',                             // secondary class on the button
-    'button[data-mat-icon-name="send"]',         // mat-icon attribute
+    'button.send-button[aria-label="Send message"]',
+    'button.send-button',
+    'button[aria-label="Send message"]',
+    'button[aria-label*="Send" i].submit',
+    'button.submit[aria-label*="Send" i]',
   ];
 
-  // Walk up from the input element. The send button is a sibling of
-  // rich-textarea, so it will appear in querySelector results one level above.
   let node = inputEl.parentElement;
   while (node && node !== document.body) {
     for (const sel of SEND_SELECTORS) {
       const btn = node.querySelector(sel);
-      // aria-disabled="false" means enabled; .disabled checks the DOM property
-      if (btn && btn.getAttribute('aria-disabled') !== 'true' && !btn.disabled) {
+      if (btn && btn.getAttribute("aria-disabled") !== "true" && !btn.disabled) {
         console.debug("[Ask Gemini] findSendButton: found via", sel);
         return btn;
       }
@@ -382,10 +437,3 @@ function findSendButton(inputEl) {
 
   return null;
 }
-
-
-// ══════════════════════════════════════════════════════════════════
-// UTILITIES
-// ══════════════════════════════════════════════════════════════════
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
