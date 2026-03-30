@@ -314,7 +314,7 @@ input.addEventListener('input', () => {
   }
 
   sendBtn.disabled = input.value.trim().length === 0 || len > MAX_CHARS;
-  sessionStorage.setItem('ask-gemini-draft', input.value);
+  chrome.storage.local.set({ askGeminiDraft: input.value });
 
   updateAC();
 });
@@ -370,23 +370,24 @@ async function tryAutoFillSelection() {
     });
 
     const selected = results?.[0]?.result;
+    // Selection always takes priority over the saved draft.
     if (selected && selected.length > 0 && selected.length <= MAX_CHARS) {
-      if (!sessionStorage.getItem('ask-gemini-draft')) {
-        input.value = selected;
-        input.dispatchEvent(new Event('input'));
-        input.select();
-        const preview = selected.length > 58 ? selected.slice(0, 58) + '…' : selected;
-        selText.textContent = `"${preview}"`;
-        selBanner.classList.add('visible');
-      }
+      input.value = selected;
+      input.dispatchEvent(new Event('input'));
+      input.select();
+      const preview = selected.length > 58 ? selected.slice(0, 58) + '…' : selected;
+      selText.textContent = `"${preview}"`;
+      selBanner.classList.add('visible');
+      return true; // signal: selection was applied
     }
+    return false;
   } catch (_) { /* tab not scriptable */ }
 }
 
 selClear.addEventListener('click', () => {
   selBanner.classList.remove('visible');
   input.value = '';
-  sessionStorage.removeItem('ask-gemini-draft');
+  chrome.storage.local.remove('askGeminiDraft');
   input.dispatchEvent(new Event('input'));
   input.focus();
 });
@@ -420,7 +421,8 @@ async function askGemini() {
   try {
     await chrome.storage.local.set({ pendingMessage: message, pendingModel: currentModel });
     await saveToHistory(message);
-    sessionStorage.removeItem('ask-gemini-draft');
+    chrome.storage.local.remove('askGeminiDraft');
+    input.value = '';
 
     const tabs = await chrome.tabs.query({ url: 'https://gemini.google.com/*' });
     if (tabs.length > 0) {
@@ -476,14 +478,18 @@ sendBtn.disabled = true;
   }
   renderDropdownList();
 
-  // Restore draft
-  const draft = sessionStorage.getItem('ask-gemini-draft');
-  if (draft) {
-    input.value = draft;
-    input.dispatchEvent(new Event('input'));
-    input.selectionStart = input.selectionEnd = draft.length;
+  // Priority: selection > draft.
+  // 1. Check for selected text first — if found, it fills the input and we stop.
+  // 2. Only if no selection, restore the saved draft.
+  const selectionApplied = await tryAutoFillSelection();
+  if (!selectionApplied) {
+    const { askGeminiDraft: draft } = await chrome.storage.local.get('askGeminiDraft');
+    if (draft) {
+      input.value = draft;
+      input.dispatchEvent(new Event('input'));
+      input.selectionStart = input.selectionEnd = draft.length;
+    }
   }
 
   input.focus();
-  tryAutoFillSelection();
 })();
