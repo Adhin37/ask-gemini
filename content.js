@@ -54,39 +54,36 @@ async function waitForModelTrigger(timeoutMs = 10_000) {
 }
 
 /**
- * Returns the button that opens Gemini's model-selection dropdown.
- * Must contain recognisable model vocabulary (avoids false positives).
+ * Returns the model-picker trigger button using its stable data-test-id.
  */
 function findModelTrigger() {
-  const selectors = [
-    'button[aria-label*="model" i]',
-    'button[data-test-id*="model" i]',
-    '[class*="model-selector" i] button',
-    '[class*="ModelSelector"] button',
-    'mat-select[aria-label*="model" i]',
-    'button[jsaction*="model" i]',
-    '[data-model-id] button',
-    'button[aria-haspopup="listbox"]',
-    'button[aria-haspopup="menu"]',
-  ];
+  return (
+    document.querySelector('button[data-test-id="bard-mode-menu-button"]') ||
+    document.querySelector('button[aria-label="Open mode picker"]')         ||
+    null
+  );
+}
 
-  // Vocabulary that must appear in the button's text for it to qualify
-  const MODEL_VOCAB = ["flash", "fast", "pro", "think", "reason", "advanced", "gemini", "quick"];
-
-  for (const sel of selectors) {
-    for (const el of document.querySelectorAll(sel)) {
-      const text = el.textContent.toLowerCase();
-      if (MODEL_VOCAB.some(w => text.includes(w))) return el;
-    }
-  }
-
-  // Last-resort: any button whose aria-label or title smells like a model picker
-  for (const el of document.querySelectorAll("button")) {
-    const label = (el.getAttribute("aria-label") || el.getAttribute("title") || "").toLowerCase();
-    if (MODEL_VOCAB.some(w => label.includes(w))) return el;
-  }
-
-  return null;
+/**
+ * Reads the active model directly from the button label without opening the
+ * dropdown. The current model name ("Fast", "Pro", "Thinking...") is in the
+ * first plain <span> inside .logo-pill-label-container.
+ * Returns 'flash' | 'pro' | 'thinking' | null.
+ */
+function readModelFromButton() {
+  const btn = findModelTrigger();
+  if (!btn) return null;
+  const container =
+    btn.querySelector('[data-test-id="logo-pill-label-container"]') ||
+    btn.querySelector('.logo-pill-label-container');
+  const span = container
+    ? Array.from(container.querySelectorAll('span')).find(
+        s => s.textContent.trim() && !s.querySelector('mat-icon')
+      )
+    : null;
+  const text = span ? span.textContent.trim() : btn.textContent.trim();
+  console.debug('[Ask Gemini] readModelFromButton:', JSON.stringify(text));
+  return classifyModelText(text);
 }
 
 
@@ -141,43 +138,32 @@ function matchesTarget(optionText, target) {
 /**
  * Returns 'flash' | 'pro' | 'thinking' | null.
  *
- * Strategy:
- *  1. Open the model dropdown.
- *  2. Scan all options for a "selected" marker:
- *       a. aria-selected="true"
- *       b. aria-checked="true"
- *       c. A Material Design selection class (mat-selected, mat-active, …)
- *       d. A child element that looks like a checkmark / tick icon
- *         (Gemini renders a filled-circle check SVG next to the active model)
- *  3. Classify the winning option's text.
- *  4. Close the dropdown.
- *  5. Fall back to reading the trigger button's text directly if step 2
- *     found nothing (trigger may surface the model name as text on some
- *     Gemini versions).
+ * Primary path: read the model label directly from the button text (no click,
+ * no dropdown, no timing issues). The "Fast ▾" / "Pro ▾" / "Thinking ▾" span
+ * inside the button is updated by Angular whenever the selection changes.
+ *
+ * Fallback: open the dropdown, find the checked option, close it.
+ * Only used if the button-read returns null (layout not yet rendered).
  */
 async function detectCurrentModel() {
+  // ── Fast path: read label without touching the dropdown ────────
+  const quick = readModelFromButton();
+  if (quick) {
+    console.debug(`[Ask Gemini] detectCurrentModel (fast path) → "${quick}"`);
+    return quick;
+  }
+
+  // ── Slow path: open dropdown, inspect selected option ──────────
   const triggerBtn = findModelTrigger();
   if (!triggerBtn) return null;
 
-  // If the button already displays the target, don't bother opening the menu.
-  const initialText = classifyModelText(triggerBtn.textContent);
-  if (initialText) {
-    console.debug(`[Ask Gemini] Trigger already shows: "${initialText}"`);
-  }
-
-  // ── Open the dropdown ──────────────────────────────────────────
   triggerBtn.click();
   await sleep(550);
 
   let detected = null;
-
   const optionRoots = [
-    '[role="option"]',
-    '[role="menuitem"]',
-    '[role="listitem"]',
-    'li[data-value]',
-    '[class*="model-item" i]',
-    '[class*="ModelOption"]',
+    '[role="option"]', '[role="menuitem"]', '[role="listitem"]',
+    'li[data-value]', '[class*="model-item" i]', '[class*="ModelOption"]',
   ];
 
   outer: for (const sel of optionRoots) {
@@ -189,16 +175,12 @@ async function detectCurrentModel() {
     }
   }
 
-  // ── Close the dropdown ─────────────────────────────────────────
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   await sleep(250);
 
-  // ── Fallback: read trigger button text ─────────────────────────
-  if (detected === null) {
-    detected = classifyModelText(triggerBtn.textContent);
-  }
+  if (detected === null) detected = readModelFromButton();
 
-  console.debug(`[Ask Gemini] detectCurrentModel → "${detected}"`);
+  console.debug(`[Ask Gemini] detectCurrentModel (slow path) → "${detected}"`);
   return detected;
 }
 
@@ -236,30 +218,31 @@ function isSelectedOption(el) {
 // ══════════════════════════════════════════════════════════════════
 
 /**
- * Detect → compare → switch → verify, up to MAX_ATTEMPTS rounds.
- * Returns true if the correct model is confirmed at any point.
+ * Ensures the correct model is active before message injection.
+ *
+ * 1. Read the button label (instant, no DOM side-effects).
+ *    → Already correct? Return immediately — nothing to do.
+ * 2. If wrong (or unreadable), open the dropdown once and click the target.
+ * 3. Verify by re-reading the button label after the UI settles.
  */
 async function ensureModel(target) {
-  const MAX_ATTEMPTS = 3;
-  const SETTLE_MS    = 800;
+  // ── Step 1: zero-cost check via button label ───────────────────
+  const current = readModelFromButton();
+  console.debug(`[Ask Gemini] ensureModel: current="${current}" target="${target}"`);
 
-  for (let i = 1; i <= MAX_ATTEMPTS; i++) {
-    const current = await detectCurrentModel();
-
-    console.debug(`[Ask Gemini] ensureModel (${i}/${MAX_ATTEMPTS}): current="${current}" target="${target}"`);
-
-    if (current === target) return true;
-
-    // Couldn't detect on last attempt — give up
-    if (current === null && i === MAX_ATTEMPTS) return false;
-
-    await performModelSwitch(target);
-    await sleep(SETTLE_MS);
+  if (current === target) {
+    console.info(`[Ask Gemini] Model already correct — no switch needed.`);
+    return true;
   }
 
-  // One last check after the final switch
-  const final = await detectCurrentModel();
-  return final === target;
+  // ── Step 2: switch once ────────────────────────────────────────
+  await performModelSwitch(target);
+  await sleep(900); // let Angular update the button label
+
+  // ── Step 3: verify ─────────────────────────────────────────────
+  const after = readModelFromButton();
+  console.debug(`[Ask Gemini] ensureModel after switch: "${after}"`);
+  return after === target;
 }
 
 /**
