@@ -15,7 +15,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Ask Gemini (Ctrl+Shift+G)",
+    "default_title": "Ask Gemini (Ctrl+Shift+L)",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -23,10 +23,10 @@
     }
   },
   "commands": {
-    "_execute_action": {
+    "open_popup": {
       "suggested_key": {
-        "default": "Ctrl+Shift+G",
-        "mac": "MacCtrl+Shift+G"
+        "default": "Ctrl+Shift+L",
+        "mac": "Command+Shift+L"
       },
       "description": "Open Ask Gemini popup"
     }

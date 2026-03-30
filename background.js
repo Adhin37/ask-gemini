@@ -74,3 +74,10 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     chrome.tabs.create({ url: GEMINI_URL });
   }
 });
+
+chrome.commands.onCommand.addListener((command) => {
+  if (command === "open_popup") {
+    // This opens the popup programmatically if the user is on a tab
+    chrome.action.openPopup(); 
+  }
+});
