@@ -16,8 +16,7 @@ const DEFAULT_TEMPLATES = [
 // ── DOM refs ───────────────────────────────────────────────────────
 const input          = document.getElementById("questionInput");
 const sendBtn        = document.getElementById("sendBtn");
-const openBtn        = document.getElementById("openBtn");
-const settingsBtn    = document.getElementById("settingsBtn");
+const logoBtn        = document.getElementById("logoBtn");
 const hint           = document.getElementById("hint");
 const selBanner      = document.getElementById("selectionBanner");
 const selText        = document.getElementById("selectionText");
@@ -477,8 +476,7 @@ async function askGemini() {
 // 9. FOOTER BUTTONS
 // ══════════════════════════════════════════════════════════════════
 
-openBtn.addEventListener('click', () => { chrome.tabs.create({ url: GEMINI_URL }); window.close(); });
-settingsBtn.addEventListener('click', () => { chrome.runtime.openOptionsPage(); window.close(); });
+logoBtn.addEventListener('click', () => { chrome.tabs.create({ url: GEMINI_URL }); window.close(); });
 
 // ══════════════════════════════════════════════════════════════════
 // 10. HELPERS
