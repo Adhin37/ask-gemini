@@ -203,37 +203,6 @@ body.light .model-opt[data-model="pro"]      { --tc: #d97706; --ta: rgba(217,119
   background: var(--ta);
 }
 
-/* Inactive tier bars — dim, colour-tinted to show count */
-.model-opt[data-model="flash"]    .tier-bar.b1 { background: var(--tc); opacity: 0.55; }
-.model-opt[data-model="flash"]    .tier-bar.b2,
-.model-opt[data-model="flash"]    .tier-bar.b3 { background: var(--text-hint); opacity: 0.22; }
-
-.model-opt[data-model="thinking"] .tier-bar.b1,
-.model-opt[data-model="thinking"] .tier-bar.b2 { background: var(--tc); opacity: 0.55; }
-.model-opt[data-model="thinking"] .tier-bar.b3 { background: var(--text-hint); opacity: 0.22; }
-
-.model-opt[data-model="pro"]      .tier-bar    { background: var(--tc); opacity: 0.55; }
-
-/* Active bar animation — each bar lights up in sequence */
-@keyframes barLightUp {
-  from { opacity: 0; transform: scaleY(0.4); }
-  to   { opacity: 1; transform: scaleY(1); }
-}
-
-.model-opt.active .tier-bar.b1 { animation: barLightUp 0.18s ease 0ms   both; }
-.model-opt.active .tier-bar.b2 { animation: barLightUp 0.18s ease 0.05s both; }
-.model-opt.active .tier-bar.b3 { animation: barLightUp 0.18s ease 0.10s both; }
-
-/* Active bars — full brightness */
-.model-opt[data-model="flash"].active    .tier-bar.b1 { background: var(--tc); opacity: 1; }
-.model-opt[data-model="thinking"].active .tier-bar.b1,
-.model-opt[data-model="thinking"].active .tier-bar.b2 { background: var(--tc); opacity: 1; }
-.model-opt[data-model="pro"].active      .tier-bar    { background: var(--tc); opacity: 1; }
-/* Unlit bars stay dim even when active */
-.model-opt[data-model="flash"].active    .tier-bar.b2,
-.model-opt[data-model="flash"].active    .tier-bar.b3 { background: var(--text-hint); opacity: 0.22; animation: none; }
-.model-opt[data-model="thinking"].active .tier-bar.b3  { background: var(--text-hint); opacity: 0.22; animation: none; }
-
 /* The always-visible single letter */
 .model-char { flex-shrink: 0; }
 
@@ -559,25 +528,8 @@ body.light .input-wrapper:focus-within { box-shadow: 0 0 0 3px rgba(100,80,200,0
   100% { opacity: 0; transform: scale(0.25) rotate(-60deg); }
 }
 
-/* Flow IN — top-left → bottom-right stagger */
-.tmpl-trigger-btn.tmpl-flow-in .tmpl-rect {
-  animation: tmplFlowIn 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-.tmpl-trigger-btn.tmpl-flow-in .tmpl-rect-1 { animation-delay:   0ms; }
-.tmpl-trigger-btn.tmpl-flow-in .tmpl-rect-2 { animation-delay:  55ms; }
-.tmpl-trigger-btn.tmpl-flow-in .tmpl-rect-3 { animation-delay:  55ms; }
-.tmpl-trigger-btn.tmpl-flow-in .tmpl-rect-4 { animation-delay: 110ms; }
-
-/* Flow OUT — bottom-right → top-left stagger */
-.tmpl-trigger-btn.tmpl-flow-out .tmpl-rect {
-  animation: tmplFlowOut 0.22s ease-in both;
-}
-.tmpl-trigger-btn.tmpl-flow-out .tmpl-rect-4 { animation-delay:  0ms; }
-.tmpl-trigger-btn.tmpl-flow-out .tmpl-rect-2 { animation-delay: 35ms; }
-.tmpl-trigger-btn.tmpl-flow-out .tmpl-rect-3 { animation-delay: 35ms; }
-.tmpl-trigger-btn.tmpl-flow-out .tmpl-rect-1 { animation-delay: 70ms; }
-
 /* Send button */
+@keyframes pulse { from { opacity: 0.7; } to { opacity: 1; } }
 .send-btn {
   display: flex; align-items: center; gap: 6px;
   padding: 7px 14px 7px 12px;
@@ -591,7 +543,6 @@ body.light .input-wrapper:focus-within { box-shadow: 0 0 0 3px rgba(100,80,200,0
 .send-btn:active { transform: translateY(0); box-shadow: 0 2px 8px rgba(124,106,247,0.3); }
 .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 .send-btn.sending { animation: pulse 0.6s ease infinite alternate; }
-@keyframes pulse { from { opacity: 0.7; } to { opacity: 1; } }
 
 @keyframes plane-fly-away {
   0% {
