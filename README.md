@@ -7,7 +7,7 @@
 
 Instantly send questions to Google Gemini right from your browser toolbar.
 
-![Promo banner](src/img/ask-gemini-marquee-1400x560.png)
+![Promo banner](src/assets/ask-gemini-marquee-1400x560.png)
 
 ---
 

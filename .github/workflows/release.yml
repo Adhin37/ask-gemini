@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Install dependencies (Alpine)
         run: |
-          apk add --no-cache git zip jq bash
+          apk add --no-cache git zip jq bash sed
 
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -39,12 +39,18 @@ jobs:
           NEW_VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
           jq ".version = \"$NEW_VERSION\"" manifest.json > manifest.tmp && mv manifest.tmp manifest.json
 
+      - name: Update README.md Version Badge
+        run: |
+          NEW_VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
+          # This replaces the version number inside the Shields.io badge URL
+          sed -i "s/version-[0-9]\+\.[0-9]\+\.[0-9]\+-informational/version-$NEW_VERSION-informational/g" README.md
+
       - name: Commit and Push Version Bump
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add manifest.json
+          git add manifest.json README.md
           git commit -m "chore: bump version to ${{ github.ref_name }} [skip ci]"
           git push origin HEAD:main
 

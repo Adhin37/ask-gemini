@@ -158,7 +158,6 @@ function registerMenus() {
   });
 }
 
-chrome.runtime.onInstalled.addListener(registerMenus);
 chrome.runtime.onStartup.addListener(registerMenus);
 
 // Flag used to prevent the storage watcher from double-firing for
@@ -193,4 +192,13 @@ chrome.commands.onCommand.addListener((command) => {
   if (command === "open_popup") {
     chrome.action.openPopup(); 
   }
+});
+
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === "install") {
+    chrome.tabs.create({
+      url: chrome.runtime.getURL("src/welcome/welcome.html")
+    });
+  }
+  if (typeof registerMenus === 'function') registerMenus();
 });
