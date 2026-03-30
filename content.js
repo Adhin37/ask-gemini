@@ -40,14 +40,13 @@
  * Waits until `getter()` returns a truthy value, using a MutationObserver
  * to avoid busy-polling. Falls back to a timeout.
  *
- * @param {() => Element|null} getter  — Called on every DOM mutation and once immediately.
+ * @param {() => Element|null} getter
  * @param {number}             timeoutMs
- * @param {Element}            [root=document.body]  — Subtree to observe.
+ * @param {Element}            [root=document.body]
  * @returns {Promise<Element|null>}
  */
 function waitForElement(getter, timeoutMs = 10_000, root = document.body) {
   return new Promise((resolve) => {
-    // Check synchronously first — element may already be present.
     const el = getter();
     if (el) { resolve(el); return; }
 
@@ -78,8 +77,7 @@ function waitForElement(getter, timeoutMs = 10_000, root = document.body) {
 }
 
 /**
- * Waits until `predicate()` returns true, re-evaluated on every mutation
- * inside `root`. Useful for watching attribute changes on a known element.
+ * Waits until `predicate()` returns true, re-evaluated on every mutation.
  *
  * @param {() => boolean} predicate
  * @param {number}        timeoutMs
@@ -117,12 +115,9 @@ function waitForCondition(predicate, timeoutMs = 5_000, root = document.body) {
 
 
 // ══════════════════════════════════════════════════════════════════
-// WAIT FOR MODEL TRIGGER
+// MODEL TRIGGER
 // ══════════════════════════════════════════════════════════════════
 
-/**
- * Returns the model-picker trigger button using its stable data-test-id.
- */
 function findModelTrigger() {
   return (
     document.querySelector('button[data-test-id="bard-mode-menu-button"]') ||
@@ -131,10 +126,6 @@ function findModelTrigger() {
   );
 }
 
-/**
- * Reads the active model directly from the button label without opening the
- * dropdown. Returns 'flash' | 'pro' | 'thinking' | null.
- */
 function readModelFromButton() {
   const btn = findModelTrigger();
   if (!btn) return null;
@@ -189,24 +180,21 @@ function matchesTarget(optionText, target) {
 
 
 // ══════════════════════════════════════════════════════════════════
-// MODEL DETECTION — button-text primary, dropdown fallback
+// MODEL DETECTION
 // ══════════════════════════════════════════════════════════════════
 
 async function detectCurrentModel() {
-  // Fast path — read without touching the dropdown.
   const quick = readModelFromButton();
   if (quick) {
     console.debug(`[Ask Gemini] detectCurrentModel (fast path) → "${quick}"`);
     return quick;
   }
 
-  // Slow path — open dropdown, inspect selected option.
   const triggerBtn = findModelTrigger();
   if (!triggerBtn) return null;
 
   triggerBtn.click();
 
-  // Wait for at least one option to appear in the DOM.
   const OPTION_SELECTORS = [
     '[role="option"]', '[role="menuitem"]', '[role="listitem"]',
     'li[data-value]',  '[class*="model-item" i]',
@@ -228,7 +216,6 @@ async function detectCurrentModel() {
 
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 
-  // Wait for dropdown to collapse.
   await waitForCondition(
     () => !OPTION_SELECTORS.some(s => document.querySelector(s)),
     1_000
@@ -246,7 +233,6 @@ function isSelectedOption(el) {
   const cls = (el.className || "").toLowerCase();
   if (cls.includes("selected") || cls.includes("active") || cls.includes("focused")) return true;
 
-  // Gemini renders a check icon only on the active model option.
   if (el.querySelector('mat-icon, svg, .icon, [class*="icon"]') !== null) return true;
 
   return false;
@@ -257,12 +243,6 @@ function isSelectedOption(el) {
 // MODEL SWITCHING WITH VERIFY
 // ══════════════════════════════════════════════════════════════════
 
-/**
- * Ensures the correct model is active.
- * 1. Read label (zero-cost).
- * 2. If wrong, open dropdown, click target.
- * 3. Wait for button label to update (MutationObserver), then verify.
- */
 async function ensureModel(target) {
   const current = readModelFromButton();
   console.debug(`[Ask Gemini] ensureModel: current="${current}" target="${target}"`);
@@ -274,7 +254,6 @@ async function ensureModel(target) {
 
   await performModelSwitch(target);
 
-  // Wait for the button label text to change to the target model.
   const btn = findModelTrigger();
   const labelContainer = btn
     ? btn.querySelector('[data-test-id="logo-pill-label-container"]') ||
@@ -293,9 +272,6 @@ async function ensureModel(target) {
   return after === target;
 }
 
-/**
- * Opens the model dropdown and clicks the option matching `target`.
- */
 async function performModelSwitch(target) {
   const triggerBtn = findModelTrigger();
   if (!triggerBtn) {
@@ -310,7 +286,6 @@ async function performModelSwitch(target) {
     'li[data-value]',  '[class*="model-item" i]',
   ];
 
-  // Wait for options to appear in the DOM.
   await waitForElement(
     () => OPTION_SELECTORS.reduce((found, s) => found || document.querySelector(s), null),
     2_000
@@ -326,7 +301,6 @@ async function performModelSwitch(target) {
     }
   }
 
-  // No match — close the dropdown cleanly.
   console.debug(`[Ask Gemini] No option matched "${target}" — closing dropdown`);
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 }
@@ -337,10 +311,20 @@ async function performModelSwitch(target) {
 // ══════════════════════════════════════════════════════════════════
 
 /**
- * Waits for the contenteditable input, injects `message`, then waits
- * for the send button to become enabled before clicking it.
- * All waits use MutationObserver — no fixed timeouts.
+ * Sends the injection outcome back to the service worker so it can
+ * update the toolbar badge. Uses sendMessage — the SW is guaranteed
+ * awake at this point because it just wrote pendingMessage to storage
+ * and opened this tab, so no keepalive is needed.
  */
+function reportResult(success) {
+  try {
+    chrome.runtime.sendMessage({ type: "injectionResult", success });
+  } catch (err) {
+    // Extension was reloaded mid-injection — not actionable.
+    console.warn("[Ask Gemini] reportResult: could not send —", err.message);
+  }
+}
+
 async function injectMessage(message) {
   // ── Find the textarea ─────────────────────────────────────────
   const input = await waitForElement(
@@ -354,6 +338,7 @@ async function injectMessage(message) {
 
   if (!input) {
     console.error("[Ask Gemini] Input field not found within timeout.");
+    reportResult(false);
     return;
   }
 
@@ -369,8 +354,6 @@ async function injectMessage(message) {
   }
 
   // ── Wait for send button to become active ─────────────────────
-  // From the DOM: aria-disabled flips from "true" → "false" once Gemini's
-  // Angular state detects the non-empty input.
   const inputArea =
     input.closest('[data-node-type="input-area"]') ||
     input.closest(".input-area")                   ||
@@ -393,6 +376,7 @@ async function injectMessage(message) {
       sendBtn.getAttribute("aria-label") || sendBtn.className
     );
     sendBtn.click();
+    reportResult(true);
   } else {
     // Keyboard fallback — dispatch Enter without bubbles to avoid sidebar handlers.
     console.debug("[Ask Gemini] Send button not ready — using keyboard fallback");
@@ -401,19 +385,13 @@ async function injectMessage(message) {
       new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: false, cancelable: true })
     );
     input.dispatchEvent(
-      new KeyboardEvent("keyup",   { key: "Enter", keyCode: 13, bubbles: false })
+      new KeyboardEvent("keyup", { key: "Enter", keyCode: 13, bubbles: false })
     );
+    // Keyboard fallback is still a best-effort submit — report success.
+    reportResult(true);
   }
 }
 
-/**
- * Walks UP from the input element to find a send button that shares the same
- * toolbar/input-area ancestor. This prevents accidentally clicking sidebar buttons.
- *
- * Selectors derived from the actual Gemini DOM snapshot:
- *   - button.send-button.submit[aria-label="Send message"]
- *   - data-mat-icon-name="send" inside the button
- */
 function findSendButton(inputEl) {
   const SEND_SELECTORS = [
     'button.send-button[aria-label="Send message"]',
