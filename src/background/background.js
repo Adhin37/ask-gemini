@@ -209,13 +209,13 @@ chrome.commands.onCommand.addListener(async (command) => {
         left = Math.round((focusedWin.left ?? 0) + (focusedWin.width  ?? 0) / 2 - 200);
         top  = Math.round((focusedWin.top  ?? 0) + (focusedWin.height ?? 0) / 2 - 280);
       }
-    } catch (_) { /* positioning failed — use defaults */ }
+    } catch (_errWin) { console.warn(_errWin); }
 
     chrome.windows.create({
       url: popupUrl,
       type: "popup",
-      width: 376,   // 360px layout + roughly 16px for OS borders
-      height: 270,  // Initial estimation; the script below will refine this
+      width: 376,
+      height: 270,
       left: left ?? 100,
       top: top ?? 100,
       focused: true,
