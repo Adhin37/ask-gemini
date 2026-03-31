@@ -188,9 +188,38 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
   }
 });
 
-chrome.commands.onCommand.addListener((command) => {
-  if (command === "open_popup") {
-    chrome.action.openPopup(); 
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== "open_popup") return;
+
+  try {
+    // Works normally when the browser toolbar is visible.
+    await chrome.action.openPopup();
+  } catch (_err) {
+    // chrome.action.openPopup() throws "Browser window has no toolbar"
+    // in F11 fullscreen mode because the toolbar is hidden.
+    // Fall back to a floating popup window instead.
+    const popupUrl = chrome.runtime.getURL("src/popup/popup.html");
+
+    // Best-effort: centre the popup over the focused window.
+    let left, top;
+    try {
+      const wins = await chrome.windows.getAll({ windowTypes: ["normal"] });
+      const focusedWin = wins.find(w => w.focused);
+      if (focusedWin) {
+        left = Math.round((focusedWin.left ?? 0) + (focusedWin.width  ?? 0) / 2 - 200);
+        top  = Math.round((focusedWin.top  ?? 0) + (focusedWin.height ?? 0) / 2 - 280);
+      }
+    } catch (_) { /* positioning failed — use defaults */ }
+
+    chrome.windows.create({
+      url: popupUrl,
+      type: "popup",
+      width: 376,   // 360px layout + roughly 16px for OS borders
+      height: 270,  // Initial estimation; the script below will refine this
+      left: left ?? 100,
+      top: top ?? 100,
+      focused: true,
+    });
   }
 });
 
