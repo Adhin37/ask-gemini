@@ -3,16 +3,10 @@
 
 const GEMINI_URL = "https://gemini.google.com/app";
 
+const DEFAULT_SUMMARIZE_PREFIX = "Summarise the following:\n\n";
+
 // ══════════════════════════════════════════════════════════════════
 // 1. BADGE HELPERS
-//
-// Three states:
-//   queued  — message is stored and waiting for content.js to inject
-//   success — injection confirmed; auto-clears after 2 s
-//   error   — injection failed;    auto-clears after 3 s
-//
-// A pending clear timer is always cancelled before setting a new
-// state so rapid submissions don't leave a stale badge.
 // ══════════════════════════════════════════════════════════════════
 
 let _badgeClearTimer = null;
@@ -32,73 +26,42 @@ function _clearBadgeAfter(ms) {
   }, ms);
 }
 
-/**
- * Called as soon as a pendingMessage lands in storage.
- * Visible on the toolbar icon immediately — before Gemini even opens.
- */
 function setBadgeQueued() {
   _cancelClear();
-  chrome.action.setBadgeBackgroundColor({ color: "#7c6af7" }); // accent purple
+  chrome.action.setBadgeBackgroundColor({ color: "#7c6af7" });
   chrome.action.setBadgeText({ text: "↑" });
 }
 
-/**
- * Called by the "injectionResult" message from content.js on success.
- * Auto-clears after 2 s.
- */
 function setBadgeSuccess() {
   _cancelClear();
-  chrome.action.setBadgeBackgroundColor({ color: "#22c55e" }); // green
+  chrome.action.setBadgeBackgroundColor({ color: "#22c55e" });
   chrome.action.setBadgeText({ text: "✓" });
   _clearBadgeAfter(2_000);
 }
 
-/**
- * Called by the "injectionResult" message from content.js on failure.
- * Auto-clears after 3 s.
- */
 function setBadgeError() {
   _cancelClear();
-  chrome.action.setBadgeBackgroundColor({ color: "#ef4444" }); // red
+  chrome.action.setBadgeBackgroundColor({ color: "#ef4444" });
   chrome.action.setBadgeText({ text: "!" });
   _clearBadgeAfter(3_000);
 }
 
 // ══════════════════════════════════════════════════════════════════
 // 2. STORAGE WATCHER
-//
-// The popup and the options-page history both queue a message by
-// writing pendingMessage to chrome.storage.local. This listener
-// catches both of them without either page needing to know about
-// badge state.
-//
-// Context-menu submissions set the badge directly in the click
-// handler (below) because they call chrome.storage.local.set()
-// themselves — catching them here too would double-fire, so we
-// gate on the context-menu flag to skip duplicates.
 // ══════════════════════════════════════════════════════════════════
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
-
-  // Only react when pendingMessage is newly written (not cleared).
   if (!changes.pendingMessage?.newValue) return;
-
-  // Context-menu submissions set _fromContextMenu = true before writing
-  // storage; we skip them here to avoid calling setBadgeQueued twice.
   if (_fromContextMenu) {
     _fromContextMenu = false;
     return;
   }
-
   setBadgeQueued();
 });
 
 // ══════════════════════════════════════════════════════════════════
 // 3. INJECTION RESULT LISTENER
-//
-// content.js sends { type: "injectionResult", success: boolean }
-// after attempting to inject the message into Gemini's input field.
 // ══════════════════════════════════════════════════════════════════
 
 chrome.runtime.onMessage.addListener((msg) => {
@@ -126,22 +89,18 @@ const MENU_ITEMS = [
     title:    'Ask Gemini: "%s"',
     contexts: ["selection"],
   },
+  // ── NEW: summarize action with a user-configurable prefix ──────
+  {
+    id:       "ask-gemini-summarize",
+    title:    "Summarize with Gemini",
+    contexts: ["selection"],
+  },
 ];
 
 /**
- * Recreates all context menus from scratch.
- *
- * In MV3, the service worker can be killed and restarted at any time.
- * Context menus are stored in Chrome's browser process and survive restarts,
- * BUT if the service worker was previously terminated mid-operation (or the
- * extension was reloaded via chrome://extensions), Chrome may drop them.
- *
- * The safest pattern is:
- *   1. removeAll()  — wipe whatever state Chrome thinks it has
- *   2. create()     — register fresh copies
- *
- * This is idempotent and called from BOTH onInstalled and onStartup so menus
- * are always present regardless of how the service worker came to life.
+ * Recreates all context menus from scratch (idempotent).
+ * Called from both onInstalled and onStartup so menus survive
+ * service-worker restarts.
  */
 function registerMenus() {
   chrome.contextMenus.removeAll(() => {
@@ -164,27 +123,51 @@ chrome.runtime.onStartup.addListener(registerMenus);
 // context-menu submissions that write pendingMessage themselves.
 let _fromContextMenu = false;
 
+/**
+ * Shared helper: write the pending message + model to storage,
+ * set the queued badge, and open (or focus) a Gemini tab.
+ */
+async function dispatchToGemini(message, model) {
+  setBadgeQueued();
+  _fromContextMenu = true;
+
+  await chrome.storage.local.set({
+    pendingMessage: message,
+    pendingModel:   model,
+  });
+
+  chrome.tabs.create({ url: GEMINI_URL });
+}
+
 chrome.contextMenus.onClicked.addListener(async (info) => {
+  // ── Open Gemini directly (no message) ─────────────────────────
   if (info.menuItemId === "open-gemini-direct" || info.menuItemId === "open-gemini-page") {
     chrome.tabs.create({ url: GEMINI_URL });
     return;
   }
 
+  // ── Ask Gemini with raw selection ─────────────────────────────
   if (info.menuItemId === "ask-gemini-selection" && info.selectionText) {
     const { askGeminiModel = "flash" } = await chrome.storage.local.get("askGeminiModel");
+    await dispatchToGemini(info.selectionText.trim(), askGeminiModel);
+    return;
+  }
 
-    // Set badge BEFORE writing storage so it's visible before the tab opens.
-    setBadgeQueued();
+  // ── Summarize selection with configurable prefix ───────────────
+  if (info.menuItemId === "ask-gemini-summarize" && info.selectionText) {
+    const {
+      askGeminiModel           = "flash",
+      askGeminiSummarizePrefix = DEFAULT_SUMMARIZE_PREFIX,
+    } = await chrome.storage.local.get(["askGeminiModel", "askGeminiSummarizePrefix"]);
 
-    // Signal the storage watcher to skip this write.
-    _fromContextMenu = true;
+    // Build the full prompt: prefix + selected text.
+    // We normalise trailing whitespace on the prefix so the join is clean
+    // regardless of whether the user ended their prefix with a newline or not.
+    const prefix  = askGeminiSummarizePrefix.trimEnd();
+    const message = prefix + "\n\n" + info.selectionText.trim();
 
-    await chrome.storage.local.set({
-      pendingMessage: info.selectionText.trim(),
-      pendingModel:   askGeminiModel,
-    });
-
-    chrome.tabs.create({ url: GEMINI_URL });
+    await dispatchToGemini(message, askGeminiModel);
+    return;
   }
 });
 
@@ -226,8 +209,8 @@ chrome.commands.onCommand.addListener(async (command) => {
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
     chrome.tabs.create({
-      url: chrome.runtime.getURL("src/welcome/welcome.html")
+      url: chrome.runtime.getURL("src/welcome/welcome.html"),
     });
   }
-  if (typeof registerMenus === 'function') registerMenus();
+  if (typeof registerMenus === "function") registerMenus();
 });
