@@ -5,49 +5,148 @@
   <title>Welcome to Ask Gemini</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="welcome.css" />
 </head>
 <body>
+
+  <!-- Ambient blobs -->
   <div class="blob blob-1"></div>
   <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
 
-  <div class="welcome-card animate-in">
-    <div class="header-group">
-      <h1>Ready to go!</h1>
-      <div class="brand-text">Ask Gemini</div>
+  <!-- Dot-grid texture -->
+  <div class="dot-grid"></div>
+
+  <div class="welcome-card">
+
+    <!-- ── Hero ── -->
+    <div class="hero">
+
+      <!-- Orbiting ring + logo badge -->
+      <div class="badge-orbit">
+        <div class="orbit-ring ring-1"></div>
+        <div class="orbit-ring ring-2"></div>
+        <div class="orbit-dot dot-a"></div>
+        <div class="orbit-dot dot-b"></div>
+
+        <div class="logo-badge">
+          <svg width="38" height="38" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="wBubble" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#f5f3ff"/>
+                <stop offset="100%" stop-color="#e8e4ff"/>
+              </linearGradient>
+              <filter id="wGlow" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur stdDeviation="1.4" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <rect x="3" y="7" width="22" height="16" rx="4.5" ry="4.5" fill="url(#wBubble)" opacity="0.96"/>
+            <path d="M8 23 L6 29 L13 23 Z" fill="url(#wBubble)" opacity="0.96"/>
+            <circle cx="10.5" cy="15" r="1.6" fill="#6c4bc8"/>
+            <circle cx="14"   cy="15" r="1.9" fill="#6c4bc8"/>
+            <circle cx="17.5" cy="15" r="1.4" fill="#6c4bc8"/>
+            <g filter="url(#wGlow)">
+              <circle cx="27" cy="9" r="5" fill="#c084fc" opacity="0.25"/>
+              <path d="M27 3 C27 3 27.9 6.9 30.5 8 C27.9 9.1 27 13 27 13 C27 13 26.1 9.1 23.5 8 C26.1 6.9 27 3 27 3Z" fill="#e8d5ff"/>
+              <circle cx="27" cy="8" r="1.2" fill="#ffffff"/>
+            </g>
+            <path d="M2 21 C2 21 2.5 22.9 4 23.5 C2.5 24.1 2 26 2 26 C2 26 1.5 24.1 0 23.5 C1.5 22.9 2 21 2 21Z" fill="#b8a4f0" opacity="0.7"/>
+          </svg>
+        </div>
+      </div>
+      
+      <!-- Headline -->
+      <h1 class="hero-title">
+        <span class="line-2">Ask Gemini</span>
+      </h1>
+      
+      <!-- Status pill -->
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        <span>Extension active</span>
+      </div>
+
+      <!-- Subline -->
+      <p class="hero-sub">
+        Ask Gemini sits one keystroke away — type a question,<br/>
+        highlight text, or fire from anywhere in your browser.
+      </p>
     </div>
-    
-    <p>The extension is installed. Here is how you can use your new AI assistant.</p>
 
+    <!-- ── Divider ── -->
+    <div class="section-label">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Quick start</span>
+    </div>
+
+    <!-- ── Feature cards ── -->
     <div class="feature-grid">
-      <div class="feature anim-delay-1">
-        <div class="feature-icon">⚡</div>
-        <div class="feature-content">
-          <b>Global Shortcut</b>
-          <span>Press <kbd>Ctrl+Shift+L</kbd> to open the assistant instantly.</span>
+
+      <div class="feat-card feat-card-1">
+        <div class="feat-icon-wrap">
+          <svg class="feat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <rect x="2" y="6" width="20" height="14" rx="3" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M8 10h8M8 14h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="feat-body">
+          <b>Global shortcut</b>
+          <span>Press <kbd>Ctrl</kbd><span class="key-sep">+</span><kbd>Shift</kbd><span class="key-sep">+</span><kbd>L</kbd> from any tab to summon the popup instantly.</span>
         </div>
       </div>
-      <div class="feature anim-delay-2">
-        <div class="feature-icon">✨</div>
-        <div class="feature-content">
-          <b>Smart Selection</b>
-          <span>Highlight text and right-click to find the <i>"Ask Gemini"</i> option.</span>
+
+      <div class="feat-card feat-card-2">
+        <div class="feat-icon-wrap">
+          <svg class="feat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/>
+          </svg>
+        </div>
+        <div class="feat-body">
+          <b>Smart selection</b>
+          <span>Highlight any text on any page, right-click, and choose <em>Ask Gemini</em> — it auto-fills.</span>
         </div>
       </div>
-      <div class="feature anim-delay-3">
-        <div class="feature-icon">🎨</div>
-        <div class="feature-content">
-          <b>Custom Templates</b>
-          <span>Type <kbd>/</kbd> in the popup to access your saved prompts.</span>
+
+      <div class="feat-card feat-card-3">
+        <div class="feat-icon-wrap">
+          <svg class="feat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/>
+            <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/>
+          </svg>
+        </div>
+        <div class="feat-body">
+          <b>Prompt templates</b>
+          <span>Type <kbd>/</kbd> in the popup to pick a saved snippet. Manage them in <em>Settings → Templates</em>.</span>
         </div>
       </div>
+
+      <div class="feat-card feat-card-4">
+        <div class="feat-icon-wrap">
+          <svg class="feat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M19.07 4.93A10 10 0 116 17.66M21 12h-2M5 12H3M12 5V3M12 21v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="feat-body">
+          <b>Model selector</b>
+          <span>Switch between <strong>Fast</strong>, <strong>Think</strong>, and <strong>Pro</strong> right in the popup — no detours to Gemini.</span>
+        </div>
+      </div>
+
     </div>
 
-    <div class="btn-row anim-delay-4">
-      <button class="btn-primary" id="closeWelcome">
-        Start Browsing
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    <!-- ── CTA ── -->
+    <div class="cta-row">
+      <button class="btn-cta" id="closeWelcome">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/>
+        </svg>
+        <span>Start browsing</span>
       </button>
     </div>
   </div>
