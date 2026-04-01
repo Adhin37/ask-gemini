@@ -127,7 +127,7 @@ async function loadHistory() {
 }
 
 function renderHistory(items, query = "") {
-  historyList.innerHTML = "";
+  historyList.replaceChildren();
   const filtered = query
     ? items.filter(h => h.text.toLowerCase().includes(query.toLowerCase()))
     : items;
@@ -211,9 +211,9 @@ async function sendPrompt(text) {
 async function copyToClipboard(text, btn) {
   try {
     await navigator.clipboard.writeText(text);
-    const orig = btn.innerHTML;
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#7c6af7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    setTimeout(() => { btn.innerHTML = orig; }, 1200);
+    const origChildren = [...btn.childNodes];
+    btn.innerHTML = "<svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6L9 17l-5-5\" stroke=\"#7c6af7\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>";
+    setTimeout(() => { btn.replaceChildren(...origChildren); }, 1200);
     showToast("Copied to clipboard");
   } catch (_) { showToast("Copy failed"); }
 }
@@ -288,7 +288,7 @@ async function loadTemplates() {
 }
 
 function renderTemplates() {
-  tmplCardList.innerHTML = "";
+  tmplCardList.replaceChildren();
 
   if (allTemplates.length === 0) {
     tmplEmptyState.style.display = "flex";

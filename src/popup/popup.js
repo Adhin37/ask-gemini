@@ -39,39 +39,39 @@ const acCounter      = document.getElementById("acCounter");
 // 1. THEME
 // ══════════════════════════════════════════════════════════════════
 
-let currentTheme = 'auto';
+let currentTheme = "auto";
 
 function resolveTheme(pref) {
-  if (pref === 'light') return 'light';
-  if (pref === 'dark')  return 'dark';
-  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  if (pref === "light") return "light";
+  if (pref === "dark")  return "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
 function applyTheme(pref) {
-  currentTheme = pref || 'auto';
+  currentTheme = pref || "auto";
   const resolved = resolveTheme(currentTheme);
-  document.body.classList.toggle('light', resolved === 'light');
+  document.body.classList.toggle("light", resolved === "light");
 }
 
-window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
-  if (currentTheme === 'auto') applyTheme('auto');
+window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
+  if (currentTheme === "auto") applyTheme("auto");
 });
 
 // ══════════════════════════════════════════════════════════════════
 // 2. MODEL SWITCHER  (flash | pro | thinking)
 // ══════════════════════════════════════════════════════════════════
 
-let currentModel = 'flash';
+let currentModel = "flash";
 
 function applyModel(model) {
-  currentModel = model || 'flash';
-  document.querySelectorAll('.model-opt').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.model === currentModel);
+  currentModel = model || "flash";
+  document.querySelectorAll(".model-opt").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.model === currentModel);
   });
 }
 
-modelSwitcher.addEventListener('click', async (e) => {
-  const btn = e.target.closest('.model-opt');
+modelSwitcher.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".model-opt");
   if (!btn || btn.dataset.model === currentModel) return;
   await chrome.storage.local.set({ askGeminiModel: btn.dataset.model });
   applyModel(btn.dataset.model);
@@ -83,83 +83,72 @@ modelSwitcher.addEventListener('click', async (e) => {
 
 let templates = [];
 
-async function loadTemplates() {
-  const { askGeminiTemplates } = await chrome.storage.local.get('askGeminiTemplates');
-  if (!askGeminiTemplates) {
-    await chrome.storage.local.set({ askGeminiTemplates: DEFAULT_TEMPLATES });
-    templates = [...DEFAULT_TEMPLATES];
-  } else {
-    templates = askGeminiTemplates;
-  }
-  renderDropdownList();
-}
-
 function renderDropdownList() {
-  tmplList.innerHTML = '';
-  if (templates.length === 0) { tmplEmpty.classList.add('visible'); return; }
-  tmplEmpty.classList.remove('visible');
+  tmplList.replaceChildren();
+  if (templates.length === 0) { tmplEmpty.classList.add("visible"); return; }
+  tmplEmpty.classList.remove("visible");
 
   templates.forEach(tpl => {
-    const el = document.createElement('button');
-    el.className = 'tmpl-item';
-    const display = tpl.replace(/\n/g, '↵').slice(0, 60);
+    const el = document.createElement("button");
+    el.className = "tmpl-item";
+    const display = tpl.replace(/\n/g, "↵").slice(0, 60);
     el.innerHTML = `
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
         <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <span class="tmpl-item-text">${escapeHtml(display)}</span>`;
-    el.addEventListener('click', () => { insertTemplate(tpl); closeDropdown(); });
+    el.addEventListener("click", () => { insertTemplate(tpl); closeDropdown(); });
     tmplList.appendChild(el);
   });
 }
 
 function insertTemplate(tpl) {
   input.value = tpl;
-  input.dispatchEvent(new Event('input'));
+  input.dispatchEvent(new Event("input"));
   input.selectionStart = input.selectionEnd = input.value.length;
   input.focus();
 }
 
 // Dropdown open/close — with flow-in / flow-out panel animation
 function animateTriggerBtn(direction) {
-  const addCls    = direction === 'in' ? 'tmpl-flow-in'  : 'tmpl-flow-out';
-  const removeCls = direction === 'in' ? 'tmpl-flow-out' : 'tmpl-flow-in';
+  const addCls    = direction === "in" ? "tmpl-flow-in"  : "tmpl-flow-out";
+  const removeCls = direction === "in" ? "tmpl-flow-out" : "tmpl-flow-in";
   tmplTriggerBtn.classList.remove(removeCls);
   void tmplTriggerBtn.offsetWidth;
   tmplTriggerBtn.classList.add(addCls);
-  const duration = direction === 'in' ? 500 : 300;
+  const duration = direction === "in" ? 500 : 300;
   setTimeout(() => tmplTriggerBtn.classList.remove(addCls), duration);
 }
 
 function openDropdown() {
   clearTimeout(_closeTimer);
-  tmplDropdown.style.display = '';      // clear any inline display:none
-  tmplDropdown.classList.remove('hiding');
-  tmplDropdown.classList.add('visible');
-  tmplTriggerBtn.classList.add('active');
-  animateTriggerBtn('in');
+  tmplDropdown.style.display = "";      // clear any inline display:none
+  tmplDropdown.classList.remove("hiding");
+  tmplDropdown.classList.add("visible");
+  tmplTriggerBtn.classList.add("active");
+  animateTriggerBtn("in");
 }
 
 let _closeTimer = null;
 function closeDropdown() {
-  if (!tmplDropdown.classList.contains('visible')) return;
-  tmplDropdown.classList.remove('visible');
-  tmplDropdown.classList.add('hiding');
-  tmplTriggerBtn.classList.remove('active');
-  animateTriggerBtn('out');
+  if (!tmplDropdown.classList.contains("visible")) return;
+  tmplDropdown.classList.remove("visible");
+  tmplDropdown.classList.add("hiding");
+  tmplTriggerBtn.classList.remove("active");
+  animateTriggerBtn("out");
   clearTimeout(_closeTimer);
   _closeTimer = setTimeout(() => {
-    tmplDropdown.classList.remove('hiding');
-    tmplDropdown.style.display = 'none';
+    tmplDropdown.classList.remove("hiding");
+    tmplDropdown.style.display = "none";
   }, 200);
 }
 
-function toggleDropdown() { tmplDropdown.classList.contains('visible') ? closeDropdown() : openDropdown(); }
+function toggleDropdown() { tmplDropdown.classList.contains("visible") ? closeDropdown() : openDropdown(); }
 
-tmplTriggerBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(); });
-tmplCloseBtn.addEventListener('click', () => closeDropdown());
-tmplSettingsLink.addEventListener('click', () => { closeDropdown(); chrome.runtime.openOptionsPage(); window.close(); });
-document.addEventListener('click', (e) => {
+tmplTriggerBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleDropdown(); });
+tmplCloseBtn.addEventListener("click", () => closeDropdown());
+tmplSettingsLink.addEventListener("click", () => { closeDropdown(); chrome.runtime.openOptionsPage(); window.close(); });
+document.addEventListener("click", (e) => {
   if (!tmplDropdown.contains(e.target) && e.target !== tmplTriggerBtn) closeDropdown();
 });
 
@@ -192,7 +181,7 @@ function isInsideCodeBlock(text, pos) {
   // Count ``` fence markers before cursor; odd count = inside block
   let count = 0, search = 0;
   while (true) {
-    const found = text.indexOf('```', search);
+    const found = text.indexOf("```", search);
     if (found === -1 || found >= pos) break;
     count++;
     search = found + 3;
@@ -212,12 +201,12 @@ function getACContext() {
   if (input.selectionEnd !== pos) return null;
 
   // Find start of current line
-  const lineStart = val.lastIndexOf('\n', pos - 1) + 1;
+  const lineStart = val.lastIndexOf("\n", pos - 1) + 1;
   const lineContent = val.substring(lineStart, pos);
 
   // Line must start with '/' (allowing leading spaces is intentionally excluded
   // so it's truly "start of line" semantics, like a terminal command)
-  if (!lineContent.startsWith('/')) return null;
+  if (!lineContent.startsWith("/")) return null;
 
   // Must not be inside a fenced code block
   if (isInsideCodeBlock(val, pos)) return null;
@@ -242,8 +231,8 @@ function openAC(lineStart, matches, idx = 0) {
   ac.lineStart = lineStart;
   ac.matches   = matches;
   ac.idx       = idx;
-  inputWrapper.classList.add('ac-active');
-  acStrip.classList.add('visible');
+  inputWrapper.classList.add("ac-active");
+  acStrip.classList.add("visible");
   renderACStrip();
 }
 
@@ -256,23 +245,23 @@ function renderACStrip() {
   const completion = match.slice(typedLen);              // what tab would add
 
   // Display with newline symbol
-  const typedHtml      = escapeHtml(typed.replace(/\n/g, '↵'));
-  const completionHtml = escapeHtml(completion.replace(/\n/g, '↵'));
+  const typedHtml      = escapeHtml(typed.replace(/\n/g, "↵"));
+  const completionHtml = escapeHtml(completion.replace(/\n/g, "↵"));
 
   acGhost.innerHTML = `<span class="ac-typed">/${typedHtml}</span><span class="ac-completion">${completionHtml}</span>`;
 
   acCounter.textContent = ac.matches.length > 1
     ? `${ac.idx + 1}/${ac.matches.length}`
-    : '';
+    : "";
 }
 
 function dismissAC() {
   if (!ac.active) return;
   ac.active = false;
-  acStrip.classList.remove('visible');
-  inputWrapper.classList.remove('ac-active');
-  acGhost.innerHTML  = '';
-  acCounter.textContent = '';
+  acStrip.classList.remove("visible");
+  inputWrapper.classList.remove("ac-active");
+  acGhost.replaceChildren();
+  acCounter.textContent = "";
 }
 
 function acceptAC() {
@@ -291,7 +280,7 @@ function acceptAC() {
   const newPos = ac.lineStart + match.length;
   input.selectionStart = input.selectionEnd = newPos;
 
-  input.dispatchEvent(new Event('input'));
+  input.dispatchEvent(new Event("input"));
   dismissAC();
 }
 
@@ -327,20 +316,20 @@ function updateAC() {
 // 5. INPUT EVENTS
 // ══════════════════════════════════════════════════════════════════
 
-input.addEventListener('input', () => {
+input.addEventListener("input", () => {
   // Auto-resize
-  input.style.height = 'auto';
-  input.style.height = Math.min(input.scrollHeight, 180) + 'px';
+  input.style.height = "auto";
+  input.style.height = Math.min(input.scrollHeight, 180) + "px";
 
   // Char counter / hint
   const len = input.value.length;
   if (len > MAX_CHARS * 0.8) {
     const rem = MAX_CHARS - len;
     hint.textContent = rem >= 0 ? `${rem} chars left` : `${Math.abs(rem)} over limit`;
-    hint.style.color = rem < 0 ? '#f05050' : rem < 200 ? '#f0a04b' : '';
+    hint.style.color = rem < 0 ? "#f05050" : rem < 200 ? "#f0a04b" : "";
   } else {
-    hint.textContent = '↵ Enter to send';
-    hint.style.color = '';
+    hint.textContent = "↵ Enter to send";
+    hint.style.color = "";
   }
 
   sendBtn.disabled = input.value.trim().length === 0 || len > MAX_CHARS;
@@ -349,10 +338,10 @@ input.addEventListener('input', () => {
   updateAC();
 });
 
-input.addEventListener('keydown', (e) => {
+input.addEventListener("keydown", (e) => {
   // ── AC key handling (highest priority) ───────────────────────
   if (ac.active) {
-    if (e.key === 'Tab') {
+    if (e.key === "Tab") {
       e.preventDefault(); // never insert tab
       if (ac.matches.length === 1) {
         acceptAC();
@@ -361,12 +350,12 @@ input.addEventListener('keydown', (e) => {
       }
       return;
     }
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault(); // accept, don't submit
       acceptAC();
       return;
     }
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       e.preventDefault();
       dismissAC();
       return;
@@ -376,11 +365,11 @@ input.addEventListener('keydown', (e) => {
   }
 
   // ── Normal key handling ───────────────────────────────────────
-  if (e.key === 'Enter' && !e.shiftKey) {
+  if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     askGemini();
   }
-  if (e.key === 'Escape') {
+  if (e.key === "Escape") {
     closeDropdown();
   }
 });
@@ -392,33 +381,33 @@ input.addEventListener('keydown', (e) => {
 async function tryAutoFillSelection() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id || tab.url?.startsWith('chrome://') || tab.url?.startsWith('chrome-extension://')) return;
+    if (!tab?.id || tab.url?.startsWith("chrome://") || tab.url?.startsWith("chrome-extension://")) return;
 
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: () => window.getSelection()?.toString().trim() ?? '',
+      func: () => window.getSelection()?.toString().trim() ?? "",
     });
 
     const selected = results?.[0]?.result;
     // Selection always takes priority over the saved draft.
     if (selected && selected.length > 0 && selected.length <= MAX_CHARS) {
       input.value = selected;
-      input.dispatchEvent(new Event('input'));
+      input.dispatchEvent(new Event("input"));
       input.select();
-      const preview = selected.length > 58 ? selected.slice(0, 58) + '…' : selected;
+      const preview = selected.length > 58 ? selected.slice(0, 58) + "…" : selected;
       selText.textContent = `"${preview}"`;
-      selBanner.classList.add('visible');
+      selBanner.classList.add("visible");
       return true; // signal: selection was applied
     }
     return false;
   } catch (_) { /* tab not scriptable */ }
 }
 
-selClear.addEventListener('click', () => {
-  selBanner.classList.remove('visible');
-  input.value = '';
-  chrome.storage.session.remove('askGeminiDraft');
-  input.dispatchEvent(new Event('input'));
+selClear.addEventListener("click", () => {
+  selBanner.classList.remove("visible");
+  input.value = "";
+  chrome.storage.session.remove("askGeminiDraft");
+  input.dispatchEvent(new Event("input"));
   input.focus();
 });
 
@@ -427,7 +416,7 @@ selClear.addEventListener('click', () => {
 // ══════════════════════════════════════════════════════════════════
 
 async function saveToHistory(message) {
-  const { askGeminiHistory = [] } = await chrome.storage.local.get('askGeminiHistory');
+  const { askGeminiHistory = [] } = await chrome.storage.local.get("askGeminiHistory");
   const deduped = askGeminiHistory.filter(h => h.text !== message);
   deduped.unshift({ text: message, ts: Date.now() });
   await chrome.storage.local.set({ askGeminiHistory: deduped.slice(0, MAX_HISTORY) });
@@ -437,13 +426,13 @@ async function saveToHistory(message) {
 // 8. SEND
 // ══════════════════════════════════════════════════════════════════
 
-sendBtn.addEventListener('click', () => askGemini());
+sendBtn.addEventListener("click", () => askGemini());
 
 async function askGemini() {
   const message = input.value.trim();
   if (!message || message.length > MAX_CHARS) return;
 
-  sendBtn.classList.add('sending');
+  sendBtn.classList.add("sending");
   sendBtn.disabled = true;
   input.disabled   = true;
   dismissAC();
@@ -451,10 +440,10 @@ async function askGemini() {
   try {
     await chrome.storage.local.set({ pendingMessage: message, pendingModel: currentModel });
     await saveToHistory(message);
-    chrome.storage.session.remove('askGeminiDraft');
-    input.value = '';
+    chrome.storage.session.remove("askGeminiDraft");
+    input.value = "";
 
-    const tabs = await chrome.tabs.query({ url: 'https://gemini.google.com/*' });
+    const tabs = await chrome.tabs.query({ url: "https://gemini.google.com/*" });
     if (tabs.length > 0) {
       await chrome.tabs.update(tabs[0].id, { url: GEMINI_URL, active: true });
       chrome.windows.update(tabs[0].windowId, { focused: true });
@@ -462,8 +451,8 @@ async function askGemini() {
       chrome.tabs.create({ url: GEMINI_URL });
     }
   } catch (err) {
-    console.error('Ask Gemini error:', err);
-    sendBtn.classList.remove('sending');
+    console.error("Ask Gemini error:", err);
+    sendBtn.classList.remove("sending");
     sendBtn.disabled = false;
     input.disabled   = false;
     input.focus();
@@ -476,14 +465,14 @@ async function askGemini() {
 // 9. FOOTER BUTTONS
 // ══════════════════════════════════════════════════════════════════
 
-logoBtn.addEventListener('click', () => { chrome.tabs.create({ url: GEMINI_URL }); window.close(); });
+logoBtn.addEventListener("click", () => { chrome.tabs.create({ url: GEMINI_URL }); window.close(); });
 
 // ══════════════════════════════════════════════════════════════════
 // 10. HELPERS
 // ══════════════════════════════════════════════════════════════════
 
 function escapeHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
 /* istanbul ignore next — test hook, never runs inside the real extension */
@@ -498,10 +487,10 @@ if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
 sendBtn.disabled = true;
 
 (async () => {
-  const data = await chrome.storage.local.get(['askGeminiTheme', 'askGeminiModel', 'askGeminiTemplates']);
+  const data = await chrome.storage.local.get(["askGeminiTheme", "askGeminiModel", "askGeminiTemplates"]);
 
-  applyTheme(data.askGeminiTheme || 'auto');
-  applyModel(data.askGeminiModel || 'flash');
+  applyTheme(data.askGeminiTheme || "auto");
+  applyModel(data.askGeminiModel || "flash");
 
   // Seed templates
   if (data.askGeminiTemplates) {
@@ -517,10 +506,10 @@ sendBtn.disabled = true;
   // 2. Only if no selection, restore the saved draft.
   const selectionApplied = await tryAutoFillSelection();
   if (!selectionApplied) {
-    const { askGeminiDraft: draft } = await chrome.storage.session.get('askGeminiDraft');
+    const { askGeminiDraft: draft } = await chrome.storage.session.get("askGeminiDraft");
     if (draft) {
       input.value = draft;
-      input.dispatchEvent(new Event('input'));
+      input.dispatchEvent(new Event("input"));
       input.selectionStart = input.selectionEnd = draft.length;
     }
   }

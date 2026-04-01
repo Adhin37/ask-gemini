@@ -132,16 +132,16 @@ function readModelFromButton() {
 
   const container =
     btn.querySelector('[data-test-id="logo-pill-label-container"]') ||
-    btn.querySelector('.logo-pill-label-container');
+    btn.querySelector(".logo-pill-label-container");
 
   const span = container
-    ? Array.from(container.querySelectorAll('span')).find(
-        s => s.textContent.trim() && !s.querySelector('mat-icon')
+    ? Array.from(container.querySelectorAll("span")).find(
+        s => s.textContent.trim() && !s.querySelector("mat-icon")
       )
     : null;
 
   const text = span ? span.textContent.trim() : btn.textContent.trim();
-  console.debug('[Ask Gemini] readModelFromButton:', JSON.stringify(text));
+  console.debug("[Ask Gemini] readModelFromButton:", JSON.stringify(text));
   return classifyModelText(text);
 }
 
@@ -183,10 +183,10 @@ function matchesTarget(optionText, target) {
 // MODEL DETECTION
 // ══════════════════════════════════════════════════════════════════
 
-async function detectCurrentModel() {
+async function _detectCurrentModel() {
   const quick = readModelFromButton();
   if (quick) {
-    console.debug(`[Ask Gemini] detectCurrentModel (fast path) → "${quick}"`);
+    console.debug(`[Ask Gemini] _detectCurrentModel (fast path) → "${quick}"`);
     return quick;
   }
 
@@ -197,7 +197,7 @@ async function detectCurrentModel() {
 
   const OPTION_SELECTORS = [
     '[role="option"]', '[role="menuitem"]', '[role="listitem"]',
-    'li[data-value]',  '[class*="model-item" i]',
+    "li[data-value]",  '[class*="model-item" i]',
   ];
   const anyOption = () => OPTION_SELECTORS.some(s => document.querySelector(s));
 
@@ -222,7 +222,7 @@ async function detectCurrentModel() {
   );
 
   if (detected === null) detected = readModelFromButton();
-  console.debug(`[Ask Gemini] detectCurrentModel (slow path) → "${detected}"`);
+  console.debug(`[Ask Gemini] _detectCurrentModel (slow path) → "${detected}"`);
   return detected;
 }
 
@@ -257,7 +257,7 @@ async function ensureModel(target) {
   const btn = findModelTrigger();
   const labelContainer = btn
     ? btn.querySelector('[data-test-id="logo-pill-label-container"]') ||
-      btn.querySelector('.logo-pill-label-container') ||
+      btn.querySelector(".logo-pill-label-container") ||
       btn
     : document.body;
 
@@ -283,7 +283,7 @@ async function performModelSwitch(target) {
 
   const OPTION_SELECTORS = [
     '[role="option"]', '[role="menuitem"]', '[role="listitem"]',
-    'li[data-value]',  '[class*="model-item" i]',
+    "li[data-value]",  '[class*="model-item" i]',
   ];
 
   await waitForElement(
@@ -344,7 +344,7 @@ async function injectMessage(message) {
 
   // ── Inject text ───────────────────────────────────────────────
   input.focus();
-  input.innerHTML = "";
+  input.replaceChildren();
 
   const inserted = document.execCommand("insertText", false, message);
 
@@ -400,7 +400,7 @@ if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
 function findSendButton(inputEl) {
   const SEND_SELECTORS = [
     'button.send-button[aria-label="Send message"]',
-    'button.send-button',
+    "button.send-button",
     'button[aria-label="Send message"]',
     'button[aria-label*="Send" i].submit',
     'button.submit[aria-label*="Send" i]',

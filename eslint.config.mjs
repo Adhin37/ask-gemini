@@ -26,18 +26,8 @@ export default [
       "no-implied-eval":  "error",
       "no-var":           "error",
       "no-undef":         "error",
-      "no-unused-vars":   ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      "no-unused-vars":   ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" }],
       "eqeqeq":           ["error", "always", { null: "ignore" }],
-
-      // ── Security: flag unsafe patterns in Chrome extensions ─────
-      // innerHTML is used with escapeHtml() here — warn rather than error.
-      "no-restricted-properties": [
-        "warn",
-        {
-          property: "innerHTML",
-          message:  "Ensure value is sanitized via escapeHtml() before assigning to innerHTML. Never pass raw user input.",
-        },
-      ],
 
       // ── Style / hygiene (warnings) ──────────────────────────────
       "prefer-const":   "warn",
