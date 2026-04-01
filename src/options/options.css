@@ -1181,3 +1181,16 @@ body.light .btn-ghost:hover { background: rgba(0,0,0,0.04); }
   color: var(--text-hint);
   font-style: italic;
 }
+
+/* ── Shortcut display ────────────────────────────────────────────── */
+.shortcut-editor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.shortcut-edit-btn {
+  padding: 5px 10px;
+  font-size: 12px;
+}

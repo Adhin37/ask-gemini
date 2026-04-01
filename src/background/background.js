@@ -117,6 +117,8 @@ chrome.runtime.onStartup.addListener(registerMenus);
 // context-menu submissions that write pendingMessage themselves.
 let _fromContextMenu = false;
 
+const MAX_HISTORY = 20;
+
 /**
  * Shared helper: write the pending message + model to storage,
  * set the queued badge, and open (or focus) a Gemini tab.
@@ -125,9 +127,14 @@ async function dispatchToGemini(message, model) {
   setBadgeQueued();
   _fromContextMenu = true;
 
+  const { askGeminiHistory = [] } = await chrome.storage.local.get("askGeminiHistory");
+  const deduped = askGeminiHistory.filter(h => h.text !== message);
+  deduped.unshift({ text: message, ts: Date.now() });
+
   await chrome.storage.local.set({
-    pendingMessage: message,
-    pendingModel:   model,
+    pendingMessage:   message,
+    pendingModel:     model,
+    askGeminiHistory: deduped.slice(0, MAX_HISTORY),
   });
 
   chrome.tabs.create({ url: GEMINI_URL });
@@ -155,19 +162,14 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
   }
 });
 
-chrome.commands.onCommand.addListener(async (command) => {
-  if (command !== "open_popup") return;
-
+async function openPopup() {
   try {
     // Works normally when the browser toolbar is visible.
     await chrome.action.openPopup();
   } catch (_err) {
-    // chrome.action.openPopup() throws "Browser window has no toolbar"
-    // in F11 fullscreen mode because the toolbar is hidden.
-    // Fall back to a floating popup window instead.
+    // Fallback: floating popup window (works in fullscreen / from content script).
     const popupUrl = chrome.runtime.getURL("src/popup/popup.html");
 
-    // Best-effort: centre the popup over the focused window.
     let left, top;
     try {
       const wins = await chrome.windows.getAll({ windowTypes: ["normal"] });
@@ -188,6 +190,11 @@ chrome.commands.onCommand.addListener(async (command) => {
       focused: true,
     });
   }
+}
+
+chrome.commands.onCommand.addListener((command) => {
+  if (command !== "open_popup") return;
+  openPopup();
 });
 
 chrome.runtime.onInstalled.addListener((details) => {

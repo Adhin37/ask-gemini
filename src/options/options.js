@@ -40,12 +40,49 @@ document.getElementById("extVersion").textContent   = ver;
 document.getElementById("aboutVersion").textContent = `Version ${manifest.version}`;
 
 // ══════════════════════════════════════════════════════════════════
-// 3. SHORTCUT PAGE LINK
+// 3. SHORTCUT DISPLAY
 // ══════════════════════════════════════════════════════════════════
+
+const shortcutDisplay = document.getElementById("shortcutDisplay");
+const shortcutEditBtn = document.getElementById("shortcutEditBtn");
+
+function renderShortcutKeys(shortcutStr) {
+  shortcutDisplay.replaceChildren();
+  if (!shortcutStr) {
+    const span = document.createElement("span");
+    span.style.cssText = "color:var(--text-hint);font-size:12px";
+    span.textContent = "Not set";
+    shortcutDisplay.appendChild(span);
+    return;
+  }
+  shortcutStr.split("+").forEach((part, i, arr) => {
+    const kbd = document.createElement("kbd");
+    kbd.textContent = part;
+    shortcutDisplay.appendChild(kbd);
+    if (i < arr.length - 1) {
+      const sep = document.createElement("span");
+      sep.className = "key-sep";
+      sep.textContent = "+";
+      shortcutDisplay.appendChild(sep);
+    }
+  });
+}
+
+async function loadShortcut() {
+  const commands = await chrome.commands.getAll();
+  const cmd = commands.find(c => c.name === "open_popup");
+  renderShortcutKeys(cmd?.shortcut || "");
+}
+
+function openShortcutSettings() {
+  chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
+}
+
+shortcutEditBtn.addEventListener("click", openShortcutSettings);
 
 document.getElementById("shortcutPageLink")?.addEventListener("click", (e) => {
   e.preventDefault();
-  chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
+  openShortcutSettings();
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -526,6 +563,7 @@ function showToast(msg) {
   const data = await chrome.storage.local.get(["askGeminiTheme", "askGeminiModel"]);
   applyTheme(data.askGeminiTheme || "auto");
   applyModel(data.askGeminiModel || "flash");
+  await loadShortcut();
   await loadHistory();
   await loadTemplates();
   await loadContextMenuSettings();

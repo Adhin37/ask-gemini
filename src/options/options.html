@@ -351,12 +351,19 @@
               <span class="shortcut-label">Open popup</span>
               <span class="shortcut-sub">Works on any page, even without the toolbar visible</span>
             </div>
-            <div class="keys" id="shortcutDisplay">
-              <kbd>Ctrl</kbd><span class="key-sep">+</span><kbd>Shift</kbd><span class="key-sep">+</span><kbd>L</kbd>
+            <div class="shortcut-editor">
+              <div class="keys" id="shortcutDisplay"></div>
+              <button class="btn-ghost shortcut-edit-btn" id="shortcutEditBtn">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Change
+              </button>
             </div>
           </div>
           <div class="card-hint">
-            To change the shortcut, go to
+            To reassign the key combination, click <strong>Change</strong> or visit
             <a href="#" id="shortcutPageLink" class="inline-link">chrome://extensions/shortcuts</a>
             and find <strong>Ask Gemini</strong>.
           </div>
