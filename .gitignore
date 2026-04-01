@@ -1,3 +1,4 @@
 ask-gemini-extension.zip
 TODO.md
 node_modules
+.claude/settings.local.json

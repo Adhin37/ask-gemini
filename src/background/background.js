@@ -89,12 +89,6 @@ const MENU_ITEMS = [
     title:    'Ask Gemini: "%s"',
     contexts: ["selection"],
   },
-  // ── NEW: summarize action with a user-configurable prefix ──────
-  {
-    id:       "ask-gemini-summarize",
-    title:    "Summarize with Gemini",
-    contexts: ["selection"],
-  },
 ];
 
 /**
@@ -146,23 +140,13 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     return;
   }
 
-  // ── Ask Gemini with raw selection ─────────────────────────────
+  // ── Ask Gemini with prefix + selection ────────────────────────
   if (info.menuItemId === "ask-gemini-selection" && info.selectionText) {
-    const { askGeminiModel = "flash" } = await chrome.storage.local.get("askGeminiModel");
-    await dispatchToGemini(info.selectionText.trim(), askGeminiModel);
-    return;
-  }
-
-  // ── Summarize selection with configurable prefix ───────────────
-  if (info.menuItemId === "ask-gemini-summarize" && info.selectionText) {
     const {
       askGeminiModel           = "flash",
       askGeminiSummarizePrefix = DEFAULT_SUMMARIZE_PREFIX,
     } = await chrome.storage.local.get(["askGeminiModel", "askGeminiSummarizePrefix"]);
 
-    // Build the full prompt: prefix + selected text.
-    // We normalise trailing whitespace on the prefix so the join is clean
-    // regardless of whether the user ended their prefix with a newline or not.
     const prefix  = askGeminiSummarizePrefix.trimEnd();
     const message = prefix + "\n\n" + info.selectionText.trim();
 

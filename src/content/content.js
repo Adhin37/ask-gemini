@@ -392,6 +392,11 @@ async function injectMessage(message) {
   }
 }
 
+/* istanbul ignore next — test hook, never runs inside the real extension */
+if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
+  Object.assign(globalThis.__TEST__, { classifyModelText, matchesTarget, waitForElement, waitForCondition });
+}
+
 function findSendButton(inputEl) {
   const SEND_SELECTORS = [
     'button.send-button[aria-label="Send message"]',

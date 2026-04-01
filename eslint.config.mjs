@@ -50,6 +50,36 @@ export default [
     },
   },
 
+  // ── Test files ─────────────────────────────────────────────────
+  {
+    files: ["tests/**/*.js"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType:  "module",
+      globals: {
+        ...globals.node,
+        // Vitest globals (globals:true in vitest.config.js)
+        describe: "readonly",
+        it:       "readonly",
+        expect:   "readonly",
+        vi:       "readonly",
+        beforeAll:  "readonly",
+        afterAll:   "readonly",
+        beforeEach: "readonly",
+        afterEach:  "readonly",
+        // jsdom globals available in test files
+        document: "readonly",
+        window:   "readonly",
+        chrome:   "readonly",
+      },
+    },
+    rules: {
+      "no-undef":       "error",
+      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "no-console":     "off",
+    },
+  },
+
   // ── Background service worker — no DOM ─────────────────────────
   // background.js runs as a MV3 Service Worker: no window / document.
   // We add serviceworker globals on top of the base browser config.

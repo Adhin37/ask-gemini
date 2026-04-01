@@ -486,6 +486,11 @@ function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+/* istanbul ignore next — test hook, never runs inside the real extension */
+if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
+  Object.assign(globalThis.__TEST__, { escapeHtml, isInsideCodeBlock, filterTemplates, saveToHistory });
+}
+
 // ══════════════════════════════════════════════════════════════════
 // 11. INIT
 // ══════════════════════════════════════════════════════════════════

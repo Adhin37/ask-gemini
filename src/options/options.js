@@ -519,3 +519,16 @@ function showToast(msg) {
   await loadTemplates();
   await loadContextMenuSettings();
 })();
+
+/* istanbul ignore next — test hook, never runs inside the real extension */
+if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
+  Object.assign(globalThis.__TEST__, {
+    escapeHtml, escAttr, highlightMatch, formatTime, resolveTheme,
+    renderHistory, renderTemplates, loadHistory, loadTemplates, loadContextMenuSettings,
+    updateCharCount, updateSummarizePrefixCharCount,
+    _setAllHistory:    (h) => { allHistory    = h; },
+    _setAllTemplates:  (t) => { allTemplates  = t; },
+    _setCurrentTheme:  (v) => { currentTheme  = v; },
+    _setCurrentModel:  (v) => { currentModel  = v; },
+  });
+}
