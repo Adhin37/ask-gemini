@@ -469,25 +469,5 @@
   </div>
 
   <script src="options.js"></script>
-
-  <!-- Live preview for the summarize prefix textarea -->
-  <script>
-    (function () {
-      const ta      = document.getElementById("summarizePrefixTextarea");
-      const preview = document.getElementById("ctxPreviewPrefix");
-      if (!ta || !preview) return;
-
-      function sync() {
-        const raw = ta.value.trimEnd();
-        // Show ↵ for newlines so the single-line preview stays readable
-        preview.textContent = raw.replace(/\n/g, " ↵ ") + (raw ? "\n\n" : "");
-      }
-
-      ta.addEventListener("input", sync);
-      // Run once after options.js has loaded the saved value
-      // (options.js fires loadContextMenuSettings on init, which sets ta.value)
-      window.addEventListener("load", sync);
-    })();
-  </script>
 </body>
 </html>

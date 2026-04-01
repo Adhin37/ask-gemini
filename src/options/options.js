@@ -433,6 +433,13 @@ const summarizePrefixTextarea  = document.getElementById("summarizePrefixTextare
 const summarizePrefixCharCount = document.getElementById("summarizePrefixCharCount");
 const summarizePrefixSaveBtn   = document.getElementById("summarizePrefixSaveBtn");
 const summarizePrefixResetBtn  = document.getElementById("summarizePrefixResetBtn");
+const ctxPreviewPrefix         = document.getElementById("ctxPreviewPrefix");
+
+function syncSummarizePreview() {
+  if (!ctxPreviewPrefix) return;
+  const raw = summarizePrefixTextarea.value.trimEnd();
+  ctxPreviewPrefix.textContent = raw.replace(/\n/g, " ↵ ") + (raw ? "\n\n" : "");
+}
 
 function updateSummarizePrefixCharCount() {
   const len = summarizePrefixTextarea.value.length;
@@ -444,7 +451,10 @@ function updateSummarizePrefixCharCount() {
     len > SUMMARIZE_PREFIX_MAX;
 }
 
-summarizePrefixTextarea.addEventListener("input", updateSummarizePrefixCharCount);
+summarizePrefixTextarea.addEventListener("input", () => {
+  updateSummarizePrefixCharCount();
+  syncSummarizePreview();
+});
 
 summarizePrefixSaveBtn.addEventListener("click", async () => {
   const val = summarizePrefixTextarea.value;
@@ -465,6 +475,7 @@ async function loadContextMenuSettings() {
     await chrome.storage.local.get("askGeminiSummarizePrefix");
   summarizePrefixTextarea.value = askGeminiSummarizePrefix;
   updateSummarizePrefixCharCount();
+  syncSummarizePreview();
 }
 
 // ══════════════════════════════════════════════════════════════════
