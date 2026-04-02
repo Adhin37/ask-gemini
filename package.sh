@@ -16,8 +16,8 @@ DIRS=(
     "icons"
     "src/background"
     "src/content"
-    "src/popup"
     "src/options"
+    "src/popup"
     "src/welcome"
 )
 
