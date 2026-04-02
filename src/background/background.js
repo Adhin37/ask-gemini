@@ -6,6 +6,131 @@ const GEMINI_URL = "https://gemini.google.com/app";
 const DEFAULT_SUMMARIZE_PREFIX = "Summarise the following:\n\n";
 
 // ══════════════════════════════════════════════════════════════════
+// PROMPT ENGINEERING — defaults & detection
+// ══════════════════════════════════════════════════════════════════
+
+const DEFAULT_PROMPT_ENG_RULES = [
+  {
+    id: "code", label: "Code",
+    hint: "Selection looks like code, or the page is a known code site",
+    enabled: true,
+    template: "Explain this code concisely:\n\n{selection}",
+  },
+  {
+    id: "error", label: "Error / Bug",
+    hint: "Selection contains an error message or stack trace",
+    enabled: true,
+    template: "Debug this error and suggest a fix:\n\n{selection}",
+  },
+  {
+    id: "url", label: "URL",
+    hint: "The entire selection is a URL",
+    enabled: true,
+    template: "Summarize what this URL is about: {selection}",
+  },
+  {
+    id: "question", label: "Question",
+    hint: "Selection ends with a question mark",
+    enabled: true,
+    template: "Answer this clearly and concisely:\n\n{selection}",
+  },
+  {
+    id: "data", label: "Data / Numbers",
+    hint: "Selection is mostly numbers or structured data",
+    enabled: true,
+    template: "Analyze and explain this data:\n\n{selection}",
+  },
+  {
+    id: "term", label: "Term / Keyword",
+    hint: "Short selection of 4 words or fewer",
+    enabled: true,
+    template: "Explain \"{selection}\" simply in 2–3 sentences.",
+  },
+  {
+    id: "article", label: "Article / Text",
+    hint: "Default for longer natural-language selections",
+    enabled: true,
+    template: "Summarize this in bullet points:\n\n{selection}",
+  },
+  {
+    id: "default", label: "Default (fallback)",
+    hint: "Applied when no other rule matches or all others are disabled",
+    enabled: true,
+    template: "{selection}",
+  },
+];
+
+// Known code-hosting / developer pages — boost "code" context detection
+const _CODE_PAGE_RE = [
+  /github\.com/, /gitlab\.com/, /bitbucket\.org/,
+  /stackoverflow\.com/, /stackexchange\.com/,
+  /codepen\.io/, /jsfiddle\.net/, /replit\.com/,
+  /codesandbox\.io/, /npmjs\.com/, /pkg\.go\.dev/,
+  /developer\.mozilla\.org/,
+];
+
+// Patterns that suggest the text is source code
+const _CODE_TEXT_RE = [
+  /^\s*(function[\s(]|class\s|def\s|import\s|const\s|let\s|var\s|if\s*\(|for\s*\(|while\s*\(|#include\s|public\s|private\s|<\?php|\bfn\b)/,
+  /=>[\s{(]/,
+  /[{};]\s*\n.*[{};]/s,
+  /\b(return|typeof|instanceof|async|await|yield)\b/,
+];
+
+// Patterns that suggest an error or stack trace
+const _ERROR_RE = [
+  /\b\w*(Error|Exception|Fault|Panic)\b.*:/,
+  /^\s+at\s+[\w.$<>[\]]+\s*\(/m,
+  /\bTraceback\b/i,
+  /line\s+\d+.*col(umn)?\s+\d+/i,
+  /\b(segfault|fatal error|uncaught exception|unhandled rejection)\b/i,
+];
+
+/**
+ * Returns the context id that best describes the selected text.
+ * @param {string} text
+ * @param {string} pageUrl
+ * @returns {"url"|"error"|"code"|"question"|"data"|"term"|"article"}
+ */
+function detectContext(text, pageUrl) {
+  const t   = text.trim();
+  const url = pageUrl || "";
+
+  if (/^https?:\/\/\S+$/.test(t))              return "url";
+  if (_ERROR_RE.some(re => re.test(t)))          return "error";
+
+  const isCodePage    = _CODE_PAGE_RE.some(re => re.test(url));
+  const looksLikeCode = _CODE_TEXT_RE.some(re => re.test(t));
+  if (isCodePage || looksLikeCode)               return "code";
+
+  if (t.endsWith("?"))                           return "question";
+
+  const words = t.split(/\s+/).filter(Boolean).length;
+  if (words >= 2 && /^[\d\s.,;:\-+%$€£¥|/\n]+$/.test(t)) return "data";
+  if (words <= 4)                                return "term";
+
+  return "article";
+}
+
+/**
+ * Applies the matching prompt-engineering rule to the selection.
+ * @param {string} selection
+ * @param {string} pageUrl
+ * @param {{ rules: Array }} settings  — value of askGeminiPromptEng
+ * @returns {string}
+ */
+function buildPromptEngMessage(selection, pageUrl, settings) {
+  const rules     = (settings && settings.rules) ? settings.rules : DEFAULT_PROMPT_ENG_RULES;
+  const contextId = detectContext(selection, pageUrl);
+
+  const rule = rules.find(r => r.id === contextId && r.enabled !== false)
+            || rules.find(r => r.id === "default"  && r.enabled !== false);
+
+  if (!rule) return selection;
+  return rule.template.replace(/\{selection\}/g, selection);
+}
+
+// ══════════════════════════════════════════════════════════════════
 // 1. BADGE HELPERS
 // ══════════════════════════════════════════════════════════════════
 
@@ -147,15 +272,25 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     return;
   }
 
-  // ── Ask Gemini with prefix + selection ────────────────────────
+  // ── Ask Gemini with selection ─────────────────────────────────
   if (info.menuItemId === "ask-gemini-selection" && info.selectionText) {
     const {
       askGeminiModel           = "flash",
       askGeminiSummarizePrefix = DEFAULT_SUMMARIZE_PREFIX,
-    } = await chrome.storage.local.get(["askGeminiModel", "askGeminiSummarizePrefix"]);
+      askGeminiPromptEng,
+    } = await chrome.storage.local.get([
+      "askGeminiModel", "askGeminiSummarizePrefix", "askGeminiPromptEng",
+    ]);
 
-    const prefix  = askGeminiSummarizePrefix.trimEnd();
-    const message = prefix + "\n\n" + info.selectionText.trim();
+    const selection = info.selectionText.trim();
+    let message;
+
+    if (askGeminiPromptEng?.enabled) {
+      message = buildPromptEngMessage(selection, info.pageUrl || "", askGeminiPromptEng);
+    } else {
+      const prefix = askGeminiSummarizePrefix.trimEnd();
+      message = prefix + "\n\n" + selection;
+    }
 
     await dispatchToGemini(message, askGeminiModel);
     return;

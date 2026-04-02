@@ -155,7 +155,7 @@
         <div class="section-header">
           <div>
             <h1 class="section-title">Templates</h1>
-            <p class="section-desc">Quick prompt snippets — trigger them with <kbd class="inline-kbd">/</kbd> or the grid button in the popup.</p>
+            <p class="section-desc">Per-model prompt snippets — trigger them with <kbd class="inline-kbd">/</kbd> or the grid button in the popup. Each model has its own list.</p>
           </div>
           <button class="btn-ghost" id="addTemplateBtn">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
@@ -163,6 +163,19 @@
               <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
             Add template
+          </button>
+        </div>
+
+        <!-- Model tabs -->
+        <div class="tmpl-model-tabs" id="tmplModelTabs">
+          <button class="tmpl-model-tab active" data-model="flash">
+            Fast <span class="tmpl-tab-badge">0</span>
+          </button>
+          <button class="tmpl-model-tab" data-model="thinking">
+            Think <span class="tmpl-tab-badge">0</span>
+          </button>
+          <button class="tmpl-model-tab" data-model="pro">
+            Pro <span class="tmpl-tab-badge">0</span>
           </button>
         </div>
 
@@ -275,14 +288,34 @@
             <div class="feat-row">
               <span class="feat-dot"></span>
               <span>
-                <strong>Ask Gemini: "…"</strong> — prepends the prefix below to your selection before sending. Edit the prefix to anything you like.
+                <strong>Ask Gemini: "…"</strong> — right-click any selected text to send it to Gemini, optionally wrapped by a smart prompt template.
               </span>
             </div>
           </div>
         </div>
 
-        <!-- Summarize prefix editor -->
+        <!-- Prompt Engineering master toggle -->
         <div class="card">
+          <div class="pref-row">
+            <div class="pref-info">
+              <span class="pref-label">Prompt Engineering</span>
+              <span class="pref-sub">Auto-detect context and apply a smart prompt template</span>
+            </div>
+            <label class="toggle-switch" title="Toggle prompt engineering">
+              <input type="checkbox" id="promptEngToggle" />
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div class="card-hint">
+            When on, Ask Gemini detects whether your selection is code, an error, a question, etc., and wraps it in a matching prompt. Each rule is editable. The <strong>Summarize prefix</strong> below is bypassed while this is active.
+          </div>
+        </div>
+
+        <!-- Rule cards — rendered by options.js, visible when PE is enabled -->
+        <div id="promptEngRules" class="pe-rules-wrap" style="display:none"></div>
+
+        <!-- Summarize prefix editor -->
+        <div class="card" id="summarizePrefixSection">
           <div class="tmpl-form-label" style="margin-bottom:10px;">
             Summarize prefix
           </div>

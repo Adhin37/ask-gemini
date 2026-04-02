@@ -5,13 +5,25 @@ const GEMINI_URL  = "https://gemini.google.com/app";
 const MAX_CHARS   = 2000;
 const MAX_HISTORY = 20;
 
-const DEFAULT_TEMPLATES = [
-  "Summarise: ",
-  "Translate to English: ",
-  "Fix this code:\n",
-  "Explain simply: ",
-  "Pros and cons of: ",
-];
+const DEFAULT_TEMPLATES_BY_MODEL = {
+  flash: [
+    "Summarise: ",
+    "Translate to English: ",
+    "Explain simply: ",
+    "Pros and cons of: ",
+  ],
+  thinking: [
+    "Think through this step-by-step: ",
+    "What are the edge cases for: ",
+    "Analyze deeply: ",
+  ],
+  pro: [
+    "Deep analysis of: ",
+    "Fix this code:\n",
+    "Compare and contrast: ",
+    "Write a comprehensive report on: ",
+  ],
+};
 
 // ── DOM refs ───────────────────────────────────────────────────────
 const input          = document.getElementById("questionInput");
@@ -71,6 +83,9 @@ modelSwitcher.addEventListener("click", async (e) => {
   if (!btn || btn.dataset.model === currentModel) return;
   await chrome.storage.local.set({ askGeminiModel: btn.dataset.model });
   applyModel(btn.dataset.model);
+  await loadTemplatesForModel(btn.dataset.model);
+  renderDropdownList();
+  dismissAC();
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -78,6 +93,19 @@ modelSwitcher.addEventListener("click", async (e) => {
 // ══════════════════════════════════════════════════════════════════
 
 let templates = [];
+
+async function loadTemplatesForModel(model) {
+  const { askGeminiTemplates } = await chrome.storage.local.get("askGeminiTemplates");
+  const defaults = DEFAULT_TEMPLATES_BY_MODEL[model] || DEFAULT_TEMPLATES_BY_MODEL.flash;
+  if (!askGeminiTemplates) {
+    templates = [...defaults];
+  } else if (Array.isArray(askGeminiTemplates)) {
+    // Migration compat: old flat array belongs to flash
+    templates = model === "flash" ? askGeminiTemplates : [...defaults];
+  } else {
+    templates = askGeminiTemplates[model] ?? [...defaults];
+  }
+}
 
 function renderDropdownList() {
   tmplList.replaceChildren();
@@ -603,18 +631,12 @@ if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
 sendBtn.disabled = true;
 
 (async () => {
-  const data = await chrome.storage.local.get(["askGeminiTheme", "askGeminiModel", "askGeminiTemplates"]);
+  const data = await chrome.storage.local.get(["askGeminiTheme", "askGeminiModel"]);
 
   applyTheme(data.askGeminiTheme || "auto");
   applyModel(data.askGeminiModel || "flash");
 
-  // Seed templates
-  if (data.askGeminiTemplates) {
-    templates = data.askGeminiTemplates;
-  } else {
-    await chrome.storage.local.set({ askGeminiTemplates: DEFAULT_TEMPLATES });
-    templates = [...DEFAULT_TEMPLATES];
-  }
+  await loadTemplatesForModel(currentModel);
   renderDropdownList();
 
   // Priority: selection > draft.

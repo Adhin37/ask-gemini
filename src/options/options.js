@@ -4,13 +4,79 @@
 
 const GEMINI_URL = "https://gemini.google.com/app";
 
-const DEFAULT_TEMPLATES = [
-  "Summarise: ",
-  "Translate to English: ",
-  "Fix this code:\n",
-  "Explain simply: ",
-  "Pros and cons of: ",
+// ── Prompt Engineering defaults (mirrors background.js) ───────────
+const DEFAULT_PROMPT_ENG_RULES = [
+  {
+    id: "code", label: "Code",
+    hint: "Selection looks like code, or the page is a known code site (GitHub, Stack Overflow…)",
+    enabled: true,
+    template: "Explain this code concisely:\n\n{selection}",
+  },
+  {
+    id: "error", label: "Error / Bug",
+    hint: "Selection contains an error message or stack trace",
+    enabled: true,
+    template: "Debug this error and suggest a fix:\n\n{selection}",
+  },
+  {
+    id: "url", label: "URL",
+    hint: "The entire selection is a URL",
+    enabled: true,
+    template: "Summarize what this URL is about: {selection}",
+  },
+  {
+    id: "question", label: "Question",
+    hint: "Selection ends with a question mark",
+    enabled: true,
+    template: "Answer this clearly and concisely:\n\n{selection}",
+  },
+  {
+    id: "data", label: "Data / Numbers",
+    hint: "Selection is mostly numbers or structured data",
+    enabled: true,
+    template: "Analyze and explain this data:\n\n{selection}",
+  },
+  {
+    id: "term", label: "Term / Keyword",
+    hint: "Short selection of 4 words or fewer",
+    enabled: true,
+    template: "Explain \"{selection}\" simply in 2–3 sentences.",
+  },
+  {
+    id: "article", label: "Article / Text",
+    hint: "Default for longer natural-language selections",
+    enabled: true,
+    template: "Summarize this in bullet points:\n\n{selection}",
+  },
+  {
+    id: "default", label: "Default (fallback)",
+    hint: "Applied when no other rule matches or all others are disabled",
+    enabled: true,
+    template: "{selection}",
+  },
 ];
+
+const PE_TEMPLATE_MAX = 400;
+
+const DEFAULT_TEMPLATES_BY_MODEL = {
+  flash: [
+    "Summarise: ",
+    "Translate to English: ",
+    "Explain simply: ",
+    "Pros and cons of: ",
+  ],
+  thinking: [
+    "Think through this step-by-step: ",
+    "What are the edge cases for: ",
+    "Analyze deeply: ",
+  ],
+  pro: [
+    "Deep analysis of: ",
+    "Fix this code:\n",
+    "Compare and contrast: ",
+    "Write a comprehensive report on: ",
+  ],
+};
 
 const DEFAULT_SUMMARIZE_PREFIX = "Summarise the following:\n\n";
 const SUMMARIZE_PREFIX_MAX     = 300;
@@ -284,8 +350,11 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 // ══════════════════════════════════════════════════════════════════
-// 7. TEMPLATES
+// 7. TEMPLATES  (per-model)
 // ══════════════════════════════════════════════════════════════════
+
+const TMPL_MODELS       = ["flash", "thinking", "pro"];
+const TMPL_MODEL_LABELS = { flash: "Fast", thinking: "Think", pro: "Pro" };
 
 const addTemplateBtn    = document.getElementById("addTemplateBtn");
 const tmplFormCard      = document.getElementById("tmplFormCard");
@@ -300,32 +369,76 @@ const tmplDeleteOverlay = document.getElementById("tmplDeleteOverlay");
 const tmplDeleteBody    = document.getElementById("tmplDeleteBody");
 const tmplDeleteCancel  = document.getElementById("tmplDeleteCancel");
 const tmplDeleteConfirm = document.getElementById("tmplDeleteConfirm");
+const tmplModelTabs     = document.getElementById("tmplModelTabs");
 
-let allTemplates       = [];
-let editingIndex       = -1;
-let pendingDeleteIndex = -1;
+let allTemplatesByModel = { flash: [], thinking: [], pro: [] };
+let activeTemplateModel = "flash";
+let editingIndex        = -1;
+let pendingDeleteIndex  = -1;
+
+function getActiveTemplates() { return allTemplatesByModel[activeTemplateModel] || []; }
+
+async function saveTemplates() {
+  await chrome.storage.local.set({ askGeminiTemplates: allTemplatesByModel });
+}
 
 async function loadTemplates() {
-  const { askGeminiTemplates } = await chrome.storage.local.get("askGeminiTemplates");
-  if (!askGeminiTemplates) {
-    await chrome.storage.local.set({ askGeminiTemplates: DEFAULT_TEMPLATES });
-    allTemplates = [...DEFAULT_TEMPLATES];
-  } else {
-    allTemplates = askGeminiTemplates;
+  const { askGeminiTemplates, askGeminiModel } = await chrome.storage.local.get(["askGeminiTemplates", "askGeminiModel"]);
+
+  // Default active tab to current model pref
+  if (askGeminiModel && TMPL_MODELS.includes(askGeminiModel)) {
+    activeTemplateModel = askGeminiModel;
   }
+
+  if (!askGeminiTemplates) {
+    // First run — seed all models with defaults
+    allTemplatesByModel = {
+      flash:    [...DEFAULT_TEMPLATES_BY_MODEL.flash],
+      thinking: [...DEFAULT_TEMPLATES_BY_MODEL.thinking],
+      pro:      [...DEFAULT_TEMPLATES_BY_MODEL.pro],
+    };
+    await saveTemplates();
+  } else if (Array.isArray(askGeminiTemplates)) {
+    // Migration: old flat array → assign to flash, seed others
+    allTemplatesByModel = {
+      flash:    askGeminiTemplates,
+      thinking: [...DEFAULT_TEMPLATES_BY_MODEL.thinking],
+      pro:      [...DEFAULT_TEMPLATES_BY_MODEL.pro],
+    };
+    await saveTemplates();
+  } else {
+    // Normal load — ensure all model keys exist
+    allTemplatesByModel = {
+      flash:    askGeminiTemplates.flash    ?? [...DEFAULT_TEMPLATES_BY_MODEL.flash],
+      thinking: askGeminiTemplates.thinking ?? [...DEFAULT_TEMPLATES_BY_MODEL.thinking],
+      pro:      askGeminiTemplates.pro      ?? [...DEFAULT_TEMPLATES_BY_MODEL.pro],
+    };
+  }
+
+  renderModelTabs();
   renderTemplates();
+}
+
+function renderModelTabs() {
+  tmplModelTabs.querySelectorAll(".tmpl-model-tab").forEach(btn => {
+    const model = btn.dataset.model;
+    btn.classList.toggle("active", model === activeTemplateModel);
+    const badge = btn.querySelector(".tmpl-tab-badge");
+    if (badge) badge.textContent = (allTemplatesByModel[model] || []).length;
+  });
 }
 
 function renderTemplates() {
   tmplCardList.replaceChildren();
+  const templates = getActiveTemplates();
 
-  if (allTemplates.length === 0) {
+  if (templates.length === 0) {
     tmplEmptyState.style.display = "flex";
     return;
   }
   tmplEmptyState.style.display = "none";
 
-  allTemplates.forEach((tpl, idx) => {
+  templates.forEach((tpl, idx) => {
     const el = document.createElement("div");
     el.className = "tmpl-card";
     el.style.animationDelay = `${idx * 18}ms`;
@@ -365,9 +478,26 @@ function renderTemplates() {
   });
 }
 
+// Tab switching
+tmplModelTabs.addEventListener("click", (e) => {
+  const btn = e.target.closest(".tmpl-model-tab");
+  if (!btn || btn.dataset.model === activeTemplateModel) return;
+
+  // Close form if open
+  if (tmplFormCard.style.display !== "none") {
+    tmplFormCard.style.display = "none";
+    tmplTextarea.value = "";
+    editingIndex = -1;
+  }
+
+  activeTemplateModel = btn.dataset.model;
+  renderModelTabs();
+  renderTemplates();
+});
+
 addTemplateBtn.addEventListener("click", () => {
   editingIndex = -1;
-  tmplFormLabel.textContent = "New template";
+  tmplFormLabel.textContent = `New template — ${TMPL_MODEL_LABELS[activeTemplateModel]}`;
   tmplTextarea.value = "";
   tmplSaveBtn.disabled = true;
   updateCharCount();
@@ -378,8 +508,8 @@ addTemplateBtn.addEventListener("click", () => {
 
 function openEditForm(idx) {
   editingIndex = idx;
-  tmplFormLabel.textContent = `Edit template ${idx + 1}`;
-  tmplTextarea.value = allTemplates[idx];
+  tmplFormLabel.textContent = `Edit template ${idx + 1} — ${TMPL_MODEL_LABELS[activeTemplateModel]}`;
+  tmplTextarea.value = getActiveTemplates()[idx];
   updateCharCount();
   tmplSaveBtn.disabled = tmplTextarea.value.trim().length === 0;
   tmplFormCard.style.display = "block";
@@ -410,24 +540,27 @@ tmplSaveBtn.addEventListener("click", async () => {
   const val = tmplTextarea.value;
   if (!val.trim() || val.length > 400) return;
 
+  const templates = getActiveTemplates();
   if (editingIndex >= 0) {
-    allTemplates[editingIndex] = val;
+    templates[editingIndex] = val;
   } else {
-    allTemplates.push(val);
+    templates.push(val);
   }
+  allTemplatesByModel[activeTemplateModel] = templates;
 
-  await chrome.storage.local.set({ askGeminiTemplates: allTemplates });
+  await saveTemplates();
   tmplFormCard.style.display = "none";
   tmplTextarea.value = "";
   const wasEditing = editingIndex >= 0;
   editingIndex = -1;
+  renderModelTabs();
   renderTemplates();
   showToast(wasEditing ? "Template updated" : "Template saved");
 });
 
 function confirmDeleteTemplate(idx) {
   pendingDeleteIndex = idx;
-  const preview = allTemplates[idx].replace(/\n/g, "↵").slice(0, 60);
+  const preview = getActiveTemplates()[idx].replace(/\n/g, "↵").slice(0, 60);
   tmplDeleteBody.textContent = `"${preview}" will be permanently removed.`;
   tmplDeleteOverlay.classList.add("visible");
 }
@@ -446,10 +579,13 @@ tmplDeleteOverlay.addEventListener("click", (e) => {
 
 tmplDeleteConfirm.addEventListener("click", async () => {
   if (pendingDeleteIndex < 0) return;
-  allTemplates.splice(pendingDeleteIndex, 1);
-  await chrome.storage.local.set({ askGeminiTemplates: allTemplates });
+  const templates = getActiveTemplates();
+  templates.splice(pendingDeleteIndex, 1);
+  allTemplatesByModel[activeTemplateModel] = templates;
+  await saveTemplates();
   tmplDeleteOverlay.classList.remove("visible");
   pendingDeleteIndex = -1;
+  renderModelTabs();
   renderTemplates();
   showToast("Template deleted");
 });
@@ -508,7 +644,202 @@ async function loadContextMenuSettings() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// 9. HELPERS
+// 9. PROMPT ENGINEERING
+// ══════════════════════════════════════════════════════════════════
+
+const promptEngToggle       = document.getElementById("promptEngToggle");
+const promptEngRulesWrap    = document.getElementById("promptEngRules");
+const summarizePrefixSection = document.getElementById("summarizePrefixSection");
+
+// Current in-memory copy of the full PE settings object
+let _peSettings = { enabled: false, rules: [] };
+
+// Per-rule save debounce timers keyed by rule id
+const _peDebounce = {};
+
+function _peSetVisibility(enabled) {
+  promptEngRulesWrap.style.display    = enabled ? "block" : "none";
+  summarizePrefixSection.style.display = enabled ? "none"  : "block";
+}
+
+/**
+ * Merges saved rules with defaults so newly added default rules are
+ * always present even on older saved settings.
+ */
+function _mergeRules(saved) {
+  return DEFAULT_PROMPT_ENG_RULES.map(def => {
+    const found = saved.find(r => r.id === def.id);
+    return found ? { ...def, ...found } : { ...def };
+  });
+}
+
+function _buildRuleCard(rule) {
+  const card = document.createElement("div");
+  card.className = "card pe-rule-card";
+  card.dataset.ruleId = rule.id;
+
+  // ── Header row ───────────────────────────────────────────────
+  const header = document.createElement("div");
+  header.className = "pe-rule-header";
+
+  const toggleLabel = document.createElement("label");
+  toggleLabel.className = "toggle-switch toggle-sm";
+  toggleLabel.title = rule.enabled ? "Disable rule" : "Enable rule";
+  const toggleInput = document.createElement("input");
+  toggleInput.type = "checkbox";
+  toggleInput.className = "pe-rule-toggle";
+  toggleInput.checked = rule.enabled !== false;
+  const toggleTrack = document.createElement("span");
+  toggleTrack.className = "toggle-track";
+  toggleLabel.appendChild(toggleInput);
+  toggleLabel.appendChild(toggleTrack);
+
+  const labelEl = document.createElement("span");
+  labelEl.className = "pe-rule-label";
+  labelEl.textContent = rule.label;
+
+  const hintEl = document.createElement("span");
+  hintEl.className = "pe-rule-hint";
+  hintEl.textContent = rule.hint;
+
+  const resetBtn = document.createElement("button");
+  resetBtn.className = "btn-ghost btn-xs pe-rule-reset";
+  resetBtn.textContent = "Reset";
+  resetBtn.title = "Reset to default template";
+
+  header.appendChild(toggleLabel);
+  header.appendChild(labelEl);
+  header.appendChild(hintEl);
+  header.appendChild(resetBtn);
+  card.appendChild(header);
+
+  // ── Textarea ──────────────────────────────────────────────────
+  const textarea = document.createElement("textarea");
+  textarea.className = "tmpl-textarea pe-rule-textarea";
+  textarea.rows = 3;
+  textarea.maxLength = PE_TEMPLATE_MAX;
+  textarea.value = rule.template;
+  textarea.placeholder = "Template — use {selection} for the selected text";
+  card.appendChild(textarea);
+
+  // ── Char count + preview row ──────────────────────────────────
+  const metaRow = document.createElement("div");
+  metaRow.className = "pe-rule-meta";
+
+  const charCount = document.createElement("span");
+  charCount.className = "tmpl-char-count pe-rule-char-count";
+  _updatePeCharCount(charCount, textarea.value.length);
+
+  const previewWrap = document.createElement("div");
+  previewWrap.className = "ctx-preview-wrap pe-preview-wrap";
+  const previewLabel = document.createElement("span");
+  previewLabel.className = "ctx-preview-label";
+  previewLabel.textContent = "Preview";
+  const previewBox = document.createElement("div");
+  previewBox.className = "ctx-preview-box";
+  const previewText = document.createElement("span");
+  previewText.className = "ctx-preview-text";
+  _updatePePreview(previewText, textarea.value);
+  previewBox.appendChild(previewText);
+  previewWrap.appendChild(previewLabel);
+  previewWrap.appendChild(previewBox);
+
+  metaRow.appendChild(charCount);
+  metaRow.appendChild(previewWrap);
+  card.appendChild(metaRow);
+
+  // ── Wire up events ────────────────────────────────────────────
+  toggleInput.addEventListener("change", () => {
+    const r = _peSettings.rules.find(x => x.id === rule.id);
+    if (r) r.enabled = toggleInput.checked;
+    toggleLabel.title = toggleInput.checked ? "Disable rule" : "Enable rule";
+    _peScheduleSave(rule.id);
+  });
+
+  textarea.addEventListener("input", () => {
+    const len = textarea.value.length;
+    _updatePeCharCount(charCount, len);
+    _updatePePreview(previewText, textarea.value);
+    const r = _peSettings.rules.find(x => x.id === rule.id);
+    if (r) r.template = textarea.value;
+    _peScheduleSave(rule.id);
+  });
+
+  resetBtn.addEventListener("click", () => {
+    const def = DEFAULT_PROMPT_ENG_RULES.find(x => x.id === rule.id);
+    if (!def) return;
+    textarea.value = def.template;
+    const r = _peSettings.rules.find(x => x.id === rule.id);
+    if (r) r.template = def.template;
+    _updatePeCharCount(charCount, def.template.length);
+    _updatePePreview(previewText, def.template);
+    _peScheduleSave(rule.id);
+    showToast("Rule reset to default");
+  });
+
+  return card;
+}
+
+function _updatePeCharCount(el, len) {
+  el.textContent = `${len} / ${PE_TEMPLATE_MAX}`;
+  el.classList.toggle("warn", len > PE_TEMPLATE_MAX * 0.8 && len <= PE_TEMPLATE_MAX);
+  el.classList.toggle("over", len > PE_TEMPLATE_MAX);
+}
+
+function _updatePePreview(el, template) {
+  el.textContent = template.replace(/\{selection\}/g, "…your selected text…");
+}
+
+function _peScheduleSave(ruleId) {
+  clearTimeout(_peDebounce[ruleId]);
+  _peDebounce[ruleId] = setTimeout(async () => {
+    await chrome.storage.local.set({ askGeminiPromptEng: _peSettings });
+    showToast("Saved");
+  }, 400);
+}
+
+function renderPromptEngRules(rules) {
+  promptEngRulesWrap.replaceChildren();
+  rules.forEach(rule => {
+    promptEngRulesWrap.appendChild(_buildRuleCard(rule));
+  });
+
+  // Reset-all button at the bottom of the rules list
+  const footer = document.createElement("div");
+  footer.className = "pe-rules-footer";
+  const resetAllBtn = document.createElement("button");
+  resetAllBtn.className = "btn-ghost";
+  resetAllBtn.textContent = "Reset all rules to defaults";
+  resetAllBtn.addEventListener("click", async () => {
+    _peSettings.rules = _mergeRules([]);
+    await chrome.storage.local.set({ askGeminiPromptEng: _peSettings });
+    renderPromptEngRules(_peSettings.rules);
+    showToast("All rules reset to defaults");
+  });
+  footer.appendChild(resetAllBtn);
+  promptEngRulesWrap.appendChild(footer);
+}
+
+promptEngToggle.addEventListener("change", async () => {
+  _peSettings.enabled = promptEngToggle.checked;
+  _peSetVisibility(_peSettings.enabled);
+  await chrome.storage.local.set({ askGeminiPromptEng: _peSettings });
+  showToast(_peSettings.enabled ? "Prompt engineering enabled" : "Prompt engineering disabled");
+});
+
+async function loadPromptEngSettings() {
+  const { askGeminiPromptEng } = await chrome.storage.local.get("askGeminiPromptEng");
+  _peSettings = {
+    enabled: askGeminiPromptEng?.enabled ?? false,
+    rules:   _mergeRules(askGeminiPromptEng?.rules ?? []),
+  };
+  promptEngToggle.checked = _peSettings.enabled;
+  _peSetVisibility(_peSettings.enabled);
+  renderPromptEngRules(_peSettings.rules);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// 10. HELPERS
 // ══════════════════════════════════════════════════════════════════
 
 function escapeHtml(s) {
@@ -548,7 +879,7 @@ function showToast(msg) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// 10. INIT
+// 11. INIT
 // ══════════════════════════════════════════════════════════════════
 
 (async () => {
@@ -559,17 +890,19 @@ function showToast(msg) {
   await loadHistory();
   await loadTemplates();
   await loadContextMenuSettings();
+  await loadPromptEngSettings();
 })();
 
 /* istanbul ignore next — test hook, never runs inside the real extension */
 if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
   Object.assign(globalThis.__TEST__, {
     escapeHtml, escAttr, highlightMatch, formatTime,
-    renderHistory, renderTemplates, loadHistory, loadTemplates, loadContextMenuSettings,
+    renderHistory, renderTemplates, loadHistory, loadTemplates, loadContextMenuSettings, loadPromptEngSettings,
     updateCharCount, updateSummarizePrefixCharCount,
-    _setAllHistory:    (h) => { allHistory    = h; },
-    _setAllTemplates:  (t) => { allTemplates  = t; },
-    _setCurrentTheme:  (v) => { currentTheme  = v; },
-    _setCurrentModel:  (v) => { currentModel  = v; },
+    _setAllHistory:          (h) => { allHistory          = h; },
+    _setAllTemplatesByModel: (t) => { allTemplatesByModel = t; },
+    _setActiveTemplateModel: (m) => { activeTemplateModel = m; },
+    _setCurrentTheme:        (v) => { currentTheme        = v; },
+    _setCurrentModel:        (v) => { currentModel        = v; },
   });
 }
