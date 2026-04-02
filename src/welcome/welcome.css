@@ -13,25 +13,39 @@
   --text-dim:     light-dark(#646a78, #6b7080);
   --font-head:    'Syne', sans-serif;
   --font-body:    'DM Sans', sans-serif;
-  --radius:       20px;
+  --radius:            20px;
+  --dot-grid-opacity:  0.5;
+  --blob-1-opacity:    0.10;
+  --blob-2-opacity:    0.09;
+  --blob-3-opacity:    0.06;
   --card-shadow:
     0 0 0 1px rgba(124,106,247,0.06),
     0 32px 80px rgba(0,0,0,0.4),
     0 0 60px rgba(124,106,247,0.06);
+  --badge-shadow:      0 0 30px rgba(124,106,247,0.25);
+  --feat-hover-shadow: 0 12px 28px rgba(0,0,0,0.18), 0 0 0 1px rgba(124,106,247,0.12);
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --card-shadow:
-      0 0 0 1px rgba(102,85,232,0.06),
-      0 24px 60px rgba(100,80,200,0.12);
+    --dot-grid-opacity:  0.3;
+    --blob-1-opacity:    0.22;
+    --blob-2-opacity:    0.22;
+    --blob-3-opacity:    0.22;
+    --card-shadow:       0 0 0 1px rgba(102,85,232,0.06), 0 24px 60px rgba(100,80,200,0.12);
+    --badge-shadow:      0 0 24px rgba(102,85,232,0.18);
+    --feat-hover-shadow: 0 8px 20px rgba(100,80,200,0.10), 0 0 0 1px rgba(100,80,200,0.10);
   }
 }
 
 :root[data-theme="light"] {
-  --card-shadow:
-    0 0 0 1px rgba(102,85,232,0.06),
-    0 24px 60px rgba(100,80,200,0.12);
+  --dot-grid-opacity:  0.3;
+  --blob-1-opacity:    0.22;
+  --blob-2-opacity:    0.22;
+  --blob-3-opacity:    0.22;
+  --card-shadow:       0 0 0 1px rgba(102,85,232,0.06), 0 24px 60px rgba(100,80,200,0.12);
+  --badge-shadow:      0 0 24px rgba(102,85,232,0.18);
+  --feat-hover-shadow: 0 8px 20px rgba(100,80,200,0.10), 0 0 0 1px rgba(100,80,200,0.10);
 }
 
 /* ── Base ─────────────────────────────────────────────────────── */
@@ -63,13 +77,8 @@ body {
   background-image: radial-gradient(circle, rgba(124,106,247,0.18) 1px, transparent 1px);
   background-size: 28px 28px;
   mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 100%);
-  opacity: 0.5;
+  opacity: var(--dot-grid-opacity);
 }
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .dot-grid { opacity: 0.3; }
-}
-:root[data-theme="light"] .dot-grid { opacity: 0.3; }
 
 /* ── Ambient blobs ────────────────────────────────────────────── */
 .blob {
@@ -85,7 +94,7 @@ body {
   width: 480px; height: 480px;
   background: var(--accent);
   top: -160px; right: -100px;
-  opacity: 0.10;
+  opacity: var(--blob-1-opacity);
   animation-duration: 14s;
 }
 
@@ -93,7 +102,7 @@ body {
   width: 360px; height: 360px;
   background: #e05fa0;
   bottom: -120px; left: -80px;
-  opacity: 0.09;
+  opacity: var(--blob-2-opacity);
   animation-duration: 10s;
   animation-delay: -5s;
 }
@@ -102,20 +111,10 @@ body {
   width: 240px; height: 240px;
   background: #4a80f0;
   top: 40%; left: 20%;
-  opacity: 0.06;
+  opacity: var(--blob-3-opacity);
   animation-duration: 16s;
   animation-delay: -8s;
 }
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .blob-1,
-  :root:not([data-theme="dark"]) .blob-2,
-  :root:not([data-theme="dark"]) .blob-3 { opacity: 0.22; }
-}
-
-:root[data-theme="light"] .blob-1,
-:root[data-theme="light"] .blob-2,
-:root[data-theme="light"] .blob-3 { opacity: 0.22; }
 
 @keyframes blobDrift {
   from { transform: translate(0, 0) scale(1); }
@@ -194,15 +193,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 30px rgba(124,106,247,0.25);
+  box-shadow: var(--badge-shadow);
   animation: badgeFloat 4s ease-in-out infinite;
   z-index: 2;
 }
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .logo-badge { box-shadow: 0 0 24px rgba(102,85,232,0.18); }
-}
-:root[data-theme="light"] .logo-badge { box-shadow: 0 0 24px rgba(102,85,232,0.18); }
 
 @keyframes badgeFloat {
   0%, 100% { transform: translateY(0); }
@@ -407,13 +401,8 @@ body {
 .feat-card:hover {
   border-color: rgba(124,106,247,0.35);
   transform: translateY(-3px) scale(1.01);
-  box-shadow: 0 12px 28px rgba(0,0,0,0.18), 0 0 0 1px rgba(124,106,247,0.12);
+  box-shadow: var(--feat-hover-shadow);
 }
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .feat-card:hover { box-shadow: 0 8px 20px rgba(100,80,200,0.10), 0 0 0 1px rgba(100,80,200,0.10); }
-}
-:root[data-theme="light"] .feat-card:hover { box-shadow: 0 8px 20px rgba(100,80,200,0.10), 0 0 0 1px rgba(100,80,200,0.10); }
 
 /* Staggered entrance */
 .feat-card-1 { animation: featIn 0.5s cubic-bezier(0.16,1,0.3,1) 0.68s both; }

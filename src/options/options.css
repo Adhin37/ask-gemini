@@ -27,8 +27,24 @@
   --radius:       14px;
   --radius-sm:    8px;
   --sidebar-w:    220px;
-  --font-head: 'Syne', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
+  --font-head:   'Syne', sans-serif;
+  --font-body:   'DM Sans', sans-serif;
+  --blob-opacity:  0.14;
+  --kbd-shadow:    0 1px 3px rgba(0,0,0,0.3);
+  --hover-tint:    light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.04));
+  --hover-tint-sm: light-dark(rgba(0,0,0,0.05), rgba(255,255,255,0.06));
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --blob-opacity: 0.30;
+    --kbd-shadow:   0 1px 2px rgba(0,0,0,0.08);
+  }
+}
+
+:root[data-theme="light"] {
+  --blob-opacity: 0.30;
+  --kbd-shadow:   0 1px 2px rgba(0,0,0,0.08);
 }
 
 html, body {
@@ -49,14 +65,9 @@ html, body {
   filter: blur(90px);
   pointer-events: none;
   z-index: 0;
-  opacity: 0.14;
+  opacity: var(--blob-opacity);
   transition: opacity 0.3s;
 }
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .blob { opacity: 0.30; }
-}
-:root[data-theme="light"] .blob { opacity: 0.30; }
 
 .blob-1 {
   width: 500px;
@@ -175,7 +186,7 @@ html, body {
 }
 
 .nav-item:hover {
-  background: light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.04));
+  background: var(--hover-tint);
   color: var(--text);
 }
 
@@ -447,7 +458,7 @@ html, body {
 }
 
 .hist-btn:hover {
-  background: light-dark(rgba(0,0,0,0.05), rgba(255,255,255,0.06));
+  background: var(--hover-tint-sm);
   color: var(--text);
 }
 
@@ -520,13 +531,8 @@ kbd {
   border-radius: 5px;
   padding: 3px 8px;
   white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  box-shadow: var(--kbd-shadow);
 }
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) kbd { box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
-}
-:root[data-theme="light"] kbd { box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
 
 .key-sep {
   color: var(--text-hint);
@@ -723,7 +729,7 @@ kbd {
 
 .seg-btn:hover {
   color: var(--text);
-  background: light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.05));
+  background: var(--hover-tint);
 }
 
 .seg-btn.active {
@@ -926,7 +932,7 @@ kbd {
 }
 
 .btn-ghost:hover {
-  background: light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.04));
+  background: var(--hover-tint);
   color: var(--text);
 }
 
