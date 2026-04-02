@@ -91,16 +91,12 @@ document.getElementById("shortcutPageLink")?.addEventListener("click", (e) => {
 
 let currentTheme = "auto";
 
-function resolveTheme(pref) {
-  if (pref === "light") return "light";
-  if (pref === "dark")  return "dark";
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-}
-
 function applyTheme(pref) {
   currentTheme = pref || "auto";
-  const resolved = resolveTheme(currentTheme);
-  document.body.classList.toggle("light", resolved === "light");
+  document.documentElement.dataset.theme = currentTheme;
+  document.documentElement.style.colorScheme =
+    currentTheme === "light" ? "only light" :
+    currentTheme === "dark"  ? "only dark"  : "";
   document.querySelectorAll("#themeControl .seg-btn").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.value === currentTheme);
   });
@@ -113,10 +109,6 @@ document.getElementById("themeControl")?.addEventListener("click", async (e) => 
   if (val === currentTheme) return;
   await chrome.storage.local.set({ askGeminiTheme: val });
   applyTheme(val);
-});
-
-window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
-  if (currentTheme === "auto") applyTheme("auto");
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -572,7 +564,7 @@ function showToast(msg) {
 /* istanbul ignore next — test hook, never runs inside the real extension */
 if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
   Object.assign(globalThis.__TEST__, {
-    escapeHtml, escAttr, highlightMatch, formatTime, resolveTheme,
+    escapeHtml, escAttr, highlightMatch, formatTime,
     renderHistory, renderTemplates, loadHistory, loadTemplates, loadContextMenuSettings,
     updateCharCount, updateSummarizePrefixCharCount,
     _setAllHistory:    (h) => { allHistory    = h; },

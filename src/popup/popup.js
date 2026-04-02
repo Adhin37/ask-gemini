@@ -41,21 +41,13 @@ const acCounter      = document.getElementById("acCounter");
 
 let currentTheme = "auto";
 
-function resolveTheme(pref) {
-  if (pref === "light") return "light";
-  if (pref === "dark")  return "dark";
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-}
-
 function applyTheme(pref) {
   currentTheme = pref || "auto";
-  const resolved = resolveTheme(currentTheme);
-  document.body.classList.toggle("light", resolved === "light");
+  document.documentElement.dataset.theme = currentTheme;
+  document.documentElement.style.colorScheme =
+    currentTheme === "light" ? "only light" :
+    currentTheme === "dark"  ? "only dark"  : "";
 }
-
-window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
-  if (currentTheme === "auto") applyTheme("auto");
-});
 
 // ══════════════════════════════════════════════════════════════════
 // 2. MODEL SWITCHER  (flash | pro | thinking)
