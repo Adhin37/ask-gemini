@@ -1,18 +1,20 @@
 // ── content.js ───────────────────────────────────────────────
 
 (async () => {
-  const data = await chrome.storage.local.get(["pendingMessage", "pendingModel"]);
+  const data = await chrome.storage.local.get(["pendingMessage", "pendingModel", "pendingFiles"]);
   if (!data.pendingMessage) return;
 
   const message   = data.pendingMessage;
   const modelPref = data.pendingModel || "flash";
-  await chrome.storage.local.remove(["pendingMessage", "pendingModel"]);
+  const files     = data.pendingFiles  || [];
+  await chrome.storage.local.remove(["pendingMessage", "pendingModel", "pendingFiles"]);
 
   // ── 1. Wait for the model trigger button ───────────────────────
   const ready = await waitForElement(() => findModelTrigger(), 10_000);
 
   if (!ready) {
     console.warn("[Ask Gemini] Model trigger not found after 10 s — skipping model check");
+    if (files.length > 0) await uploadFilesToGemini(files);
     await injectMessage(message);
     return;
   }
@@ -27,7 +29,10 @@
     console.info(`[Ask Gemini] ✓ Model confirmed: "${modelPref}"`);
   }
 
-  // ── 3. Inject the message and submit ───────────────────────────
+  // ── 3. Upload any attached files and wait for processing ───────
+  if (files.length > 0) await uploadFilesToGemini(files);
+
+  // ── 4. Inject the message and submit ───────────────────────────
   await injectMessage(message);
 })();
 
@@ -303,6 +308,91 @@ async function performModelSwitch(target) {
 
   console.debug(`[Ask Gemini] No option matched "${target}" — closing dropdown`);
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// FILE UPLOAD
+// ══════════════════════════════════════════════════════════════════
+
+/**
+ * Uploads all pending files to the Gemini input, then waits for Gemini
+ * to finish processing them before returning.
+ * Wait time: 5 s base + 2 s per MB of total payload.
+ *
+ * @param {{ name: string, type: string, size: number, data: string }[]} files
+ */
+async function uploadFilesToGemini(files) {
+  if (!files || files.length === 0) return;
+
+  const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+
+  for (const fileData of files) {
+    await uploadSingleFile(fileData);
+    // Small gap between consecutive files
+    await new Promise((r) => setTimeout(r, 300));
+  }
+
+  const waitMs = 5_000 + Math.ceil(totalBytes / (1024 * 1024)) * 2_000;
+  console.info(`[Ask Gemini] Waiting ${waitMs} ms for file upload(s) to complete…`);
+  await new Promise((r) => setTimeout(r, waitMs));
+}
+
+/**
+ * Converts a base64 data-URL to a File, then attempts to deliver it to
+ * Gemini's input using two strategies:
+ *
+ *  A. Native file-input setter — reliable on React apps because it
+ *     bypasses the read-only `.files` descriptor and fires a real
+ *     `change` event that React's synthetic event system picks up.
+ *
+ *  B. DataTransfer drop simulation — fallback for apps without a
+ *     reachable `<input type="file">`.
+ *
+ * @param {{ name: string, type: string, data: string }} fileData
+ */
+async function uploadSingleFile(fileData) {
+  const { name, type, data } = fileData;
+
+  // Convert base64 data URL → Blob → File
+  const response = await fetch(data);
+  const blob     = await response.blob();
+  const file     = new File([blob], name, { type });
+
+  // ── Strategy A: native file-input ────────────────────────────
+  const fileInputEl = document.querySelector("input[type='file']");
+  if (fileInputEl) {
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      const nativeSetter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype, "files"
+      ).set;
+      nativeSetter.call(fileInputEl, dt.files);
+      fileInputEl.dispatchEvent(new Event("change", { bubbles: true }));
+      console.debug(`[Ask Gemini] uploadSingleFile (input): "${name}"`);
+      return;
+    } catch (err) {
+      console.warn("[Ask Gemini] uploadSingleFile: input approach failed —", err.message);
+    }
+  }
+
+  // ── Strategy B: drag-and-drop simulation ─────────────────────
+  const dropTarget =
+    document.querySelector("[data-node-type='input-area']") ||
+    document.querySelector("rich-textarea")                 ||
+    document.querySelector(".input-area-container")         ||
+    document.querySelector("main")                          ||
+    document.body;
+
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  dropTarget.dispatchEvent(new DragEvent("dragenter", { dataTransfer: dt, bubbles: true, cancelable: true }));
+  await new Promise((r) => setTimeout(r, 60));
+  dropTarget.dispatchEvent(new DragEvent("dragover",  { dataTransfer: dt, bubbles: true, cancelable: true }));
+  await new Promise((r) => setTimeout(r, 60));
+  dropTarget.dispatchEvent(new DragEvent("drop",      { dataTransfer: dt, bubbles: true, cancelable: true }));
+  console.debug(`[Ask Gemini] uploadSingleFile (drop): "${name}"`);
 }
 
 

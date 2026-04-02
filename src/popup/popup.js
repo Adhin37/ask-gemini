@@ -34,6 +34,10 @@ const tmplSettingsLink = document.getElementById("tmplSettingsLink");
 const acStrip        = document.getElementById("acStrip");
 const acGhost        = document.getElementById("acGhost");
 const acCounter      = document.getElementById("acCounter");
+// File attachment
+const attachBtn      = document.getElementById("attachBtn");
+const fileInput      = document.getElementById("fileInput");
+const fileChips      = document.getElementById("fileChips");
 
 // ══════════════════════════════════════════════════════════════════
 // 1. THEME
@@ -305,7 +309,129 @@ function updateAC() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// 5. INPUT EVENTS
+// 5. FILE ATTACHMENT
+// ══════════════════════════════════════════════════════════════════
+
+const MAX_FILES     = 4;
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4 MB per file
+
+let attachedFiles = []; // File[]
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderFileChips() {
+  fileChips.replaceChildren();
+  attachedFiles.forEach((file, i) => {
+    const chip = document.createElement("div");
+    chip.className = "file-chip";
+
+    if (file.type.startsWith("image/")) {
+      const img = document.createElement("img");
+      img.className = "file-chip-thumb";
+      img.alt = "";
+      img.src = URL.createObjectURL(file);
+      chip.appendChild(img);
+    } else {
+      // Generic file icon (SVG via DOM, no innerHTML)
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "file-chip-icon");
+      svg.setAttribute("viewBox", "0 0 24 24");
+      svg.setAttribute("fill", "none");
+      const p1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      p1.setAttribute("d", "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z");
+      p1.setAttribute("stroke", "currentColor");
+      p1.setAttribute("stroke-width", "2");
+      p1.setAttribute("stroke-linejoin", "round");
+      const p2 = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      p2.setAttribute("points", "14 2 14 8 20 8");
+      p2.setAttribute("stroke", "currentColor");
+      p2.setAttribute("stroke-width", "2");
+      p2.setAttribute("stroke-linejoin", "round");
+      svg.appendChild(p1);
+      svg.appendChild(p2);
+      chip.appendChild(svg);
+    }
+
+    const nameEl = document.createElement("span");
+    nameEl.className = "file-chip-name";
+    nameEl.textContent = file.name;
+    chip.appendChild(nameEl);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "file-chip-remove";
+    removeBtn.textContent = "×";
+    removeBtn.title = "Remove";
+    removeBtn.addEventListener("click", () => {
+      attachedFiles.splice(i, 1);
+      renderFileChips();
+      updateSendBtn();
+    });
+    chip.appendChild(removeBtn);
+    fileChips.appendChild(chip);
+  });
+
+  attachBtn.classList.toggle("has-files", attachedFiles.length > 0);
+}
+
+function addFiles(fileList) {
+  const toAdd = Array.from(fileList).filter(file => {
+    if (file.size > MAX_FILE_SIZE) {
+      console.warn(`[Ask Gemini] File "${file.name}" exceeds 4 MB — skipped`);
+      return false;
+    }
+    return true;
+  });
+  const slots = MAX_FILES - attachedFiles.length;
+  attachedFiles.push(...toAdd.slice(0, slots));
+  renderFileChips();
+  updateSendBtn();
+}
+
+function updateSendBtn() {
+  const len = input.value.length;
+  sendBtn.disabled = input.value.trim().length === 0 || len > MAX_CHARS;
+}
+
+attachBtn.addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", () => {
+  if (fileInput.files.length > 0) addFiles(fileInput.files);
+  fileInput.value = ""; // reset so the same file can be re-selected
+});
+
+// Drag & drop onto the input wrapper
+inputWrapper.addEventListener("dragenter", (e) => {
+  if (e.dataTransfer.types.includes("Files")) {
+    e.preventDefault();
+    inputWrapper.classList.add("drag-over");
+  }
+});
+inputWrapper.addEventListener("dragover", (e) => {
+  if (e.dataTransfer.types.includes("Files")) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    inputWrapper.classList.add("drag-over");
+  }
+});
+inputWrapper.addEventListener("dragleave", (e) => {
+  if (!inputWrapper.contains(e.relatedTarget)) {
+    inputWrapper.classList.remove("drag-over");
+  }
+});
+inputWrapper.addEventListener("drop", (e) => {
+  e.preventDefault();
+  inputWrapper.classList.remove("drag-over");
+  if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files);
+});
+
+// ══════════════════════════════════════════════════════════════════
+// 6. INPUT EVENTS
 // ══════════════════════════════════════════════════════════════════
 
 input.addEventListener("input", () => {
@@ -324,7 +450,7 @@ input.addEventListener("input", () => {
     hint.style.color = "";
   }
 
-  sendBtn.disabled = input.value.trim().length === 0 || len > MAX_CHARS;
+  updateSendBtn();
   chrome.storage.session.set({ askGeminiDraft: input.value });
 
   updateAC();
@@ -367,7 +493,7 @@ input.addEventListener("keydown", (e) => {
 });
 
 // ══════════════════════════════════════════════════════════════════
-// 6. SELECTED-TEXT AUTO-FILL
+// 7. SELECTED-TEXT AUTO-FILL
 // ══════════════════════════════════════════════════════════════════
 
 async function tryAutoFillSelection() {
@@ -404,7 +530,7 @@ selClear.addEventListener("click", () => {
 });
 
 // ══════════════════════════════════════════════════════════════════
-// 7. HISTORY
+// 8. HISTORY
 // ══════════════════════════════════════════════════════════════════
 
 async function saveToHistory(message) {
@@ -415,7 +541,7 @@ async function saveToHistory(message) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// 8. SEND
+// 9. SEND
 // ══════════════════════════════════════════════════════════════════
 
 sendBtn.addEventListener("click", () => askGemini());
@@ -430,7 +556,22 @@ async function askGemini() {
   dismissAC();
 
   try {
-    await chrome.storage.local.set({ pendingMessage: message, pendingModel: currentModel });
+    const storagePayload = { pendingMessage: message, pendingModel: currentModel };
+
+    if (attachedFiles.length > 0) {
+      storagePayload.pendingFiles = await Promise.all(
+        attachedFiles.map(async (f) => ({
+          name: f.name,
+          type: f.type,
+          size: f.size,
+          data: await fileToBase64(f),
+        }))
+      );
+      attachedFiles = [];
+      renderFileChips();
+    }
+
+    await chrome.storage.local.set(storagePayload);
     await saveToHistory(message);
     chrome.storage.session.remove("askGeminiDraft");
     input.value = "";
@@ -454,13 +595,13 @@ async function askGemini() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// 9. FOOTER BUTTONS
+// 10. FOOTER BUTTONS
 // ══════════════════════════════════════════════════════════════════
 
 logoBtn.addEventListener("click", () => { chrome.tabs.create({ url: GEMINI_URL }); window.close(); });
 
 // ══════════════════════════════════════════════════════════════════
-// 10. HELPERS
+// 11. HELPERS
 // ══════════════════════════════════════════════════════════════════
 
 function escapeHtml(s) {
@@ -473,7 +614,7 @@ if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// 11. INIT
+// 12. INIT
 // ══════════════════════════════════════════════════════════════════
 
 sendBtn.disabled = true;
