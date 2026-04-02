@@ -332,32 +332,11 @@ function renderFileChips() {
     const chip = document.createElement("div");
     chip.className = "file-chip";
 
-    if (file.type.startsWith("image/")) {
-      const img = document.createElement("img");
-      img.className = "file-chip-thumb";
-      img.alt = "";
-      img.src = URL.createObjectURL(file);
-      chip.appendChild(img);
-    } else {
-      // Generic file icon (SVG via DOM, no innerHTML)
-      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.setAttribute("class", "file-chip-icon");
-      svg.setAttribute("viewBox", "0 0 24 24");
-      svg.setAttribute("fill", "none");
-      const p1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      p1.setAttribute("d", "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z");
-      p1.setAttribute("stroke", "currentColor");
-      p1.setAttribute("stroke-width", "2");
-      p1.setAttribute("stroke-linejoin", "round");
-      const p2 = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-      p2.setAttribute("points", "14 2 14 8 20 8");
-      p2.setAttribute("stroke", "currentColor");
-      p2.setAttribute("stroke-width", "2");
-      p2.setAttribute("stroke-linejoin", "round");
-      svg.appendChild(p1);
-      svg.appendChild(p2);
-      chip.appendChild(svg);
-    }
+    const img = document.createElement("img");
+    img.className = "file-chip-thumb";
+    img.alt = "";
+    img.src = URL.createObjectURL(file);
+    chip.appendChild(img);
 
     const nameEl = document.createElement("span");
     nameEl.className = "file-chip-name";
@@ -382,8 +361,12 @@ function renderFileChips() {
 
 function addFiles(fileList) {
   const toAdd = Array.from(fileList).filter(file => {
+    if (!file.type.startsWith("image/")) {
+      console.warn(`[Ask Gemini] "${file.name}" is not an image — skipped`);
+      return false;
+    }
     if (file.size > MAX_FILE_SIZE) {
-      console.warn(`[Ask Gemini] File "${file.name}" exceeds 4 MB — skipped`);
+      console.warn(`[Ask Gemini] "${file.name}" exceeds 4 MB — skipped`);
       return false;
     }
     return true;

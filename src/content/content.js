@@ -316,8 +316,14 @@ async function performModelSwitch(target) {
 // ══════════════════════════════════════════════════════════════════
 
 /**
- * Uploads all pending files to the Gemini input, then waits for Gemini
- * to finish processing them before returning.
+ * Pastes all pending images into the Gemini input via ClipboardEvent,
+ * then waits for Gemini to finish uploading them before returning.
+ *
+ * Strategy: dispatch a synthetic `paste` ClipboardEvent whose
+ * `clipboardData` DataTransfer contains the image File. React apps
+ * typically do not check `event.isTrusted` on paste events, so this
+ * is processed the same way as a real Ctrl+V paste.
+ *
  * Wait time: 5 s base + 2 s per MB of total payload.
  *
  * @param {{ name: string, type: string, size: number, data: string }[]} files
@@ -325,74 +331,60 @@ async function performModelSwitch(target) {
 async function uploadFilesToGemini(files) {
   if (!files || files.length === 0) return;
 
+  // Find the Gemini contenteditable input to paste into
+  const inputEl = await waitForElement(
+    () =>
+      document.querySelector("rich-textarea div.ql-editor[contenteditable='true']") ||
+      document.querySelector("rich-textarea div[contenteditable='true']")           ||
+      document.querySelector("div.ql-editor[contenteditable='true']")               ||
+      document.querySelector("div[contenteditable='true'][aria-label]"),
+    10_000
+  );
+
+  if (!inputEl) {
+    console.warn("[Ask Gemini] uploadFilesToGemini: input not found — skipping image paste");
+    return;
+  }
+
   const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
 
   for (const fileData of files) {
-    await uploadSingleFile(fileData);
-    // Small gap between consecutive files
-    await new Promise((r) => setTimeout(r, 300));
+    await pasteImageToInput(fileData, inputEl);
+    // Small gap so Gemini registers each image separately
+    await new Promise((r) => setTimeout(r, 400));
   }
 
+  // Wait for Gemini's upload pipeline to process the images
   const waitMs = 5_000 + Math.ceil(totalBytes / (1024 * 1024)) * 2_000;
-  console.info(`[Ask Gemini] Waiting ${waitMs} ms for file upload(s) to complete…`);
+  console.info(`[Ask Gemini] Waiting ${waitMs} ms for image upload(s) to complete…`);
   await new Promise((r) => setTimeout(r, waitMs));
 }
 
 /**
- * Converts a base64 data-URL to a File, then attempts to deliver it to
- * Gemini's input using two strategies:
- *
- *  A. Native file-input setter — reliable on React apps because it
- *     bypasses the read-only `.files` descriptor and fires a real
- *     `change` event that React's synthetic event system picks up.
- *
- *  B. DataTransfer drop simulation — fallback for apps without a
- *     reachable `<input type="file">`.
+ * Dispatches a synthetic paste event containing a single image File onto
+ * the Gemini input element.
  *
  * @param {{ name: string, type: string, data: string }} fileData
+ * @param {Element} inputEl
  */
-async function uploadSingleFile(fileData) {
+async function pasteImageToInput(fileData, inputEl) {
   const { name, type, data } = fileData;
 
-  // Convert base64 data URL → Blob → File
   const response = await fetch(data);
   const blob     = await response.blob();
   const file     = new File([blob], name, { type });
 
-  // ── Strategy A: native file-input ────────────────────────────
-  const fileInputEl = document.querySelector("input[type='file']");
-  if (fileInputEl) {
-    try {
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      const nativeSetter = Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype, "files"
-      ).set;
-      nativeSetter.call(fileInputEl, dt.files);
-      fileInputEl.dispatchEvent(new Event("change", { bubbles: true }));
-      console.debug(`[Ask Gemini] uploadSingleFile (input): "${name}"`);
-      return;
-    } catch (err) {
-      console.warn("[Ask Gemini] uploadSingleFile: input approach failed —", err.message);
-    }
-  }
-
-  // ── Strategy B: drag-and-drop simulation ─────────────────────
-  const dropTarget =
-    document.querySelector("[data-node-type='input-area']") ||
-    document.querySelector("rich-textarea")                 ||
-    document.querySelector(".input-area-container")         ||
-    document.querySelector("main")                          ||
-    document.body;
-
   const dt = new DataTransfer();
   dt.items.add(file);
-  dropTarget.dispatchEvent(new DragEvent("dragenter", { dataTransfer: dt, bubbles: true, cancelable: true }));
-  await new Promise((r) => setTimeout(r, 60));
-  dropTarget.dispatchEvent(new DragEvent("dragover",  { dataTransfer: dt, bubbles: true, cancelable: true }));
-  await new Promise((r) => setTimeout(r, 60));
-  dropTarget.dispatchEvent(new DragEvent("drop",      { dataTransfer: dt, bubbles: true, cancelable: true }));
-  console.debug(`[Ask Gemini] uploadSingleFile (drop): "${name}"`);
+
+  inputEl.focus();
+  inputEl.dispatchEvent(new ClipboardEvent("paste", {
+    bubbles:       true,
+    cancelable:    true,
+    clipboardData: dt,
+  }));
+
+  console.debug(`[Ask Gemini] pasteImageToInput: dispatched paste for "${name}"`);
 }
 
 
