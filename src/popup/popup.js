@@ -25,6 +25,31 @@ const DEFAULT_TEMPLATES_BY_MODEL = {
   ],
 };
 
+// ══════════════════════════════════════════════════════════════════
+// PROMPT INJECTION DETECTION
+// ══════════════════════════════════════════════════════════════════
+
+const INJECTION_PATTERNS = [
+  /ignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?|context|rules?)/i,
+  /disregard\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?|context)/i,
+  /forget\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?|context|everything)/i,
+  /override\s+(your\s+)?(instructions?|safety|guidelines?|system)/i,
+  /new\s+(system\s+)?instructions?\s*:/i,
+  /you\s+are\s+now\s+(a|an)\s+/i,
+  /act\s+as\s+(if\s+you\s+(are|were)|a|an)\s+/i,
+  /pretend\s+(to\s+be|you\s+(are|were))\s+/i,
+  /\[INST\]/,
+  /<<SYS>>/,
+  /<\s*system\s*>/i,
+  /###\s*System\s*:/i,
+  /\bDAN\b.*\bmode\b/i,
+  /\bjailbreak\b/i,
+];
+
+function detectPromptInjection(text) {
+  return INJECTION_PATTERNS.some(re => re.test(text));
+}
+
 // ── DOM refs ───────────────────────────────────────────────────────
 const input          = document.getElementById("questionInput");
 const sendBtn        = document.getElementById("sendBtn");
@@ -50,6 +75,10 @@ const acCounter      = document.getElementById("acCounter");
 const attachBtn      = document.getElementById("attachBtn");
 const fileInput      = document.getElementById("fileInput");
 const fileChips      = document.getElementById("fileChips");
+// Injection warning
+const injectWarning  = document.getElementById("injectWarning");
+const injectCancel   = document.getElementById("injectCancel");
+const injectSendAnyway = document.getElementById("injectSendAnyway");
 
 // ══════════════════════════════════════════════════════════════════
 // 1. THEME
@@ -387,18 +416,72 @@ function renderFileChips() {
   attachBtn.classList.toggle("has-files", attachedFiles.length > 0);
 }
 
-function addFiles(fileList) {
-  const toAdd = Array.from(fileList).filter(file => {
+/**
+ * Returns true if the file's leading bytes match a known safe image format.
+ * Rejects SVG (can embed arbitrary text prompts) and unrecognised magic bytes.
+ * @param {File} file
+ * @returns {Promise<boolean>}
+ */
+function validateImageMagicBytes(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const b = new Uint8Array(e.target.result);
+      const isJpeg = b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF;
+      const isPng  = b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47;
+      const isGif  = b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46;
+      const isWebP = b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46
+                  && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50;
+      const isBmp  = b[0] === 0x42 && b[1] === 0x4D;
+      const isTiff = (b[0] === 0x49 && b[1] === 0x49 && b[2] === 0x2A)
+                  || (b[0] === 0x4D && b[1] === 0x4D && b[3] === 0x2A);
+      resolve(isJpeg || isPng || isGif || isWebP || isBmp || isTiff);
+    };
+    reader.onerror = () => resolve(false);
+    reader.readAsArrayBuffer(file.slice(0, 12));
+  });
+}
+
+function showFileError(msg) {
+  hint.textContent = msg;
+  hint.style.color = "#f05050";
+  setTimeout(() => {
+    hint.textContent = "↵ Enter to send";
+    hint.style.color = "";
+  }, 3000);
+}
+
+async function addFiles(fileList) {
+  const candidates = Array.from(fileList);
+  const toAdd = [];
+
+  for (const file of candidates) {
+    // Block SVG — can contain embedded text prompts and scripts
+    if (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
+      showFileError(`"${file.name}" rejected: SVG files are not allowed`);
+      console.warn(`[Ask Gemini] "${file.name}" rejected: SVG files are not allowed`);
+      continue;
+    }
     if (!file.type.startsWith("image/")) {
+      showFileError(`"${file.name}" is not an image`);
       console.warn(`[Ask Gemini] "${file.name}" is not an image — skipped`);
-      return false;
+      continue;
     }
     if (file.size > MAX_FILE_SIZE) {
+      showFileError(`"${file.name}" exceeds 4 MB`);
       console.warn(`[Ask Gemini] "${file.name}" exceeds 4 MB — skipped`);
-      return false;
+      continue;
     }
-    return true;
-  });
+    // Validate magic bytes to ensure the file content matches its declared type
+    const validBytes = await validateImageMagicBytes(file);
+    if (!validBytes) {
+      showFileError(`"${file.name}" rejected: file content does not match image format`);
+      console.warn(`[Ask Gemini] "${file.name}" rejected: magic bytes do not match an image format`);
+      continue;
+    }
+    toAdd.push(file);
+  }
+
   const slots = MAX_FILES - attachedFiles.length;
   attachedFiles.push(...toAdd.slice(0, slots));
   renderFileChips();
@@ -555,11 +638,29 @@ async function saveToHistory(message) {
 // 9. SEND
 // ══════════════════════════════════════════════════════════════════
 
+let _injectionAcknowledged = false;
+
+function showInjectWarning() { injectWarning.classList.add("visible"); }
+function hideInjectWarning() { injectWarning.classList.remove("visible"); }
+
+injectCancel.addEventListener("click", () => hideInjectWarning());
+injectSendAnyway.addEventListener("click", () => {
+  hideInjectWarning();
+  _injectionAcknowledged = true;
+  askGemini();
+});
+
 sendBtn.addEventListener("click", () => askGemini());
 
 async function askGemini() {
   const message = input.value.trim();
   if (!message || message.length > MAX_CHARS) return;
+
+  if (detectPromptInjection(message) && !_injectionAcknowledged) {
+    showInjectWarning();
+    return;
+  }
+  _injectionAcknowledged = false;
 
   sendBtn.classList.add("sending");
   sendBtn.disabled = true;

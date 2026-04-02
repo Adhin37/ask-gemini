@@ -105,7 +105,7 @@ html, body {
   left: -30px;
 }
 
-.header, .main, .footer, .sel-banner, .tmpl-dropdown {
+.header, .main, .footer, .sel-banner, .inject-warning, .tmpl-dropdown {
   position: relative;
   z-index: 1;
 }
@@ -461,6 +461,68 @@ html, body {
 .sel-clear:hover {
   color: var(--text);
   background: var(--hover-tint);
+}
+
+/* ── Injection warning ────────────────────────────────────────── */
+.inject-warning {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  background: light-dark(rgba(245,158,11,0.10), rgba(245,158,11,0.12));
+  border: 1px solid light-dark(rgba(245,158,11,0.40), rgba(245,158,11,0.28));
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+  animation: fadeSlideIn 0.18s ease both;
+}
+
+.inject-warning.visible { display: flex; }
+
+.inject-warning svg {
+  color: light-dark(#d97706, #f59e0b);
+  flex-shrink: 0;
+}
+
+.inject-msg {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inject-actions {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.inject-cancel-btn,
+.inject-send-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 10.5px;
+  font-family: var(--font-body);
+  padding: 2px 8px;
+  color: var(--text-dim);
+  transition: background 0.15s, color 0.15s;
+}
+
+.inject-cancel-btn:hover {
+  background: var(--hover-tint);
+  color: var(--text);
+}
+
+.inject-send-btn {
+  border-color: light-dark(rgba(245,158,11,0.45), rgba(245,158,11,0.35));
+  color: light-dark(#b45309, #f59e0b);
+}
+
+.inject-send-btn:hover {
+  background: light-dark(rgba(245,158,11,0.12), rgba(245,158,11,0.18));
 }
 
 /* ── Template dropdown (button-triggered) ─────────────────────── */
