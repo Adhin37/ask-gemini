@@ -155,7 +155,7 @@ function applyModel(model) {
 modelSwitcher.addEventListener("click", async (e) => {
   const btn = e.target.closest(".model-opt");
   if (!btn || btn.dataset.model === currentModel) return;
-  await chrome.storage.local.set({ askGeminiModel: btn.dataset.model });
+  await chrome.storage.sync.set({ askGeminiModel: btn.dataset.model });
   applyModel(btn.dataset.model);
   await loadTemplatesForModel(btn.dataset.model);
   renderDropdownList();
@@ -169,7 +169,7 @@ modelSwitcher.addEventListener("click", async (e) => {
 let templates = [];
 
 async function loadTemplatesForModel(model) {
-  const { askGeminiTemplates } = await chrome.storage.local.get("askGeminiTemplates");
+  const { askGeminiTemplates } = await chrome.storage.sync.get("askGeminiTemplates");
   const defaults = DEFAULT_TEMPLATES_BY_MODEL[model] || DEFAULT_TEMPLATES_BY_MODEL.flash;
   if (!askGeminiTemplates) {
     templates = [...defaults];
@@ -778,7 +778,7 @@ if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
 sendBtn.disabled = true;
 
 (async () => {
-  const data = await chrome.storage.local.get(["askGeminiTheme", "askGeminiModel"]);
+  const data = await chrome.storage.sync.get(["askGeminiTheme", "askGeminiModel"]);
 
   applyTheme(data.askGeminiTheme || "auto");
   applyModel(data.askGeminiModel || "flash");

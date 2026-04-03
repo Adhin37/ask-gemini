@@ -176,7 +176,7 @@ document.getElementById("themeControl")?.addEventListener("click", async (e) => 
   if (!btn) return;
   const val = btn.dataset.value;
   if (val === currentTheme) return;
-  await chrome.storage.local.set({ askGeminiTheme: val });
+  await chrome.storage.sync.set({ askGeminiTheme: val });
   applyTheme(val);
 });
 
@@ -198,7 +198,7 @@ document.getElementById("modelControl")?.addEventListener("click", async (e) => 
   if (!btn) return;
   const val = btn.dataset.value;
   if (val === currentModel) return;
-  await chrome.storage.local.set({ askGeminiModel: val });
+  await chrome.storage.sync.set({ askGeminiModel: val });
   applyModel(val);
   const labels = { flash: "Fast", pro: "Pro", thinking: "Think" };
   showToast(`Model set to ${labels[val] || val}`);
@@ -382,11 +382,11 @@ let pendingDeleteIndex  = -1;
 function getActiveTemplates() { return allTemplatesByModel[activeTemplateModel] || []; }
 
 async function saveTemplates() {
-  await chrome.storage.local.set({ askGeminiTemplates: allTemplatesByModel });
+  await chrome.storage.sync.set({ askGeminiTemplates: allTemplatesByModel });
 }
 
 async function loadTemplates() {
-  const { askGeminiTemplates, askGeminiModel } = await chrome.storage.local.get(["askGeminiTemplates", "askGeminiModel"]);
+  const { askGeminiTemplates, askGeminiModel } = await chrome.storage.sync.get(["askGeminiTemplates", "askGeminiModel"]);
 
   // Default active tab to current model pref
   if (askGeminiModel && TMPL_MODELS.includes(askGeminiModel)) {
@@ -627,20 +627,20 @@ summarizePrefixTextarea.addEventListener("input", () => {
 summarizePrefixSaveBtn.addEventListener("click", async () => {
   const val = summarizePrefixTextarea.value;
   if (!val.trim() || val.length > SUMMARIZE_PREFIX_MAX) return;
-  await chrome.storage.local.set({ askGeminiSummarizePrefix: val });
+  await chrome.storage.sync.set({ askGeminiSummarizePrefix: val });
   showToast("Summarize prefix saved");
 });
 
 summarizePrefixResetBtn.addEventListener("click", async () => {
   summarizePrefixTextarea.value = DEFAULT_SUMMARIZE_PREFIX;
   updateSummarizePrefixCharCount();
-  await chrome.storage.local.set({ askGeminiSummarizePrefix: DEFAULT_SUMMARIZE_PREFIX });
+  await chrome.storage.sync.set({ askGeminiSummarizePrefix: DEFAULT_SUMMARIZE_PREFIX });
   showToast("Reset to default");
 });
 
 async function loadContextMenuSettings() {
   const { askGeminiSummarizePrefix = DEFAULT_SUMMARIZE_PREFIX } =
-    await chrome.storage.local.get("askGeminiSummarizePrefix");
+    await chrome.storage.sync.get("askGeminiSummarizePrefix");
   summarizePrefixTextarea.value = askGeminiSummarizePrefix;
   updateSummarizePrefixCharCount();
   syncSummarizePreview();
@@ -796,7 +796,7 @@ function _updatePePreview(el, template) {
 function _peScheduleSave(ruleId) {
   clearTimeout(_peDebounce[ruleId]);
   _peDebounce[ruleId] = setTimeout(async () => {
-    await chrome.storage.local.set({ askGeminiPromptEng: _peSettings });
+    await chrome.storage.sync.set({ askGeminiPromptEng: _peSettings });
     showToast("Saved");
   }, 400);
 }
@@ -815,7 +815,7 @@ function renderPromptEngRules(rules) {
   resetAllBtn.textContent = "Reset all rules to defaults";
   resetAllBtn.addEventListener("click", async () => {
     _peSettings.rules = _mergeRules([]);
-    await chrome.storage.local.set({ askGeminiPromptEng: _peSettings });
+    await chrome.storage.sync.set({ askGeminiPromptEng: _peSettings });
     renderPromptEngRules(_peSettings.rules);
     showToast("All rules reset to defaults");
   });
@@ -826,12 +826,12 @@ function renderPromptEngRules(rules) {
 promptEngToggle.addEventListener("change", async () => {
   _peSettings.enabled = promptEngToggle.checked;
   _peSetVisibility(_peSettings.enabled);
-  await chrome.storage.local.set({ askGeminiPromptEng: _peSettings });
+  await chrome.storage.sync.set({ askGeminiPromptEng: _peSettings });
   showToast(_peSettings.enabled ? "Prompt engineering enabled" : "Prompt engineering disabled");
 });
 
 async function loadPromptEngSettings() {
-  const { askGeminiPromptEng } = await chrome.storage.local.get("askGeminiPromptEng");
+  const { askGeminiPromptEng } = await chrome.storage.sync.get("askGeminiPromptEng");
   _peSettings = {
     enabled: askGeminiPromptEng?.enabled ?? false,
     rules:   _mergeRules(askGeminiPromptEng?.rules ?? []),
@@ -886,7 +886,7 @@ function showToast(msg) {
 // ══════════════════════════════════════════════════════════════════
 
 (async () => {
-  const data = await chrome.storage.local.get(["askGeminiTheme", "askGeminiModel"]);
+  const data = await chrome.storage.sync.get(["askGeminiTheme", "askGeminiModel"]);
   applyTheme(data.askGeminiTheme || "auto");
   applyModel(data.askGeminiModel || "flash");
   await loadShortcut();

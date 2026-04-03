@@ -345,7 +345,7 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
       askGeminiModel           = "flash",
       askGeminiSummarizePrefix = DEFAULT_SUMMARIZE_PREFIX,
       askGeminiPromptEng,
-    } = await chrome.storage.local.get([
+    } = await chrome.storage.sync.get([
       "askGeminiModel", "askGeminiSummarizePrefix", "askGeminiPromptEng",
     ]);
 

@@ -2,7 +2,7 @@
 
 async function init() {
   // 1. Apply Theme (matches your existing logic)
-  const data = await chrome.storage.local.get("askGeminiTheme");
+  const data = await chrome.storage.sync.get("askGeminiTheme");
   const theme = data.askGeminiTheme || "auto";
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme =
