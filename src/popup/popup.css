@@ -681,12 +681,49 @@ html, body {
 .main { margin-bottom: 12px; }
 
 .input-wrapper {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
+
+/* ── Animated placeholder cycler ──────────────────────────────── */
+.ph-cycler {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 14px 16px 10px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.55;
+  color: var(--text-hint);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 0;
+}
+
+.ph-cycler.ph-hidden { display: none; }
+
+@keyframes phSlideIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes phSlideOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-5px); }
+}
+
+.ph-cycler.ph-exit  { animation: phSlideOut 0.25s ease forwards; }
+.ph-cycler.ph-enter { animation: phSlideIn  0.30s ease forwards; }
 
 .input-wrapper:focus-within {
   border-color: var(--border-focus);

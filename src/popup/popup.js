@@ -79,6 +79,51 @@ const fileChips      = document.getElementById("fileChips");
 const injectWarning  = document.getElementById("injectWarning");
 const injectCancel   = document.getElementById("injectCancel");
 const injectSendAnyway = document.getElementById("injectSendAnyway");
+// Placeholder cycler
+const phCycler       = document.getElementById("phCycler");
+
+// ══════════════════════════════════════════════════════════════════
+// 0. PLACEHOLDER CYCLER
+// ══════════════════════════════════════════════════════════════════
+
+const PLACEHOLDERS = [
+  "Ask anything...",
+  "/ for templates",
+  "Shift+↵ for a new line",
+  "Drag & drop images",
+  "Summarise, translate, explain...",
+  "Ask about the page you're reading",
+];
+
+let _phIdx    = 0;
+let _phTimer  = null;
+
+function phCycle() {
+  phCycler.classList.remove("ph-enter");
+  phCycler.classList.add("ph-exit");
+  setTimeout(() => {
+    _phIdx = (_phIdx + 1) % PLACEHOLDERS.length;
+    phCycler.textContent = PLACEHOLDERS[_phIdx];
+    phCycler.classList.remove("ph-exit");
+    void phCycler.offsetWidth; // force reflow so animation restarts
+    phCycler.classList.add("ph-enter");
+  }, 250);
+}
+
+function phUpdate() {
+  if (input.value.length > 0) {
+    phCycler.classList.add("ph-hidden");
+    if (_phTimer) { clearInterval(_phTimer); _phTimer = null; }
+  } else {
+    if (phCycler.classList.contains("ph-hidden")) {
+      phCycler.textContent = PLACEHOLDERS[_phIdx];
+      phCycler.classList.remove("ph-hidden");
+      void phCycler.offsetWidth;
+      phCycler.classList.add("ph-enter");
+    }
+    if (!_phTimer) _phTimer = setInterval(phCycle, 5000);
+  }
+}
 
 // ══════════════════════════════════════════════════════════════════
 // 1. THEME
@@ -547,6 +592,7 @@ input.addEventListener("input", () => {
   updateSendBtn();
   chrome.storage.session.set({ askGeminiDraft: input.value });
 
+  phUpdate();
   updateAC();
 });
 
@@ -753,5 +799,6 @@ sendBtn.disabled = true;
     }
   }
 
+  phUpdate();
   input.focus();
 })();
