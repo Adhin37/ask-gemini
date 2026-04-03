@@ -105,6 +105,9 @@ const ver = `v${manifest.version}`;
 document.getElementById("extVersion").textContent   = ver;
 document.getElementById("aboutVersion").textContent = `Version ${manifest.version}`;
 
+document.getElementById("brandLogoBtn").addEventListener("click", () => chrome.tabs.create({ url: GEMINI_URL }));
+document.getElementById("aboutLogoBtn").addEventListener("click", () => chrome.tabs.create({ url: GEMINI_URL }));
+
 // ══════════════════════════════════════════════════════════════════
 // 3. SHORTCUT DISPLAY
 // ══════════════════════════════════════════════════════════════════

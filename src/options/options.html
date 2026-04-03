@@ -19,7 +19,7 @@
 
     <!-- ── Sidebar ── -->
     <nav class="sidebar">
-      <div class="brand">
+      <div class="brand" id="brandLogoBtn" title="Open Gemini">
         <div class="brand-icon">
           <svg width="26" height="26" viewBox="0 0 36 36" fill="none">
             <defs>
@@ -104,9 +104,9 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
           <path d="M18 8h1a4 4 0 010 8h-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          <line x1="6" y1="1" x2="6" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          <line x1="10" y1="1" x2="10" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          <line x1="14" y1="1" x2="14" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <line class="kofi-steam kofi-steam-1" x1="6"  y1="1" x2="6"  y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <line class="kofi-steam kofi-steam-2" x1="10" y1="1" x2="10" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <line class="kofi-steam kofi-steam-3" x1="14" y1="1" x2="14" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
         Buy me a coffee
       </a>
@@ -430,21 +430,29 @@
           </div>
         </div>
         <div class="card about-card">
-          <div class="about-logo">
+          <div class="about-logo" id="aboutLogoBtn" title="Open Gemini">
             <svg width="48" height="48" viewBox="0 0 36 36" fill="none">
               <defs>
                 <linearGradient id="bubbleG3" x1="0" y1="0" x2="1" y2="1">
                   <stop offset="0%" stop-color="#f5f3ff"/>
                   <stop offset="100%" stop-color="#e8e4ff"/>
                 </linearGradient>
+                <filter id="starGlow3" x="-60%" y="-60%" width="220%" height="220%">
+                  <feGaussianBlur stdDeviation="1.4" result="blur"/>
+                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
               </defs>
               <rect x="3" y="7" width="22" height="16" rx="4.5" ry="4.5" fill="url(#bubbleG3)" opacity="0.96"/>
               <path d="M8 23 L6 29 L13 23 Z" fill="url(#bubbleG3)" opacity="0.96"/>
               <circle cx="10.5" cy="15" r="1.6" fill="#6c4bc8"/>
               <circle cx="14"   cy="15" r="1.9" fill="#6c4bc8"/>
               <circle cx="17.5" cy="15" r="1.4" fill="#6c4bc8"/>
-              <path d="M27 3 C27 3 27.9 6.9 30.5 8 C27.9 9.1 27 13 27 13 C27 13 26.1 9.1 23.5 8 C26.1 6.9 27 3 27 3Z" fill="#e8d5ff"/>
-              <circle cx="27" cy="8" r="1.2" fill="#ffffff"/>
+              <g filter="url(#starGlow3)">
+                <circle cx="27" cy="9" r="5" fill="#c084fc" opacity="0.25"/>
+                <path d="M27 3 C27 3 27.9 6.9 30.5 8 C27.9 9.1 27 13 27 13 C27 13 26.1 9.1 23.5 8 C26.1 6.9 27 3 27 3Z" fill="#e8d5ff"/>
+                <circle cx="27" cy="8" r="1.2" fill="#ffffff"/>
+              </g>
+              <path d="M2 21 C2 21 2.5 22.9 4 23.5 C2.5 24.1 2 26 2 26 C2 26 1.5 24.1 0 23.5 C1.5 22.9 2 21 2 21Z" fill="#b8a4f0" opacity="0.7"/>
             </svg>
           </div>
           <div class="about-info">
@@ -467,9 +475,9 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <path d="M18 8h1a4 4 0 010 8h-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            <line x1="6" y1="1" x2="6" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            <line x1="10" y1="1" x2="10" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            <line x1="14" y1="1" x2="14" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line class="kofi-steam kofi-steam-1" x1="6"  y1="1" x2="6"  y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line class="kofi-steam kofi-steam-2" x1="10" y1="1" x2="10" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line class="kofi-steam kofi-steam-3" x1="14" y1="1" x2="14" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
           </svg>
           <div>
             <div class="kofi-card-title">Support the developer</div>
