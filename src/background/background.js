@@ -163,7 +163,13 @@ function buildPromptEngMessage(selection, pageUrl, settings) {
 // 1. BADGE HELPERS
 // ══════════════════════════════════════════════════════════════════
 
-let _badgeClearTimer = null;
+let _badgeClearTimer  = null;
+let _resultTimer      = null;
+let _hasPendingResult = false;
+
+// How long to wait for the content script to report back before
+// assuming something went wrong (network down, tab closed, etc.).
+const RESULT_TIMEOUT_MS = 30_000;
 
 function _cancelClear() {
   if (_badgeClearTimer !== null) {
@@ -180,14 +186,33 @@ function _clearBadgeAfter(ms) {
   }, ms);
 }
 
+function _startResultTimer() {
+  _clearResultTimer();
+  _resultTimer = setTimeout(() => {
+    _resultTimer = null;
+    if (_hasPendingResult) setBadgeError();
+  }, RESULT_TIMEOUT_MS);
+}
+
+function _clearResultTimer() {
+  if (_resultTimer !== null) {
+    clearTimeout(_resultTimer);
+    _resultTimer = null;
+  }
+}
+
 function setBadgeQueued() {
   _cancelClear();
+  _hasPendingResult = true;
+  _startResultTimer();
   chrome.action.setBadgeBackgroundColor({ color: "#7c6af7" });
   chrome.action.setBadgeText({ text: "↑" });
 }
 
 function setBadgeSuccess() {
   _cancelClear();
+  _clearResultTimer();
+  _hasPendingResult = false;
   chrome.action.setBadgeBackgroundColor({ color: "#22c55e" });
   chrome.action.setBadgeText({ text: "✓" });
   _clearBadgeAfter(2_000);
@@ -195,10 +220,23 @@ function setBadgeSuccess() {
 
 function setBadgeError() {
   _cancelClear();
+  _clearResultTimer();
+  _hasPendingResult = false;
   chrome.action.setBadgeBackgroundColor({ color: "#ef4444" });
   chrome.action.setBadgeText({ text: "!" });
-  _clearBadgeAfter(3_000);
+  _clearBadgeAfter(6_000);
 }
+
+// Detect failed tab navigations (no network, DNS error, etc.).
+// Chrome redirects broken navigations to chrome-error://chromewebdata/
+// — the content script never runs in that case, so we catch it here.
+chrome.tabs.onUpdated.addListener((_tabId, info, tab) => {
+  if (!_hasPendingResult) return;
+  const url = info.url ?? tab.url ?? "";
+  if (url.startsWith("chrome-error://")) {
+    setBadgeError();
+  }
+});
 
 // ══════════════════════════════════════════════════════════════════
 // 2. STORAGE WATCHER
