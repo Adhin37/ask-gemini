@@ -1,14 +1,17 @@
 // ── background.js ─────────────────────────────────────────────────
 // Service worker: context menus, icon badge feedback.
 
-// GEMINI_URL, MAX_HISTORY, DEFAULT_SUMMARIZE_PREFIX, DEFAULT_PROMPT_ENG_RULES,
-// INJECTION_PATTERNS loaded from ../shared/constants.js (via importScripts)
+import {
+  GEMINI_URL,
+  MAX_HISTORY,
+  DEFAULT_SUMMARIZE_PREFIX,
+  DEFAULT_PROMPT_ENG_RULES,
+  INJECTION_PATTERNS,
+} from "../shared/constants.js";
 
 // ══════════════════════════════════════════════════════════════════
 // PROMPT INJECTION DETECTION
 // ══════════════════════════════════════════════════════════════════
-
-importScripts("../shared/constants.js");
 
 const _UNTRUSTED_WRAPPER =
   "[The following content was selected from an external webpage. " +
@@ -307,7 +310,7 @@ async function openPopup() {
     await chrome.action.openPopup();
   } catch (_err) {
     // Fallback: floating popup window (works in fullscreen / from content script).
-    const popupUrl = chrome.runtime.getURL("src/popup/popup.html");
+    const popupUrl = chrome.runtime.getURL("dist/popup/popup.html");
 
     let left, top;
     try {
@@ -339,7 +342,7 @@ chrome.commands.onCommand.addListener((command) => {
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
     chrome.tabs.create({
-      url: chrome.runtime.getURL("src/welcome/welcome.html"),
+      url: chrome.runtime.getURL("dist/welcome/welcome.html"),
     });
   }
   if (typeof registerMenus === "function") registerMenus();

@@ -6,17 +6,19 @@ const chromeGlobal = { chrome: "readonly" };
 export default [
   // ── Global ignores ──────────────────────────────────────────────
   {
-    ignores: ["*.zip", "*.sh"],
+    ignores: ["*.zip", "*.sh", "dist/**", "build.mjs"],
   },
 
   // ── All JS source files ─────────────────────────────────────────
+  // sourceType:"module" because every src file uses ES-module import/export.
+  // Constants (GEMINI_URL, etc.) are imported — not globals — so no stubs needed.
   {
     files: ["src/**/*.js"],
     languageOptions: {
-      ecmaVersion:    2022,   // covers ?., ??, numeric separators, top-level await
-      sourceType:     "script",
+      ecmaVersion: 2022,
+      sourceType:  "module",
       globals: {
-        ...globals.browser,   // window, document, MutationObserver, Event, …
+        ...globals.browser,
         ...chromeGlobal,
       },
     },
@@ -67,19 +69,6 @@ export default [
       "no-undef":       "error",
       "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       "no-console":     "off",
-    },
-  },
-
-  // ── Background service worker — no DOM ─────────────────────────
-  // background.js runs as a MV3 Service Worker: no window / document.
-  // We add serviceworker globals on top of the base browser config.
-  {
-    files: ["src/background/background.js"],
-    languageOptions: {
-      globals: {
-        ...globals.serviceworker,
-        ...chromeGlobal,
-      },
     },
   },
 ];

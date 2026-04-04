@@ -1,15 +1,15 @@
 // ── shared/constants.js ───────────────────────────────────────────
 // Single source of truth for constants shared across multiple scripts.
-// Loaded by popup.html and options.html via <script>, and by
-// background.js via importScripts(). Must remain plain JS (no import/export).
+// ES module — imported by background.js, popup.js, and options.js.
+// esbuild inlines each constant into its respective bundle.
 
-const GEMINI_URL = "https://gemini.google.com/app";
+export const GEMINI_URL = "https://gemini.google.com/app";
 
-const MAX_HISTORY = 20;
+export const MAX_HISTORY = 20;
 
-const DEFAULT_SUMMARIZE_PREFIX = "Summarize the following:\n\n";
+export const DEFAULT_SUMMARIZE_PREFIX = "Summarize the following:\n\n";
 
-const DEFAULT_TEMPLATES_BY_MODEL = {
+export const DEFAULT_TEMPLATES_BY_MODEL = {
   flash: [
     "Summarize: ",
     "Translate to English: ",
@@ -29,7 +29,7 @@ const DEFAULT_TEMPLATES_BY_MODEL = {
   ],
 };
 
-const DEFAULT_PROMPT_ENG_RULES = [
+export const DEFAULT_PROMPT_ENG_RULES = [
   {
     id: "code", label: "Code",
     hint: "Selection looks like code, or the page is a known code site (GitHub, Stack Overflow…)",
@@ -80,7 +80,7 @@ const DEFAULT_PROMPT_ENG_RULES = [
   },
 ];
 
-const INJECTION_PATTERNS = [
+export const INJECTION_PATTERNS = [
   /ignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?|context|rules?)/i,
   /disregard\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?|context)/i,
   /forget\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?|context|everything)/i,

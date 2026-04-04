@@ -10,13 +10,22 @@
 ## File Structure
 
 ```
-manifest.json                       # MV3 manifest — source of truth for permissions/scripts
+manifest.json                       # MV3 manifest — points to dist/ for runtime files
+build.mjs                           # esbuild bundler script
 src/
+  shared/constants.js               # ES-module exports shared by background, popup, options
   background/background.js          # Service Worker (no persistent background page)
   content/content.js                # Injected into gemini.google.com
   popup/popup.html|js|css           # Extension popup UI
   options/options.html|js|css       # Options/settings page
-  assets/                           # Static assets
+  welcome/welcome.html|js|css       # First-run welcome page
+  assets/                           # Store listing images (not loaded by the extension)
+dist/                               # Build output — gitignored, referenced by manifest.json
+  background/background.js          # Bundled + minified
+  content/content.js
+  popup/popup.html|js|css
+  options/options.html|js|css
+  welcome/welcome.html|js|css
 icons/                              # Extension icons (16, 48, 128px)
 ```
 
@@ -60,6 +69,33 @@ icons/                              # Extension icons (16, 48, 128px)
 | Permissions | Match manifest exactly — no undeclared permissions at runtime |
 | Compatibility | Target Chrome stable; no experimental APIs |
 
+## Build
+
+esbuild bundles and minifies all JS/CSS into `dist/`. The manifest references `dist/` exclusively.
+
+```bash
+npm install          # install deps (first time)
+npm run build        # production build → dist/  (minified)
+npm run build:dev    # dev build → dist/  (unminified, inline source maps)
+```
+
+`dist/` is gitignored. You must run `npm run build` before loading the extension in Chrome or packaging it.
+
+### How constants are shared
+
+`src/shared/constants.js` exports every shared constant (`GEMINI_URL`, `MAX_HISTORY`, etc.) as named ES-module exports. Each consuming file (`background.js`, `popup.js`, `options.js`) imports exactly what it needs. esbuild inlines the imported values into each bundle — no runtime `importScripts()`, no `<script>` tag for constants.
+
+### Packaging for distribution
+
+```bash
+./package.sh          # builds + creates both zips
+./package.sh --no-build  # skip build (dist/ already exists)
+```
+
+Produces:
+- `ask-gemini-extension.zip` — minified build for CWS upload / GitHub release
+- `ask-gemini-source.zip` — unminified source for CWS review submission
+
 ## Linting
 
 Three tools, one command: `npm run lint`
@@ -78,7 +114,7 @@ Install dev deps once: `npm install`
 - **Security warning**: `innerHTML` use is flagged — must be preceded by `escapeHtml()` or equivalent
 - **Style warnings**: `prefer-const`, `semi`, `quotes` (double) — majority style in this codebase
 - `console.log` is warned; `console.warn/error/info/debug` are allowed
-- `src/background/background.js` gets `serviceworker` globals (no DOM) — do not reference `window`/`document` there
+- All source files use `sourceType: "module"` — `import` statements are required for shared code
 
 ### Quote convention
 

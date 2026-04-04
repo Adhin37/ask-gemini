@@ -1,60 +1,101 @@
 #!/bin/bash
+# package.sh — Build and package Ask Gemini for distribution + CWS review
+#
+# Produces two zip files:
+#   ask-gemini-extension.zip  — minified build for distribution / Chrome Web Store upload
+#   ask-gemini-source.zip     — unminified source for Chrome Web Store review submission
+#
+# Usage:
+#   ./package.sh              → run build, then create both zips
+#   ./package.sh --no-build   → skip the build step (dist/ must already exist)
 
-# Define the output filename
-OUTPUT_ZIP="ask-gemini-extension.zip"
+set -euo pipefail
 
-# These are the files required for the extension to run.
-# We include the root manifest and the grouped feature folders in src/
-FILES=(
-    "manifest.json"
-    "LICENSE"
-    "README.md"
-    "POLICIES.md"
-)
+RELEASE_ZIP="ask-gemini-extension.zip"
+SOURCE_ZIP="ask-gemini-source.zip"
+SKIP_BUILD=false
 
-DIRS=(
-    "icons"
-    "src/background"
-    "src/content"
-    "src/options"
-    "src/popup"
-    "src/welcome"
-)
-
-echo "Checking for required files and directories..."
-MISSING=0
-
-for file in "${FILES[@]}"; do
-    if [ ! -f "$file" ]; then
-        echo "Error: File $file is missing."
-        MISSING=$((MISSING + 1))
-    fi
+for arg in "$@"; do
+  [[ "$arg" == "--no-build" ]] && SKIP_BUILD=true
 done
 
-for dir in "${DIRS[@]}"; do
-    if [ ! -d "$dir" ]; then
-        echo "Error: Directory $dir/ is missing."
-        MISSING=$((MISSING + 1))
-    fi
+# ── 1. Build ─────────────────────────────────────────────────────────
+if [ "$SKIP_BUILD" = false ]; then
+  echo "Building extension..."
+  node build.mjs
+fi
+
+# ── 2. Validate dist/ exists ─────────────────────────────────────────
+echo ""
+echo "Validating build output..."
+
+MISSING=0
+REQUIRED_DIST=(
+  "dist/background/background.js"
+  "dist/content/content.js"
+  "dist/popup/popup.html"
+  "dist/popup/popup.js"
+  "dist/popup/popup.css"
+  "dist/options/options.html"
+  "dist/options/options.js"
+  "dist/options/options.css"
+  "dist/welcome/welcome.html"
+  "dist/welcome/welcome.js"
+  "dist/welcome/welcome.css"
+)
+REQUIRED_ROOT=(
+  "manifest.json"
+  "LICENSE"
+  "README.md"
+  "POLICIES.md"
+)
+REQUIRED_DIRS=(
+  "icons"
+)
+
+for f in "${REQUIRED_DIST[@]}" "${REQUIRED_ROOT[@]}"; do
+  if [ ! -f "$f" ]; then
+    echo "  ERROR: missing $f"
+    MISSING=$((MISSING + 1))
+  fi
+done
+for d in "${REQUIRED_DIRS[@]}"; do
+  if [ ! -d "$d" ]; then
+    echo "  ERROR: missing $d/"
+    MISSING=$((MISSING + 1))
+  fi
 done
 
 if [ $MISSING -gt 0 ]; then
-    echo "------------------------------------------------"
-    echo "Validation failed. $MISSING item(s) missing."
-    echo "Make sure you've moved files into their src/ folders."
-    echo "Aborting."
-    exit 1
+  echo "Validation failed: $MISSING item(s) missing. Aborting."
+  exit 1
 fi
+echo "  All required files present."
 
-echo "All files found. Creating $OUTPUT_ZIP..."
+# ── 3. Release zip (minified build) ──────────────────────────────────
+echo ""
+echo "Creating $RELEASE_ZIP (minified build)..."
+rm -f "$RELEASE_ZIP"
+zip -r "$RELEASE_ZIP" \
+  manifest.json LICENSE README.md POLICIES.md \
+  icons/ \
+  dist/
+echo "  $RELEASE_ZIP created ($(du -sh "$RELEASE_ZIP" | cut -f1))"
 
-rm -f "$OUTPUT_ZIP"
+# ── 4. Source zip (for Chrome Web Store review) ───────────────────────
+# CWS policy: if you submit minified code you must provide the original source.
+# This zip contains the human-readable source so reviewers can inspect it.
+echo ""
+echo "Creating $SOURCE_ZIP (unminified source for CWS review)..."
+rm -f "$SOURCE_ZIP"
+zip -r "$SOURCE_ZIP" \
+  manifest.json LICENSE README.md POLICIES.md CONTRIBUTING.md \
+  icons/ \
+  src/ \
+  build.mjs package.json
+echo "  $SOURCE_ZIP created ($(du -sh "$SOURCE_ZIP" | cut -f1))"
 
-zip -r "$OUTPUT_ZIP" "${FILES[@]}" "${DIRS[@]}"
-
-if [ $? -eq 0 ]; then
-    echo "Successfully packaged $OUTPUT_ZIP"
-else
-    echo "Error: Failed to create zip file."
-    exit 1
-fi
+echo ""
+echo "Done."
+echo "  Release:  $RELEASE_ZIP  ← upload to Chrome Web Store"
+echo "  Source:   $SOURCE_ZIP   ← attach to CWS submission as source code"

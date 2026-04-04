@@ -14,7 +14,7 @@
     "https://gemini.google.com/*"
   ],
   "action": {
-    "default_popup": "src/popup/popup.html",
+    "default_popup": "dist/popup/popup.html",
     "default_title": "Ask Gemini (Ctrl+Shift+L)",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -32,11 +32,11 @@
     }
   },
   "options_ui": {
-    "page": "src/options/options.html",
+    "page": "dist/options/options.html",
     "open_in_tab": true
   },
   "background": {
-    "service_worker": "src/background/background.js"
+    "service_worker": "dist/background/background.js"
   },
   "content_scripts": [
     {
@@ -44,7 +44,7 @@
         "https://gemini.google.com/*"
       ],
       "js": [
-        "src/content/content.js"
+        "dist/content/content.js"
       ],
       "run_at": "document_idle"
     }

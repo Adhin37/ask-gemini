@@ -2,8 +2,12 @@
 // Settings page: history, templates, appearance (theme + model),
 // context menu actions, shortcut, about
 
-// GEMINI_URL, DEFAULT_PROMPT_ENG_RULES, DEFAULT_SUMMARIZE_PREFIX,
-// DEFAULT_TEMPLATES_BY_MODEL loaded from ../shared/constants.js
+import {
+  GEMINI_URL,
+  DEFAULT_SUMMARIZE_PREFIX,
+  DEFAULT_TEMPLATES_BY_MODEL,
+  DEFAULT_PROMPT_ENG_RULES,
+} from "../shared/constants.js";
 
 const PE_TEMPLATE_MAX = 400;
 

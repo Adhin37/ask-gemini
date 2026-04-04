@@ -1,7 +1,12 @@
 // ── popup.js ──────────────────────────────────────────────────
 // Model switcher (Flash/Pro/Think), inline autocomplete, theme, history
 
-// GEMINI_URL, MAX_HISTORY, DEFAULT_TEMPLATES_BY_MODEL loaded from ../shared/constants.js
+import {
+  GEMINI_URL,
+  MAX_HISTORY,
+  DEFAULT_TEMPLATES_BY_MODEL,
+  INJECTION_PATTERNS,
+} from "../shared/constants.js";
 
 const MAX_CHARS = 2000;
 
