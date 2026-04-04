@@ -528,6 +528,9 @@ async function addFiles(fileList) {
   }
 
   const slots = MAX_FILES - attachedFiles.length;
+  if (toAdd.length > slots) {
+    showFileError(`Max ${MAX_FILES} images — ${toAdd.length - slots} file${toAdd.length - slots > 1 ? "s" : ""} skipped`);
+  }
   attachedFiles.push(...toAdd.slice(0, slots));
   renderFileChips();
   updateSendBtn();
