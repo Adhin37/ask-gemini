@@ -312,12 +312,6 @@ body {
 }
 
 .line-1 {
-  color: var(--text);
-  opacity: 0;
-  animation: fadeUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.38s both;
-}
-
-.line-2 {
   background: linear-gradient(100deg, light-dark(#4a38cf, #c8c4ff) 0%, var(--accent) 45%, light-dark(#9830a8, #e05fa0) 100%);
   -webkit-text-fill-color: transparent;
   background-clip: text;
