@@ -3,79 +3,54 @@
  * build.mjs — esbuild bundler for Ask Gemini Chrome Extension
  *
  * Usage:
- *   node build.mjs           → minified production build → dist/
+ *   node build.mjs           → minified production build → src/**\/*.min.{js,css}
  *   node build.mjs --dev     → unminified dev build with inline source maps
  *
  * What it does:
- *   1. Cleans dist/
- *   2. Bundles each JS entry point (constants.js inlined into every consumer)
- *   3. Minifies each CSS file
- *   4. Copies HTML files, stripping the now-redundant constants.js <script> tag
+ *   1. Bundles each JS entry point (constants.js inlined into every consumer)
+ *   2. Minifies each CSS file
+ *   Output is placed next to each source file as *.min.js / *.min.css.
+ *   These generated files are gitignored; the originals are kept for CWS review.
  */
 
 import * as esbuild from "esbuild";
-import { mkdir, readFile, rm, writeFile } from "fs/promises";
-import path from "path";
 
-const dev  = process.argv.includes("--dev");
-const DIST = "dist";
+const dev = process.argv.includes("--dev");
 
-// ── 1. Clean ────────────────────────────────────────────────────────
-await rm(DIST, { recursive: true, force: true });
-console.log(`Building Ask Gemini → ${DIST}/  [${dev ? "dev" : "production"}]\n`);
+console.log(`Building Ask Gemini  [${dev ? "dev" : "production"}]\n`);
 
-// ── 2. JS bundles ───────────────────────────────────────────────────
+// ── JS bundles ──────────────────────────────────────────────────────
 // esbuild resolves the ES-module imports and outputs a self-contained IIFE
 // per entry point — no runtime overhead, no loader injected.
 await esbuild.build({
-  entryPoints: {
-    "background/background": "src/background/background.js",
-    "content/content":       "src/content/content.js",
-    "popup/popup":           "src/popup/popup.js",
-    "options/options":       "src/options/options.js",
-    "welcome/welcome":       "src/welcome/welcome.js",
-  },
+  entryPoints: [
+    { in: "src/background/background.js", out: "src/background/background.min" },
+    { in: "src/content/content.js",       out: "src/content/content.min"       },
+    { in: "src/popup/popup.js",           out: "src/popup/popup.min"           },
+    { in: "src/options/options.js",       out: "src/options/options.min"       },
+    { in: "src/welcome/welcome.js",       out: "src/welcome/welcome.min"       },
+  ],
   bundle:    true,
   minify:    !dev,
   sourcemap: dev ? "inline" : false,
-  outdir:    DIST,
+  outdir:    ".",
   format:    "iife",
   platform:  "browser",
   target:    ["chrome120"],
   logLevel:  "info",
 });
 
-// ── 3. CSS bundles ──────────────────────────────────────────────────
+// ── CSS bundles ─────────────────────────────────────────────────────
 await esbuild.build({
-  entryPoints: {
-    "popup/popup":     "src/popup/popup.css",
-    "options/options": "src/options/options.css",
-    "welcome/welcome": "src/welcome/welcome.css",
-  },
+  entryPoints: [
+    { in: "src/popup/popup.css",     out: "src/popup/popup.min"     },
+    { in: "src/options/options.css", out: "src/options/options.min" },
+    { in: "src/welcome/welcome.css", out: "src/welcome/welcome.min" },
+  ],
   bundle:   true,
   minify:   !dev,
-  outdir:   DIST,
+  outdir:   ".",
   logLevel: "info",
 });
 
-// ── 4. HTML files ───────────────────────────────────────────────────
-// Copy HTML into dist/, removing the now-unnecessary constants.js <script> tag
-// (constants are inlined into each JS bundle by esbuild).
-// All other relative paths (popup.js, popup.css, etc.) remain valid because
-// the HTML files land in the same subdirectory as their bundled assets.
-const CONSTANTS_TAG_RE = /[ \t]*<script src="\.\.\/shared\/constants\.js"><\/script>\n?/g;
-
-const HTML_FILES = [
-  ["src/popup/popup.html",     `${DIST}/popup/popup.html`],
-  ["src/options/options.html", `${DIST}/options/options.html`],
-  ["src/welcome/welcome.html", `${DIST}/welcome/welcome.html`],
-];
-
-for (const [src, dst] of HTML_FILES) {
-  const html = (await readFile(src, "utf8")).replace(CONSTANTS_TAG_RE, "");
-  await mkdir(path.dirname(dst), { recursive: true });
-  await writeFile(dst, html);
-  console.log(`  copied  ${dst}`);
-}
-
-console.log(`\nDone.`);
+console.log("\nDone.");

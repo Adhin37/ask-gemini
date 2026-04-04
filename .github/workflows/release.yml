@@ -69,9 +69,8 @@ jobs:
       - name: Run Packaging Script
         run: |
           chmod +x package.sh
-          ./package.sh --no-build
+          ./package.sh
           test -s ask-gemini-extension.zip
-          test -s ask-gemini-source.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -81,6 +80,5 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             ask-gemini-extension.zip
-            ask-gemini-source.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

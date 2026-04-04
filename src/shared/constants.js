@@ -70,7 +70,7 @@ export const DEFAULT_PROMPT_ENG_RULES = [
     id: "article", label: "Article / Text",
     hint: "Default for longer natural-language selections",
     enabled: true,
-    template: "Summarize this text:\n**TL;DR:** one-sentence essence\n**Key points:**\n- Main argument\n- Supporting evidence (2–3 bullets)\n\n**Takeaway:** most actionable insight\n\n{selection}",
+    template: "Summarize this text:\n**TL;DR:** one-sentence essence\n**Key points:**\n- Main argument\n- Supporting evidence (2-3 bullets)\n\n**Takeaway:** most actionable insight\n\n{selection}",
   },
   {
     id: "default", label: "Default (fallback)",
