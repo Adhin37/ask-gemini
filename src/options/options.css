@@ -1,34 +1,13 @@
-/* ── Reset ────────────────────────────────────────────────────────── */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@import url("../shared/base.css");
 
-/* ── Theme tokens ────────────────────────────────────────────────── */
+/* ── Options-specific theme tokens ───────────────────────────────── */
 :root {
-  color-scheme: light dark;
-
-  --bg:           light-dark(#f0eeff, #0e1016);
-  --surface:      light-dark(#fff, #161922);
-  --surface-2:    light-dark(#f5f2ff, #1c2030);
-  --border:       light-dark(rgba(100,80,200,0.12), rgba(255,255,255,0.07));
-  --border-focus: light-dark(rgba(100,80,230,0.50), rgba(120,100,255,0.55));
-  --accent:       light-dark(#6655e8, #7c6af7);
-  --accent-2:     light-dark(#c03888, #e05fa0);
-  --accent-dim:   light-dark(rgba(102,85,232,0.12), rgba(124,106,247,0.18));
-  --text:         light-dark(#1a1625, #e8eaf0);
-  --text-dim:     light-dark(#5c5570, #6b7080);
-  --text-hint:    light-dark(#9a94b8, #3e4355);
-  --danger:       light-dark(#d03838, #e05050);
-  --danger-dim:   light-dark(rgba(208,56,56,0.10), rgba(224,80,80,0.12));
-  --radius:       14px;
-  --radius-sm:    8px;
-  --sidebar-w:    220px;
-  --font-head:   'Syne', sans-serif;
-  --font-body:   'DM Sans', sans-serif;
+  --accent-2:      light-dark(#c03888, #e05fa0);
+  --accent-dim:    light-dark(rgba(102,85,232,0.12), rgba(124,106,247,0.18));
+  --text-hint:     light-dark(#9a94b8, #3e4355);
+  --danger:        light-dark(#d03838, #e05050);
+  --danger-dim:    light-dark(rgba(208,56,56,0.10), rgba(224,80,80,0.12));
+  --sidebar-w:     220px;
   --blob-opacity:  0.14;
   --kbd-shadow:    0 1px 3px rgba(0,0,0,0.3);
   --hover-tint:    light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.04));
@@ -242,19 +221,6 @@ html, body {
   border-color: rgba(240,160,75,0.30);
 }
 
-.kofi-steam {
-  transform-box:    fill-box;
-  transform-origin: center bottom;
-}
-
-@keyframes steamWave {
-  0%   { transform: translateY(0)    skewX(0deg);  opacity: 1;    }
-  20%  { transform: translateY(-1px) skewX(4deg);  opacity: 0.85; }
-  40%  { transform: translateY(-2px) skewX(-4deg); opacity: 0.65; }
-  60%  { transform: translateY(-3px) skewX(3deg);  opacity: 0.4;  }
-  80%  { transform: translateY(-3px) skewX(-2deg); opacity: 0.15; }
-  100% { transform: translateY(-4px) skewX(0deg);  opacity: 0;    }
-}
 
 .kofi-side:hover .kofi-steam,
 .kofi-card:hover .kofi-steam {
@@ -950,10 +916,6 @@ kbd {
   animation: starPulse 1.5s ease-in-out infinite;
 }
 
-@keyframes starPulse {
-  0%, 100% { opacity: 1; transform: scale(1);   filter: brightness(1);   }
-  50%       { opacity: 0.8; transform: scale(1.1); filter: brightness(1.5); }
-}
 
 .about-name {
   font-family: var(--font-head);

@@ -1,0 +1,96 @@
+/* ── shared/base.css ─────────────────────────────────────────────
+ * Shared reset, design tokens, and animations imported by all pages.
+ * esbuild inlines this at build time — no runtime HTTP request.
+ * ──────────────────────────────────────────────────────────────── */
+
+/* ── Reset ───────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Core design tokens — defaults for popup + options.
+ * welcome.css overrides --border, --text, --text-dim, and --radius. ── */
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces */
+  --bg:        light-dark(#f0eeff, #0e1016);
+  --surface:   light-dark(#fff, #161922);
+  --surface-2: light-dark(#f5f2ff, #1c2030);
+
+  /* Borders */
+  --border:       light-dark(rgba(100,80,200,0.12), rgba(255,255,255,0.07));
+  --border-focus: light-dark(rgba(100,80,230,0.5), rgba(120,100,255,0.55));
+
+  /* Accent */
+  --accent: light-dark(#6655e8, #7c6af7);
+
+  /* Text */
+  --text:     light-dark(#1a1625, #e8eaf0);
+  --text-dim: light-dark(#5c5570, #6b7080);
+
+  /* Layout */
+  --radius:    14px;
+  --radius-sm: 8px;
+
+  /* Typography */
+  --font-head: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+
+/* ── Ko-fi steam animation ───────────────────────────────────────── */
+.kofi-steam {
+  transform-box:    fill-box;
+  transform-origin: center bottom;
+}
+
+@keyframes steamWave {
+  0% {
+    transform: translateY(0) skewX(0deg);
+    opacity: 1;
+  }
+
+  20% {
+    transform: translateY(-1px) skewX(4deg);
+    opacity: 0.85;
+  }
+
+  40% {
+    transform: translateY(-2px) skewX(-4deg);
+    opacity: 0.65;
+  }
+
+  60% {
+    transform: translateY(-3px) skewX(3deg);
+    opacity: 0.4;
+  }
+
+  80% {
+    transform: translateY(-3px) skewX(-2deg);
+    opacity: 0.15;
+  }
+
+  100% {
+    transform: translateY(-4px) skewX(0deg);
+    opacity: 0;
+  }
+}
+
+/* ── Logo star pulse animation ───────────────────────────────────── */
+@keyframes starPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1);
+    filter: brightness(1.5);
+  }
+}

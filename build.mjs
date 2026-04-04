@@ -33,8 +33,6 @@ await esbuild.build({
   bundle:    true,
   minify:    !dev,
   sourcemap: dev ? "inline" : false,
-  // In production, globalThis.__TEST__ is replaced with `undefined`, so esbuild
-  // statically eliminates all `if (globalThis.__TEST__)` test-hook blocks.
   define:    dev ? {} : { "globalThis.__TEST__": "undefined" },
   outdir:    ".",
   format:    "iife",

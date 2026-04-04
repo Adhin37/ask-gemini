@@ -1,19 +1,16 @@
-/* ── Theme tokens ─────────────────────────────────────────────── */
-:root {
-  color-scheme: light dark;
+@import url("../shared/base.css");
 
-  --bg:           light-dark(#f0eeff, #0e1016);
-  --surface:      light-dark(#fff, #161922);
-  --surface-2:    light-dark(#f5f2ff, #1c2030);
-  --border:       light-dark(rgba(100,80,200,0.10), rgba(255,255,255,0.07));
-  --accent:       light-dark(#6655e8, #7c6af7);
-  --accent-glow:  light-dark(rgba(102,85,232,0.3), rgba(124,106,247,0.4));
-  --accent-dim:   light-dark(rgba(102,85,232,0.10), rgba(124,106,247,0.12));
-  --text:         light-dark(#1a1d23, #e8eaf0);
-  --text-dim:     light-dark(#646a78, #6b7080);
-  --font-head:    'Syne', sans-serif;
-  --font-body:    'DM Sans', sans-serif;
-  --radius:            20px;
+/* ── Welcome theme tokens ─────────────────────────────────────── */
+:root {
+  /* Overrides — welcome uses slightly different values than the base */
+  --border:   light-dark(rgba(100,80,200,0.10), rgba(255,255,255,0.07));
+  --text:     light-dark(#1a1d23, #e8eaf0);
+  --text-dim: light-dark(#646a78, #6b7080);
+  --radius:   20px;
+
+  /* Welcome-specific tokens */
+  --accent-glow:       light-dark(rgba(102,85,232,0.3), rgba(124,106,247,0.4));
+  --accent-dim:        light-dark(rgba(102,85,232,0.10), rgba(124,106,247,0.12));
   --dot-grid-opacity:  0.5;
   --blob-1-opacity:    0.10;
   --blob-2-opacity:    0.09;
