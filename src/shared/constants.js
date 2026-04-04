@@ -7,11 +7,11 @@ const GEMINI_URL = "https://gemini.google.com/app";
 
 const MAX_HISTORY = 20;
 
-const DEFAULT_SUMMARIZE_PREFIX = "Summarise the following:\n\n";
+const DEFAULT_SUMMARIZE_PREFIX = "Summarize the following:\n\n";
 
 const DEFAULT_TEMPLATES_BY_MODEL = {
   flash: [
-    "Summarise: ",
+    "Summarize: ",
     "Translate to English: ",
     "Explain simply: ",
     "Pros and cons of: ",

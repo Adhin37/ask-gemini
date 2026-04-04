@@ -56,7 +56,7 @@ const PLACEHOLDERS = [
   "/ for templates",
   "Shift+↵ for a new line",
   "Drag & drop images",
-  "Summarise, translate, explain...",
+  "Summarize, translate, explain...",
   "Ask about the page you're reading",
 ];
 
