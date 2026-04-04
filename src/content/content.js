@@ -4,6 +4,10 @@
 let _statusEl   = null;
 let _cancelSpin = null;
 
+/**
+ * Creates (or updates) the floating status overlay and sets its label text.
+ * @param {string} msg
+ */
 function showStatus(msg) {
   if (!_statusEl) {
     _statusEl = document.createElement("div");
@@ -66,6 +70,7 @@ function showStatus(msg) {
   _statusEl.querySelector("span:last-child").textContent = msg;
 }
 
+/** Fades out and removes the floating status overlay. */
 function hideStatus() {
   if (!_statusEl) return;
   _cancelSpin?.();
@@ -212,6 +217,10 @@ function waitForCondition(predicate, timeoutMs = 5_000, root = document.body) {
 // MODEL TRIGGER
 // ══════════════════════════════════════════════════════════════════
 
+/**
+ * Returns the Gemini model-picker trigger button, or null if not found.
+ * @returns {Element|null}
+ */
 function findModelTrigger() {
   return (
     document.querySelector('button[data-test-id="bard-mode-menu-button"]') ||
@@ -220,6 +229,10 @@ function findModelTrigger() {
   );
 }
 
+/**
+ * Reads the currently active model from the trigger button label.
+ * @returns {"flash"|"thinking"|"pro"|null}
+ */
 function readModelFromButton() {
   const btn = findModelTrigger();
   if (!btn) return null;
@@ -244,6 +257,11 @@ function readModelFromButton() {
 // MODEL CLASSIFICATION
 // ══════════════════════════════════════════════════════════════════
 
+/**
+ * Maps a free-form model label string to a canonical model id.
+ * @param {string} text
+ * @returns {"flash"|"thinking"|"pro"|null}
+ */
 function classifyModelText(text) {
   const t = text.toLowerCase();
   if (t.includes("think") || t.includes("reason"))               return "thinking";
@@ -255,6 +273,12 @@ function classifyModelText(text) {
   return null;
 }
 
+/**
+ * Returns true if the dropdown option text corresponds to the target model.
+ * @param {string} optionText
+ * @param {"flash"|"thinking"|"pro"} target
+ * @returns {boolean}
+ */
 function matchesTarget(optionText, target) {
   const t        = optionText.toLowerCase();
   const hasThink = t.includes("think") || t.includes("reason");
@@ -277,6 +301,11 @@ function matchesTarget(optionText, target) {
 // MODEL DETECTION
 // ══════════════════════════════════════════════════════════════════
 
+/**
+ * Detects the currently active model, opening the picker dropdown if the
+ * button label alone is insufficient.
+ * @returns {Promise<"flash"|"thinking"|"pro"|null>}
+ */
 async function _detectCurrentModel() {
   const quick = readModelFromButton();
   if (quick) {
@@ -320,6 +349,12 @@ async function _detectCurrentModel() {
   return detected;
 }
 
+/**
+ * Heuristically determines whether a dropdown option element is the currently
+ * selected/active one.
+ * @param {Element} el
+ * @returns {boolean}
+ */
 function isSelectedOption(el) {
   if (el.getAttribute("aria-selected") === "true") return true;
   if (el.getAttribute("aria-checked")  === "true") return true;
@@ -337,6 +372,12 @@ function isSelectedOption(el) {
 // MODEL SWITCHING WITH VERIFY
 // ══════════════════════════════════════════════════════════════════
 
+/**
+ * Ensures the given model is active, switching if necessary, and waits for
+ * the UI to confirm the change.
+ * @param {"flash"|"thinking"|"pro"} target
+ * @returns {Promise<boolean>} true if the correct model is confirmed active
+ */
 async function ensureModel(target) {
   const current = readModelFromButton();
   console.debug(`[Ask Gemini] ensureModel: current="${current}" target="${target}"`);
@@ -366,6 +407,11 @@ async function ensureModel(target) {
   return after === target;
 }
 
+/**
+ * Opens the model picker dropdown and clicks the option matching `target`.
+ * Closes the dropdown without switching if no matching option is found.
+ * @param {"flash"|"thinking"|"pro"} target
+ */
 async function performModelSwitch(target) {
   const triggerBtn = findModelTrigger();
   if (!triggerBtn) {
@@ -496,6 +542,11 @@ function reportResult(success) {
   }
 }
 
+/**
+ * Injects `message` into the Gemini textarea and submits it.
+ * Reports the outcome to the service worker via reportResult().
+ * @param {string} message
+ */
 async function injectMessage(message) {
   // ── Find the textarea ─────────────────────────────────────────
   const input = await waitForElement(
@@ -568,6 +619,11 @@ if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
   Object.assign(globalThis.__TEST__, { classifyModelText, matchesTarget, waitForElement, waitForCondition });
 }
 
+/**
+ * Walks up the DOM from `inputEl` to find the nearest enabled send button.
+ * @param {Element} inputEl
+ * @returns {Element|null}
+ */
 function findSendButton(inputEl) {
   const SEND_SELECTORS = [
     'button.send-button[aria-label="Send message"]',

@@ -14,6 +14,10 @@ const PE_TEMPLATE_MAX = 400;
 const SUMMARIZE_PREFIX_MAX = 300;
 
 // ── Textarea auto-resize (max 7 visible lines, scrollbar beyond) ──
+/**
+ * Resizes a textarea to fit its content up to 7 visible lines.
+ * @param {HTMLTextAreaElement} ta
+ */
 function autoResizeTextarea(ta) {
   const MAX_LINES = 7;
   ta.style.height = "auto";
@@ -61,6 +65,10 @@ document.getElementById("aboutLogoBtn").addEventListener("click", () => chrome.t
 const shortcutDisplay = document.getElementById("shortcutDisplay");
 const shortcutEditBtn = document.getElementById("shortcutEditBtn");
 
+/**
+ * Renders the keyboard shortcut as styled <kbd> elements inside `shortcutDisplay`.
+ * @param {string} shortcutStr  e.g. "Ctrl+Shift+L"
+ */
 function renderShortcutKeys(shortcutStr) {
   shortcutDisplay.replaceChildren();
   if (!shortcutStr) {
@@ -83,12 +91,14 @@ function renderShortcutKeys(shortcutStr) {
   });
 }
 
+/** Reads the registered keyboard shortcut from the browser and renders it. */
 async function loadShortcut() {
   const commands = await chrome.commands.getAll();
   const cmd = commands.find(c => c.name === "open_popup");
   renderShortcutKeys(cmd?.shortcut || "");
 }
 
+/** Opens the Chrome extensions shortcuts page in a new tab. */
 function openShortcutSettings() {
   chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
 }
@@ -106,6 +116,10 @@ document.getElementById("shortcutPageLink")?.addEventListener("click", (e) => {
 
 let currentTheme = "auto";
 
+/**
+ * Applies the given theme preference to the document root and updates the segment control.
+ * @param {"light"|"dark"|"auto"} pref
+ */
 function applyTheme(pref) {
   currentTheme = pref || "auto";
   document.documentElement.dataset.theme = currentTheme;
@@ -132,6 +146,10 @@ document.getElementById("themeControl")?.addEventListener("click", async (e) => 
 
 let currentModel = "flash";
 
+/**
+ * Sets the active model and updates the model segment control.
+ * @param {"flash"|"thinking"|"pro"} model
+ */
 function applyModel(model) {
   currentModel = model || "flash";
   document.querySelectorAll("#modelControl .seg-btn").forEach(btn => {
@@ -164,12 +182,18 @@ const confirmCancel = document.getElementById("confirmCancel");
 
 let allHistory = [];
 
+/** Loads history from local storage and renders it. */
 async function loadHistory() {
   const { askGeminiHistory = [] } = await chrome.storage.local.get("askGeminiHistory");
   allHistory = askGeminiHistory;
   renderHistory(allHistory, searchInput.value.trim());
 }
 
+/**
+ * Renders the history list, optionally filtered by a search query.
+ * @param {{ text: string, ts: number }[]} items
+ * @param {string} [query=""]
+ */
 function renderHistory(items, query = "") {
   historyList.replaceChildren();
   const filtered = query
@@ -241,6 +265,10 @@ function renderHistory(items, query = "") {
   });
 }
 
+/**
+ * Writes `text` as a pending message to storage and opens/focuses a Gemini tab.
+ * @param {string} text
+ */
 async function sendPrompt(text) {
   await chrome.storage.local.set({ pendingMessage: text });
   const tabs = await chrome.tabs.query({ url: "https://gemini.google.com/*" });
@@ -252,6 +280,11 @@ async function sendPrompt(text) {
   }
 }
 
+/**
+ * Copies `text` to the clipboard and briefly shows a checkmark on `btn`.
+ * @param {string}      text
+ * @param {HTMLElement} btn
+ */
 async function copyToClipboard(text, btn) {
   try {
     await navigator.clipboard.writeText(text);
@@ -262,6 +295,10 @@ async function copyToClipboard(text, btn) {
   } catch (_) { showToast("Copy failed"); }
 }
 
+/**
+ * Removes the history entry matching `text` from storage and re-renders the list.
+ * @param {string} text
+ */
 async function deleteHistoryItem(text) {
   const { askGeminiHistory = [] } = await chrome.storage.local.get("askGeminiHistory");
   const updated = askGeminiHistory.filter(h => h.text !== text);
@@ -325,12 +362,18 @@ let activeTemplateModel = "flash";
 let editingIndex        = -1;
 let pendingDeleteIndex  = -1;
 
+/**
+ * Returns the template array for the currently active model tab.
+ * @returns {string[]}
+ */
 function getActiveTemplates() { return allTemplatesByModel[activeTemplateModel] || []; }
 
+/** Persists `allTemplatesByModel` to sync storage. */
 async function saveTemplates() {
   await chrome.storage.sync.set({ askGeminiTemplates: allTemplatesByModel });
 }
 
+/** Loads per-model templates from sync storage, migrating legacy flat arrays if needed. */
 async function loadTemplates() {
   const { askGeminiTemplates, askGeminiModel } = await chrome.storage.sync.get(["askGeminiTemplates", "askGeminiModel"]);
 
@@ -368,6 +411,7 @@ async function loadTemplates() {
   renderTemplates();
 }
 
+/** Updates model tab active states and badge counts. */
 function renderModelTabs() {
   tmplModelTabs.querySelectorAll(".tmpl-model-tab").forEach(btn => {
     const model = btn.dataset.model;
@@ -377,6 +421,7 @@ function renderModelTabs() {
   });
 }
 
+/** Re-renders the template card list for the active model. */
 function renderTemplates() {
   tmplCardList.replaceChildren();
   const templates = getActiveTemplates();
@@ -455,6 +500,10 @@ addTemplateBtn.addEventListener("click", () => {
   tmplFormCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
 });
 
+/**
+ * Opens the template edit form pre-filled with the template at `idx`.
+ * @param {number} idx
+ */
 function openEditForm(idx) {
   editingIndex = idx;
   tmplFormLabel.textContent = `Edit template ${idx + 1} — ${TMPL_MODEL_LABELS[activeTemplateModel]}`;
@@ -466,6 +515,7 @@ function openEditForm(idx) {
   tmplFormCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
+/** Updates the character counter and over-limit styling for the template textarea. */
 function updateCharCount() {
   const len = tmplTextarea.value.length;
   const max = 400;
@@ -507,6 +557,10 @@ tmplSaveBtn.addEventListener("click", async () => {
   showToast(wasEditing ? "Template updated" : "Template saved");
 });
 
+/**
+ * Shows the delete-confirmation overlay for the template at `idx`.
+ * @param {number} idx
+ */
 function confirmDeleteTemplate(idx) {
   pendingDeleteIndex = idx;
   const preview = getActiveTemplates()[idx].replace(/\n/g, "↵").slice(0, 60);
@@ -549,12 +603,14 @@ const summarizePrefixSaveBtn   = document.getElementById("summarizePrefixSaveBtn
 const summarizePrefixResetBtn  = document.getElementById("summarizePrefixResetBtn");
 const ctxPreviewPrefix         = document.getElementById("ctxPreviewPrefix");
 
+/** Syncs the summarize-prefix preview text from the textarea value. */
 function syncSummarizePreview() {
   if (!ctxPreviewPrefix) return;
   const raw = summarizePrefixTextarea.value.trimEnd();
   ctxPreviewPrefix.textContent = raw.replace(/\n/g, " ↵ ") + (raw ? "\n\n" : "");
 }
 
+/** Updates the character counter and over-limit styling for the summarize-prefix textarea. */
 function updateSummarizePrefixCharCount() {
   const len = summarizePrefixTextarea.value.length;
   summarizePrefixCharCount.textContent = `${len} / ${SUMMARIZE_PREFIX_MAX}`;
@@ -584,6 +640,7 @@ summarizePrefixResetBtn.addEventListener("click", async () => {
   showToast("Reset to default");
 });
 
+/** Loads the summarize prefix from sync storage and populates the textarea. */
 async function loadContextMenuSettings() {
   const { askGeminiSummarizePrefix = DEFAULT_SUMMARIZE_PREFIX } =
     await chrome.storage.sync.get("askGeminiSummarizePrefix");
@@ -606,6 +663,10 @@ let _peSettings = { enabled: false, rules: [] };
 // Per-rule save debounce timers keyed by rule id
 const _peDebounce = {};
 
+/**
+ * Shows or hides the PE rules panel and the summarize-prefix section.
+ * @param {boolean} enabled
+ */
 function _peSetVisibility(enabled) {
   promptEngRulesWrap.style.display    = enabled ? "block" : "none";
   summarizePrefixSection.style.display = enabled ? "none"  : "block";
@@ -622,6 +683,11 @@ function _mergeRules(saved) {
   });
 }
 
+/**
+ * Builds and returns a DOM card element for a single prompt-engineering rule.
+ * @param {{ id: string, label: string, hint: string, enabled: boolean, template: string }} rule
+ * @returns {HTMLElement}
+ */
 function _buildRuleCard(rule) {
   const card = document.createElement("div");
   card.className = "card pe-rule-card";
@@ -741,16 +807,30 @@ function _buildRuleCard(rule) {
   return card;
 }
 
+/**
+ * Updates a PE rule's character counter element.
+ * @param {HTMLElement} el
+ * @param {number}      len
+ */
 function _updatePeCharCount(el, len) {
   el.textContent = `${len} / ${PE_TEMPLATE_MAX}`;
   el.classList.toggle("warn", len > PE_TEMPLATE_MAX * 0.8 && len <= PE_TEMPLATE_MAX);
   el.classList.toggle("over", len > PE_TEMPLATE_MAX);
 }
 
+/**
+ * Renders a PE rule template preview, replacing {selection} with placeholder text.
+ * @param {HTMLElement} el
+ * @param {string}      template
+ */
 function _updatePePreview(el, template) {
   el.textContent = template.replace(/\{selection\}/g, "…your selected text…");
 }
 
+/**
+ * Debounces saving the PE settings after a rule change (400 ms delay).
+ * @param {string} ruleId
+ */
 function _peScheduleSave(ruleId) {
   clearTimeout(_peDebounce[ruleId]);
   _peDebounce[ruleId] = setTimeout(async () => {
@@ -759,6 +839,10 @@ function _peScheduleSave(ruleId) {
   }, 400);
 }
 
+/**
+ * Re-renders all PE rule cards plus the reset-all footer button.
+ * @param {{ id: string, label: string, hint: string, enabled: boolean, template: string }[]} rules
+ */
 function renderPromptEngRules(rules) {
   promptEngRulesWrap.replaceChildren();
   rules.forEach(rule => {
@@ -786,6 +870,7 @@ promptEngToggle.addEventListener("change", async () => {
   showToast(_peSettings.enabled ? "Prompt engineering enabled" : "Prompt engineering disabled");
 });
 
+/** Loads prompt-engineering settings from sync storage and renders the rule cards. */
 async function loadPromptEngSettings() {
   const { askGeminiPromptEng } = await chrome.storage.sync.get("askGeminiPromptEng");
   _peSettings = {
@@ -817,22 +902,48 @@ peResetAllConfirm.addEventListener("click", async () => {
 // 10. HELPERS
 // ══════════════════════════════════════════════════════════════════
 
+/**
+ * Resolves "auto" to the actual OS-level light/dark preference.
+ * @param {"light"|"dark"|"auto"} pref
+ * @returns {"light"|"dark"}
+ */
 function resolveTheme(pref) {
   if (pref === "light" || pref === "dark") return pref;
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
+/**
+ * Escapes HTML special characters to prevent XSS when interpolating into markup.
+ * @param {string} s
+ * @returns {string}
+ */
 function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
+/**
+ * Escapes characters that are unsafe inside HTML attribute values.
+ * @param {string} s
+ * @returns {string}
+ */
 function escAttr(s) {
   return s.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
+/**
+ * Returns HTML with all occurrences of `query` in `text` wrapped in <mark>.
+ * @param {string} text
+ * @param {string} query
+ * @returns {string}
+ */
 function highlightMatch(text, query) {
   const escaped = escapeHtml(text);
   const re = new RegExp(`(${escapeHtml(query).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
   return escaped.replace(re, "<mark>$1</mark>");
 }
+/**
+ * Formats a Unix timestamp as a human-readable relative time string.
+ * @param {number} ts  Unix timestamp in milliseconds.
+ * @returns {string}
+ */
 function formatTime(ts) {
   if (!ts) return "";
   const d    = new Date(ts);
@@ -845,6 +956,10 @@ function formatTime(ts) {
 }
 
 let toastTimer;
+/**
+ * Shows a brief toast notification at the bottom of the page.
+ * @param {string} msg
+ */
 function showToast(msg) {
   let toast = document.querySelector(".toast");
   if (!toast) {

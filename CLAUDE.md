@@ -57,6 +57,7 @@ icons/                                # Extension icons (16, 48, 128px)
 - **UI Consistency:** Popup and Options pages must use the CSS variables and styles defined in `src/popup/popup.css` and `src/options/options.css`. Do not introduce new design tokens.
 - **No innerHTML:** Use `textContent`, `createElement`, or `insertAdjacentText` to avoid CSP violations.
 - **No eval():** Forbidden — violates MV3 CSP.
+- **JSDoc:** Every function in `src/**/*.js` (excluding `*.min.js`) must have a JSDoc comment above it. Include `@param` and `@returns` tags for non-trivial signatures. Keep descriptions concise.
 
 ## Critical Constraints
 

@@ -16,6 +16,11 @@ const MAX_CHARS = 2000;
 
 // INJECTION_PATTERNS is loaded from ../shared/constants.js
 
+/**
+ * Returns true if the text contains patterns that look like a prompt injection attempt.
+ * @param {string} text
+ * @returns {boolean}
+ */
 function detectPromptInjection(text) {
   return INJECTION_PATTERNS.some(re => re.test(text));
 }
@@ -68,6 +73,7 @@ const PLACEHOLDERS = [
 let _phIdx    = 0;
 let _phTimer  = null;
 
+/** Advances the placeholder text to the next item with a fade animation. */
 function phCycle() {
   phCycler.classList.remove("ph-enter");
   phCycler.classList.add("ph-exit");
@@ -80,6 +86,7 @@ function phCycle() {
   }, 250);
 }
 
+/** Shows/hides the placeholder cycler based on whether the input has content. */
 function phUpdate() {
   if (input.value.length > 0) {
     phCycler.classList.add("ph-hidden");
@@ -101,6 +108,10 @@ function phUpdate() {
 
 let currentTheme = "auto";
 
+/**
+ * Applies the given theme preference to the document root.
+ * @param {"light"|"dark"|"auto"} pref
+ */
 function applyTheme(pref) {
   currentTheme = pref || "auto";
   document.documentElement.dataset.theme = currentTheme;
@@ -115,6 +126,10 @@ function applyTheme(pref) {
 
 let currentModel = "flash";
 
+/**
+ * Sets the active model and updates the model-switcher button states.
+ * @param {"flash"|"thinking"|"pro"} model
+ */
 function applyModel(model) {
   currentModel = model || "flash";
   document.querySelectorAll(".model-opt").forEach(btn => {
@@ -138,6 +153,10 @@ modelSwitcher.addEventListener("click", async (e) => {
 
 let templates = [];
 
+/**
+ * Loads the template list for the given model from storage into `templates`.
+ * @param {"flash"|"thinking"|"pro"} model
+ */
 async function loadTemplatesForModel(model) {
   const { askGeminiTemplates } = await chrome.storage.sync.get("askGeminiTemplates");
   const defaults = DEFAULT_TEMPLATES_BY_MODEL[model] || DEFAULT_TEMPLATES_BY_MODEL.flash;
@@ -151,6 +170,7 @@ async function loadTemplatesForModel(model) {
   }
 }
 
+/** Re-renders the template dropdown list from the current `templates` array. */
 function renderDropdownList() {
   tmplList.replaceChildren();
   if (templates.length === 0) { tmplEmpty.classList.add("visible"); return; }
@@ -170,6 +190,10 @@ function renderDropdownList() {
   });
 }
 
+/**
+ * Inserts the given template string into the input and moves the cursor to the end.
+ * @param {string} tpl
+ */
 function insertTemplate(tpl) {
   input.value = tpl;
   input.dispatchEvent(new Event("input"));
@@ -178,6 +202,10 @@ function insertTemplate(tpl) {
 }
 
 // Dropdown open/close — with flow-in / flow-out panel animation
+/**
+ * Plays the flow-in or flow-out animation on the template trigger button.
+ * @param {"in"|"out"} direction
+ */
 function animateTriggerBtn(direction) {
   const addCls    = direction === "in" ? "tmpl-flow-in"  : "tmpl-flow-out";
   const removeCls = direction === "in" ? "tmpl-flow-out" : "tmpl-flow-in";
@@ -188,6 +216,7 @@ function animateTriggerBtn(direction) {
   setTimeout(() => tmplTriggerBtn.classList.remove(addCls), duration);
 }
 
+/** Opens the template dropdown panel. */
 function openDropdown() {
   clearTimeout(_closeTimer);
   tmplDropdown.style.display = "";      // clear any inline display:none
@@ -198,6 +227,7 @@ function openDropdown() {
 }
 
 let _closeTimer = null;
+/** Closes the template dropdown panel with a hide animation. */
 function closeDropdown() {
   if (!tmplDropdown.classList.contains("visible")) return;
   tmplDropdown.classList.remove("visible");
@@ -211,6 +241,7 @@ function closeDropdown() {
   }, 200);
 }
 
+/** Toggles the template dropdown open/closed. */
 function toggleDropdown() { tmplDropdown.classList.contains("visible") ? closeDropdown() : openDropdown(); }
 
 tmplTriggerBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleDropdown(); });
@@ -245,6 +276,12 @@ const ac = {
 
 // ── helpers ───────────────────────────────────────────────────────
 
+/**
+ * Returns true if the cursor position `pos` is inside a fenced code block.
+ * @param {string} text
+ * @param {number} pos
+ * @returns {boolean}
+ */
 function isInsideCodeBlock(text, pos) {
   // Count ``` fence markers before cursor; odd count = inside block
   let count = 0, search = 0;
@@ -285,6 +322,11 @@ function getACContext() {
   return { lineStart, query };
 }
 
+/**
+ * Returns templates whose text starts with `query` (case-insensitive).
+ * @param {string} query
+ * @returns {string[]}
+ */
 function filterTemplates(query) {
   const q = query.toLowerCase();
   // Match templates whose text (after trimming) starts with the query
@@ -294,6 +336,12 @@ function filterTemplates(query) {
 
 // ── AC state changes ──────────────────────────────────────────────
 
+/**
+ * Activates the autocomplete strip with the given matches.
+ * @param {number}   lineStart  Index in textarea.value where the current line begins.
+ * @param {string[]} matches    Filtered template strings.
+ * @param {number}   [idx=0]    Initially highlighted match index.
+ */
 function openAC(lineStart, matches, idx = 0) {
   ac.active    = true;
   ac.lineStart = lineStart;
@@ -304,6 +352,7 @@ function openAC(lineStart, matches, idx = 0) {
   renderACStrip();
 }
 
+/** Updates the AC strip UI to reflect the current match and typed prefix. */
 function renderACStrip() {
   const match = ac.matches[ac.idx];
   const typedLen = input.value.length - ac.lineStart - 1; // chars typed after '/'
@@ -323,6 +372,7 @@ function renderACStrip() {
     : "";
 }
 
+/** Hides the AC strip and resets autocomplete state. */
 function dismissAC() {
   if (!ac.active) return;
   ac.active = false;
@@ -332,6 +382,7 @@ function dismissAC() {
   acCounter.textContent = "";
 }
 
+/** Accepts the currently highlighted AC match, replacing the typed prefix with the full template. */
 function acceptAC() {
   if (!ac.active || ac.matches.length === 0) return;
 
@@ -352,6 +403,7 @@ function acceptAC() {
   dismissAC();
 }
 
+/** Advances to the next AC match, wrapping around. */
 function cycleAC() {
   ac.idx = (ac.idx + 1) % ac.matches.length;
   renderACStrip();
@@ -359,6 +411,7 @@ function cycleAC() {
 
 // ── the main AC update — called on every 'input' event ───────────
 
+/** Re-evaluates autocomplete state after each input event. */
 function updateAC() {
   const ctx = getACContext();
 
@@ -389,6 +442,11 @@ const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4 MB per file
 
 let attachedFiles = []; // File[]
 
+/**
+ * Reads a File as a base64-encoded data URL.
+ * @param {File} file
+ * @returns {Promise<string>}
+ */
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -398,6 +456,7 @@ function fileToBase64(file) {
   });
 }
 
+/** Re-renders the file chip list from the current `attachedFiles` array. */
 function renderFileChips() {
   fileChips.querySelectorAll(".file-chip-thumb").forEach(img => URL.revokeObjectURL(img.src));
   fileChips.replaceChildren();
@@ -462,6 +521,7 @@ function validateImageMagicBytes(file) {
 let _shiftHeld       = false;
 let _defaultHintActive = true;
 
+/** Resets the hint bar to the default "↵ Send" / "Shift+↵ Newline" text. */
 function setDefaultHint() {
   _defaultHintActive = true;
   hint.textContent   = _shiftHeld ? "Shift+↵ Newline" : "↵ Send";
@@ -482,6 +542,10 @@ document.addEventListener("keyup", (e) => {
   }
 });
 
+/**
+ * Displays a transient error message in the hint bar, then restores the default.
+ * @param {string} msg
+ */
 function showFileError(msg) {
   _defaultHintActive = false;
   hint.textContent = msg;
@@ -489,6 +553,11 @@ function showFileError(msg) {
   setTimeout(() => setDefaultHint(), 3000);
 }
 
+/**
+ * Validates and adds files from a FileList to `attachedFiles`, showing errors
+ * for rejected items and enforcing the MAX_FILES limit.
+ * @param {FileList} fileList
+ */
 async function addFiles(fileList) {
   const candidates = Array.from(fileList);
   const toAdd = [];
@@ -529,6 +598,7 @@ async function addFiles(fileList) {
   updateSendBtn();
 }
 
+/** Enables or disables the send button based on input length and char limit. */
 function updateSendBtn() {
   const len = input.value.length;
   sendBtn.disabled = input.value.trim().length === 0 || len > MAX_CHARS;
@@ -632,6 +702,10 @@ input.addEventListener("keydown", (e) => {
 // 7. SELECTED-TEXT AUTO-FILL
 // ══════════════════════════════════════════════════════════════════
 
+/**
+ * Reads the active tab's selected text and pre-fills the input with it.
+ * @returns {Promise<boolean>} true if a selection was applied
+ */
 async function tryAutoFillSelection() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -669,6 +743,10 @@ selClear.addEventListener("click", () => {
 // 8. HISTORY
 // ══════════════════════════════════════════════════════════════════
 
+/**
+ * Prepends `message` to the local history, deduplicating and capping at MAX_HISTORY.
+ * @param {string} message
+ */
 async function saveToHistory(message) {
   const { askGeminiHistory = [] } = await chrome.storage.local.get("askGeminiHistory");
   const deduped = askGeminiHistory.filter(h => h.text !== message);
@@ -682,7 +760,9 @@ async function saveToHistory(message) {
 
 let _injectionAcknowledged = false;
 
+/** Shows the prompt-injection warning banner. */
 function showInjectWarning() { injectWarning.classList.add("visible"); }
+/** Hides the prompt-injection warning banner. */
 function hideInjectWarning() { injectWarning.classList.remove("visible"); }
 
 injectCancel.addEventListener("click", () => hideInjectWarning());
@@ -694,6 +774,10 @@ injectSendAnyway.addEventListener("click", () => {
 
 sendBtn.addEventListener("click", () => askGemini());
 
+/**
+ * Validates the input, writes the pending message (and any attached files) to
+ * storage, saves it to history, then opens/focuses the Gemini tab.
+ */
 async function askGemini() {
   const message = input.value.trim();
   if (!message || message.length > MAX_CHARS) return;
@@ -758,6 +842,11 @@ logoBtn.addEventListener("click", () => { chrome.tabs.create({ url: GEMINI_URL }
 // 11. HELPERS
 // ══════════════════════════════════════════════════════════════════
 
+/**
+ * Escapes HTML special characters to prevent XSS when interpolating into markup.
+ * @param {string} s
+ * @returns {string}
+ */
 function escapeHtml(s) {
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
