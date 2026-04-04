@@ -27,11 +27,18 @@
   --border-focus: light-dark(rgba(100,80,230,0.5), rgba(120,100,255,0.55));
 
   /* Accent */
-  --accent: light-dark(#6655e8, #7c6af7);
+  --accent:     light-dark(#6655e8, #7c6af7);
+  --accent-2:   light-dark(#c03888, #e05fa0);
+  --accent-glow: light-dark(rgba(102,85,232,0.25), rgba(124,106,247,0.35));
+  --accent-dim:  light-dark(rgba(102,85,232,0.10), rgba(124,106,247,0.15));
 
   /* Text */
-  --text:     light-dark(#1a1625, #e8eaf0);
-  --text-dim: light-dark(#5c5570, #6b7080);
+  --text:      light-dark(#1a1625, #e8eaf0);
+  --text-dim:  light-dark(#5c5570, #6b7080);
+  --text-hint: light-dark(#9a94b8, #3e4355);
+
+  /* Interaction */
+  --hover-tint: light-dark(rgba(0,0,0,0.05), rgba(255,255,255,0.06));
 
   /* Layout */
   --radius:    14px;

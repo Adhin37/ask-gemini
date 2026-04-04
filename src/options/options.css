@@ -2,15 +2,12 @@
 
 /* ── Options-specific theme tokens ───────────────────────────────── */
 :root {
-  --accent-2:      light-dark(#c03888, #e05fa0);
-  --accent-dim:    light-dark(rgba(102,85,232,0.12), rgba(124,106,247,0.18));
-  --text-hint:     light-dark(#9a94b8, #3e4355);
-  --danger:        light-dark(#d03838, #e05050);
-  --danger-dim:    light-dark(rgba(208,56,56,0.10), rgba(224,80,80,0.12));
-  --sidebar-w:     220px;
-  --blob-opacity:  0.14;
-  --hover-tint:    light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.04));
-  --hover-tint-sm: light-dark(rgba(0,0,0,0.05), rgba(255,255,255,0.06));
+  /* Slightly stronger tint than base for larger interactive surfaces */
+  --accent-dim:   light-dark(rgba(102,85,232,0.12), rgba(124,106,247,0.18));
+  --danger:       light-dark(#d03838, #e05050);
+  --danger-dim:   light-dark(rgba(208,56,56,0.10), rgba(224,80,80,0.12));
+  --sidebar-w:    220px;
+  --blob-opacity: 0.14;
 
   /* Only the shadow color differs (blur unified at 2px) → light-dark() inline. */
   --kbd-shadow: 0 1px 2px light-dark(rgba(0,0,0,0.08), rgba(0,0,0,0.3));
@@ -471,7 +468,7 @@ html, body {
 }
 
 .hist-btn:hover {
-  background: var(--hover-tint-sm);
+  background: var(--hover-tint);
   color: var(--text);
 }
 
