@@ -329,7 +329,7 @@ async function openPopup() {
     await chrome.action.openPopup();
   } catch (_err) {
     // Fallback: floating popup window (works in fullscreen / from content script).
-    const popupUrl = chrome.runtime.getURL("dist/popup/popup.html");
+    const popupUrl = chrome.runtime.getURL("src/popup/popup.html");
 
     let left, top;
     try {
@@ -361,7 +361,7 @@ chrome.commands.onCommand.addListener((command) => {
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
     chrome.tabs.create({
-      url: chrome.runtime.getURL("dist/welcome/welcome.html"),
+      url: chrome.runtime.getURL("src/welcome/welcome.html"),
     });
   }
   registerMenus();

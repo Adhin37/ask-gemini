@@ -6,7 +6,7 @@ const chromeGlobal = { chrome: "readonly" };
 export default [
   // ── Global ignores ──────────────────────────────────────────────
   {
-    ignores: ["*.zip", "*.sh", "dist/**", "build.mjs", "src/**/*.min.js"],
+    ignores: ["*.zip", "*.sh", "build.mjs", "src/**/*.min.js"],
   },
 
   // ── All JS source files ─────────────────────────────────────────
