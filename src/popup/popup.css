@@ -152,10 +152,10 @@ html, body {
 .logo:hover .logo-icon {
   transform: scale(1.12) rotate(-6deg) translateY(-2px);
   border-color: var(--accent);
-  background: linear-gradient(135deg, #252840, #2c3050);
+  background: linear-gradient(135deg, light-dark(#c8c0ff, #252840), light-dark(#b8b0f0, #2c3050));
   box-shadow:
     0 8px 25px var(--accent-glow),
-    inset 0 0 12px rgba(124,106,247,0.3);
+    inset 0 0 12px light-dark(rgba(102,85,232,0.2), rgba(124,106,247,0.3));
 }
 
 /* Make the internal star "pulse" when hovered */
@@ -377,9 +377,9 @@ html, body {
   right: calc(100% + 10px);
   top: 50%;
   transform: translateY(-50%) translateX(6px);
-  background: #1e2030;
+  background: var(--surface-2);
   border: 1px solid rgba(240,160,75,0.3);
-  color: #f0c070;
+  color: light-dark(#905500, #f0c070);
   font-size: 11px;
   font-family: var(--font-body);
   white-space: nowrap;
@@ -388,7 +388,7 @@ html, body {
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.18s, transform 0.18s;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 24px light-dark(rgba(0,0,0,0.12), rgba(0,0,0,0.4));
 }
 
 .kofi-tooltip::before {

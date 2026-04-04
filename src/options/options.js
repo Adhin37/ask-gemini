@@ -643,9 +643,19 @@ function _buildRuleCard(rule) {
   labelEl.className = "pe-rule-label";
   labelEl.textContent = rule.label;
 
-  const hintEl = document.createElement("span");
-  hintEl.className = "pe-rule-hint";
-  hintEl.textContent = rule.hint;
+  const hintWrap = document.createElement("span");
+  hintWrap.className = "pe-rule-hint-wrap";
+
+  const hintIcon = document.createElement("span");
+  hintIcon.className = "pe-rule-hint-icon";
+  hintIcon.textContent = "?";
+
+  const hintTooltip = document.createElement("span");
+  hintTooltip.className = "pe-rule-hint-tooltip";
+  hintTooltip.textContent = rule.hint;
+
+  hintWrap.appendChild(hintIcon);
+  hintWrap.appendChild(hintTooltip);
 
   const resetBtn = document.createElement("button");
   resetBtn.className = "btn-ghost btn-xs pe-rule-reset";
@@ -654,7 +664,7 @@ function _buildRuleCard(rule) {
 
   header.appendChild(toggleLabel);
   header.appendChild(labelEl);
-  header.appendChild(hintEl);
+  header.appendChild(hintWrap);
   header.appendChild(resetBtn);
   card.appendChild(header);
 
