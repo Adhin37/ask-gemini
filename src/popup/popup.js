@@ -453,13 +453,35 @@ function validateImageMagicBytes(file) {
   });
 }
 
+// ── Hint bar state ────────────────────────────────────────────────
+let _shiftHeld       = false;
+let _defaultHintActive = true;
+
+function setDefaultHint() {
+  _defaultHintActive = true;
+  hint.textContent   = _shiftHeld ? "Shift+↵ Newline" : "↵ Send";
+  hint.style.color   = "";
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Shift" && !_shiftHeld) {
+    _shiftHeld = true;
+    if (_defaultHintActive) hint.textContent = "Shift+↵ Newline";
+  }
+});
+
+document.addEventListener("keyup", (e) => {
+  if (e.key === "Shift") {
+    _shiftHeld = false;
+    if (_defaultHintActive) hint.textContent = "↵ Send";
+  }
+});
+
 function showFileError(msg) {
+  _defaultHintActive = false;
   hint.textContent = msg;
   hint.style.color = "#f05050";
-  setTimeout(() => {
-    hint.textContent = "↵ Enter to send";
-    hint.style.color = "";
-  }, 3000);
+  setTimeout(() => setDefaultHint(), 3000);
 }
 
 async function addFiles(fileList) {
@@ -551,11 +573,11 @@ input.addEventListener("input", () => {
   const len = input.value.length;
   if (len > MAX_CHARS * 0.8) {
     const rem = MAX_CHARS - len;
+    _defaultHintActive = false;
     hint.textContent = rem >= 0 ? `${rem} chars left` : `${Math.abs(rem)} over limit`;
     hint.style.color = rem < 0 ? "#f05050" : rem < 200 ? "#f0a04b" : "";
   } else {
-    hint.textContent = "↵ Enter to send";
-    hint.style.color = "";
+    setDefaultHint();
   }
 
   updateSendBtn();

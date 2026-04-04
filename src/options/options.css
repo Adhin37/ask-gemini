@@ -468,7 +468,7 @@ html, body {
 }
 
 .history-text mark {
-  background: rgba(124,106,247,0.30);
+  background: light-dark(rgba(102,85,232,0.18), rgba(124,106,247,0.30));
   color: var(--text);
   border-radius: 2px;
   padding: 0 1px;
