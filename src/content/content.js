@@ -298,6 +298,38 @@ function matchesTarget(optionText, target) {
 
 
 // ══════════════════════════════════════════════════════════════════
+// SHARED SELECTORS
+// ══════════════════════════════════════════════════════════════════
+
+/** Selectors tried in order to locate model-picker dropdown options. */
+const OPTION_SELECTORS = [
+  '[role="option"]', '[role="menuitem"]', '[role="listitem"]',
+  "li[data-value]",  '[class*="model-item" i]',
+];
+
+/** Selectors tried in order to locate Gemini's send button. */
+const SEND_SELECTORS = [
+  'button.send-button[aria-label="Send message"]',
+  "button.send-button",
+  'button[aria-label="Send message"]',
+  'button[aria-label*="Send" i].submit',
+  'button.submit[aria-label*="Send" i]',
+];
+
+/**
+ * Returns Gemini's contenteditable rich-text input element, or null.
+ * @returns {Element|null}
+ */
+function findTextareaInput() {
+  return (
+    document.querySelector("rich-textarea div.ql-editor[contenteditable='true']") ||
+    document.querySelector("rich-textarea div[contenteditable='true']")           ||
+    document.querySelector("div.ql-editor[contenteditable='true']")               ||
+    document.querySelector("div[contenteditable='true'][aria-label]")
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
 // MODEL DETECTION
 // ══════════════════════════════════════════════════════════════════
 
@@ -318,10 +350,6 @@ async function _detectCurrentModel() {
 
   triggerBtn.click();
 
-  const OPTION_SELECTORS = [
-    '[role="option"]', '[role="menuitem"]', '[role="listitem"]',
-    "li[data-value]",  '[class*="model-item" i]',
-  ];
   const anyOption = () => OPTION_SELECTORS.some(s => document.querySelector(s));
 
   await waitForCondition(anyOption, 2_000);
@@ -421,11 +449,6 @@ async function performModelSwitch(target) {
 
   triggerBtn.click();
 
-  const OPTION_SELECTORS = [
-    '[role="option"]', '[role="menuitem"]', '[role="listitem"]',
-    "li[data-value]",  '[class*="model-item" i]',
-  ];
-
   await waitForElement(
     () => OPTION_SELECTORS.reduce((found, s) => found || document.querySelector(s), null),
     2_000
@@ -467,14 +490,7 @@ async function uploadFilesToGemini(files) {
   if (!files || files.length === 0) return;
 
   // Find the Gemini contenteditable input to paste into
-  const inputEl = await waitForElement(
-    () =>
-      document.querySelector("rich-textarea div.ql-editor[contenteditable='true']") ||
-      document.querySelector("rich-textarea div[contenteditable='true']")           ||
-      document.querySelector("div.ql-editor[contenteditable='true']")               ||
-      document.querySelector("div[contenteditable='true'][aria-label]"),
-    10_000
-  );
+  const inputEl = await waitForElement(findTextareaInput, 10_000);
 
   if (!inputEl) {
     console.warn("[Ask Gemini] uploadFilesToGemini: input not found — skipping image paste");
@@ -549,14 +565,7 @@ function reportResult(success) {
  */
 async function injectMessage(message) {
   // ── Find the textarea ─────────────────────────────────────────
-  const input = await waitForElement(
-    () =>
-      document.querySelector("rich-textarea div.ql-editor[contenteditable='true']") ||
-      document.querySelector("rich-textarea div[contenteditable='true']")           ||
-      document.querySelector("div.ql-editor[contenteditable='true']")               ||
-      document.querySelector("div[contenteditable='true'][aria-label]"),
-    10_000
-  );
+  const input = await waitForElement(findTextareaInput, 10_000);
 
   if (!input) {
     console.error("[Ask Gemini] Input field not found within timeout.");
@@ -625,14 +634,6 @@ if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
  * @returns {Element|null}
  */
 function findSendButton(inputEl) {
-  const SEND_SELECTORS = [
-    'button.send-button[aria-label="Send message"]',
-    "button.send-button",
-    'button[aria-label="Send message"]',
-    'button[aria-label*="Send" i].submit',
-    'button.submit[aria-label*="Send" i]',
-  ];
-
   let node = inputEl.parentElement;
   while (node && node !== document.body) {
     for (const sel of SEND_SELECTORS) {

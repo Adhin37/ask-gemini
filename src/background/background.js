@@ -364,5 +364,5 @@ chrome.runtime.onInstalled.addListener((details) => {
       url: chrome.runtime.getURL("dist/welcome/welcome.html"),
     });
   }
-  if (typeof registerMenus === "function") registerMenus();
+  registerMenus();
 });
