@@ -9,21 +9,22 @@
   --danger-dim:    light-dark(rgba(208,56,56,0.10), rgba(224,80,80,0.12));
   --sidebar-w:     220px;
   --blob-opacity:  0.14;
-  --kbd-shadow:    0 1px 3px rgba(0,0,0,0.3);
   --hover-tint:    light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.04));
   --hover-tint-sm: light-dark(rgba(0,0,0,0.05), rgba(255,255,255,0.06));
-}
 
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --blob-opacity: 0.30;
-    --kbd-shadow:   0 1px 2px rgba(0,0,0,0.08);
+  /* Only the shadow color differs (blur unified at 2px) → light-dark() inline. */
+  --kbd-shadow: 0 1px 2px light-dark(rgba(0,0,0,0.08), rgba(0,0,0,0.3));
+
+  /* --blob-opacity is a number — light-dark() can't be used here. */
+  @media (prefers-color-scheme: light) {
+    &:not([data-theme="dark"]) {
+      --blob-opacity: 0.30;
+    }
   }
-}
 
-:root[data-theme="light"] {
-  --blob-opacity: 0.30;
-  --kbd-shadow:   0 1px 2px rgba(0,0,0,0.08);
+  &[data-theme="light"] {
+    --blob-opacity: 0.30;
+  }
 }
 
 html, body {

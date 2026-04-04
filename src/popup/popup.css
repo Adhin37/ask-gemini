@@ -10,19 +10,24 @@
   --theme-icon:   light-dark(#5c5570, #6b7080);
   --blob-opacity: 0.18;
   --hover-tint:   light-dark(rgba(0,0,0,0.05), rgba(255,255,255,0.06));
-  --focus-shadow: 0 0 0 3px rgba(124,106,247,0.12), 0 0 20px rgba(124,106,247,0.08);
-}
 
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --blob-opacity: 0.28;
-    --focus-shadow: 0 0 0 3px rgba(100,80,200,0.10);
+  /* Color part of focus ring differs → light-dark() inline.
+   * Dark has a second glow layer; light gets a transparent placeholder. */
+  --focus-shadow:
+    0 0 0 3px light-dark(rgba(100,80,200,0.10), rgba(124,106,247,0.12)),
+    0 0 20px  light-dark(transparent, rgba(124,106,247,0.08));
+
+  /* --blob-opacity is a number, not a color — light-dark() can't be used.
+   * CSS Nesting keeps the light-mode overrides co-located with the default. */
+  @media (prefers-color-scheme: light) {
+    &:not([data-theme="dark"]) {
+      --blob-opacity: 0.28;
+    }
   }
-}
 
-:root[data-theme="light"] {
-  --blob-opacity: 0.28;
-  --focus-shadow: 0 0 0 3px rgba(100,80,200,0.10);
+  &[data-theme="light"] {
+    --blob-opacity: 0.28;
+  }
 }
 
 /* ── Body / Shell ─────────────────────────────────────────────── */
