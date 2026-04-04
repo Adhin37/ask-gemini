@@ -1,5 +1,81 @@
 // ── content.js ───────────────────────────────────────────────
 
+// ── Status overlay ────────────────────────────────────────────
+let _statusEl   = null;
+let _cancelSpin = null;
+
+function showStatus(msg) {
+  if (!_statusEl) {
+    _statusEl = document.createElement("div");
+    Object.assign(_statusEl.style, {
+      position:      "fixed",
+      top:           "20px",
+      left:          "50%",
+      transform:     "translateX(-50%)",
+      zIndex:        "2147483647",
+      display:       "flex",
+      alignItems:    "center",
+      gap:           "10px",
+      background:    "rgba(20, 16, 54, 0.92)",
+      color:         "#ede9ff",
+      padding:       "11px 20px",
+      borderRadius:  "999px",
+      fontSize:      "13px",
+      fontWeight:    "500",
+      fontFamily:    "'Google Sans', sans-serif",
+      border:        "1px solid rgba(167,139,250,0.35)",
+      boxShadow:     "0 4px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(167,139,250,0.1)",
+      backdropFilter: "blur(8px)",
+      opacity:       "0",
+      transition:    "opacity 0.2s ease",
+      pointerEvents: "none",
+      userSelect:    "none",
+      whiteSpace:    "nowrap",
+    });
+
+    const spinner = document.createElement("span");
+    Object.assign(spinner.style, {
+      width:        "14px",
+      height:       "14px",
+      border:       "2px solid rgba(167,139,250,0.25)",
+      borderTop:    "2px solid #a78bfa",
+      borderRadius: "50%",
+      flexShrink:   "0",
+      display:      "block",
+    });
+
+    const label = document.createElement("span");
+    _statusEl.appendChild(spinner);
+    _statusEl.appendChild(label);
+    document.body.appendChild(_statusEl);
+
+    requestAnimationFrame(() => { _statusEl.style.opacity = "1"; });
+
+    // Animate spinner via rAF — avoids injecting a <style> into the page
+    let angle = 0;
+    let raf;
+    const step = () => {
+      angle = (angle + 8) % 360;
+      spinner.style.transform = `rotate(${angle}deg)`;
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    _cancelSpin = () => cancelAnimationFrame(raf);
+  }
+
+  _statusEl.querySelector("span:last-child").textContent = msg;
+}
+
+function hideStatus() {
+  if (!_statusEl) return;
+  _cancelSpin?.();
+  _cancelSpin = null;
+  _statusEl.style.opacity = "0";
+  const el = _statusEl;
+  _statusEl = null;
+  setTimeout(() => el.remove(), 250);
+}
+
 (async () => {
   const data = await chrome.storage.local.get(["pendingMessage", "pendingModel", "pendingFiles"]);
   if (!data.pendingMessage) return;
@@ -9,17 +85,25 @@
   const files     = data.pendingFiles  || [];
   await chrome.storage.local.remove(["pendingMessage", "pendingModel", "pendingFiles"]);
 
+  showStatus("Ask Gemini…");
+
   // ── 1. Wait for the model trigger button ───────────────────────
   const ready = await waitForElement(() => findModelTrigger(), 10_000);
 
   if (!ready) {
     console.warn("[Ask Gemini] Model trigger not found after 10 s — skipping model check");
-    if (files.length > 0) await uploadFilesToGemini(files);
+    if (files.length > 0) {
+      showStatus(`Uploading image${files.length > 1 ? "s" : ""}…`);
+      await uploadFilesToGemini(files);
+    }
+    showStatus("Sending…");
     await injectMessage(message);
+    hideStatus();
     return;
   }
 
   // ── 2. Guarantee the correct model is active ───────────────────
+  if (readModelFromButton() !== modelPref) showStatus("Switching model…");
   const confirmed = await ensureModel(modelPref);
   if (!confirmed) {
     console.warn(
@@ -30,10 +114,15 @@
   }
 
   // ── 3. Upload any attached files and wait for processing ───────
-  if (files.length > 0) await uploadFilesToGemini(files);
+  if (files.length > 0) {
+    showStatus(`Uploading image${files.length > 1 ? "s" : ""}…`);
+    await uploadFilesToGemini(files);
+  }
 
   // ── 4. Inject the message and submit ───────────────────────────
+  showStatus("Sending…");
   await injectMessage(message);
+  hideStatus();
 })();
 
 

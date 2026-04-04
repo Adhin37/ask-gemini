@@ -1,50 +1,15 @@
 // ── popup.js ──────────────────────────────────────────────────
 // Model switcher (Flash/Pro/Think), inline autocomplete, theme, history
 
-const GEMINI_URL  = "https://gemini.google.com/app";
-const MAX_CHARS   = 2000;
-const MAX_HISTORY = 20;
+// GEMINI_URL, MAX_HISTORY, DEFAULT_TEMPLATES_BY_MODEL loaded from ../shared/constants.js
 
-const DEFAULT_TEMPLATES_BY_MODEL = {
-  flash: [
-    "Summarise: ",
-    "Translate to English: ",
-    "Explain simply: ",
-    "Pros and cons of: ",
-  ],
-  thinking: [
-    "Think through this step-by-step: ",
-    "What are the edge cases for: ",
-    "Analyze deeply: ",
-  ],
-  pro: [
-    "Deep analysis of: ",
-    "Fix this code:\n",
-    "Compare and contrast: ",
-    "Write a comprehensive report on: ",
-  ],
-};
+const MAX_CHARS = 2000;
 
 // ══════════════════════════════════════════════════════════════════
 // PROMPT INJECTION DETECTION
 // ══════════════════════════════════════════════════════════════════
 
-const INJECTION_PATTERNS = [
-  /ignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?|context|rules?)/i,
-  /disregard\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?|context)/i,
-  /forget\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?|context|everything)/i,
-  /override\s+(your\s+)?(instructions?|safety|guidelines?|system)/i,
-  /new\s+(system\s+)?instructions?\s*:/i,
-  /you\s+are\s+now\s+(a|an)\s+/i,
-  /act\s+as\s+(if\s+you\s+(are|were)|a|an)\s+/i,
-  /pretend\s+(to\s+be|you\s+(are|were))\s+/i,
-  /\[INST\]/,
-  /<<SYS>>/,
-  /<\s*system\s*>/i,
-  /###\s*System\s*:/i,
-  /\bDAN\b.*\bmode\b/i,
-  /\bjailbreak\b/i,
-];
+// INJECTION_PATTERNS is loaded from ../shared/constants.js
 
 function detectPromptInjection(text) {
   return INJECTION_PATTERNS.some(re => re.test(text));
@@ -429,6 +394,7 @@ function fileToBase64(file) {
 }
 
 function renderFileChips() {
+  fileChips.querySelectorAll(".file-chip-thumb").forEach(img => URL.revokeObjectURL(img.src));
   fileChips.replaceChildren();
   attachedFiles.forEach((file, i) => {
     const chip = document.createElement("div");

@@ -516,6 +516,19 @@
     </div>
   </div>
 
+  <!-- Confirm dialog (reset all PE rules) -->
+  <div class="dialog-overlay" id="peResetAllOverlay">
+    <div class="dialog">
+      <h3 class="dialog-title">Reset all rules?</h3>
+      <p class="dialog-body">All prompt engineering rules will be restored to their defaults. Your edits will be lost.</p>
+      <div class="dialog-actions">
+        <button class="btn-ghost" id="peResetAllCancel">Cancel</button>
+        <button class="btn-danger" id="peResetAllConfirm">Reset all</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/constants.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

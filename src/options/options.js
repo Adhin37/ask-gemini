@@ -2,84 +2,12 @@
 // Settings page: history, templates, appearance (theme + model),
 // context menu actions, shortcut, about
 
-const GEMINI_URL = "https://gemini.google.com/app";
-
-// ── Prompt Engineering defaults (mirrors background.js) ───────────
-const DEFAULT_PROMPT_ENG_RULES = [
-  {
-    id: "code", label: "Code",
-    hint: "Selection looks like code, or the page is a known code site (GitHub, Stack Overflow…)",
-    enabled: true,
-    template: "Analyze this code:\n1. **Purpose** — what does it do?\n2. **Logic** — how does it work step-by-step?\n3. **Issues** — any bugs, edge cases, or improvements?\n\n{selection}",
-  },
-  {
-    id: "error", label: "Error / Bug",
-    hint: "Selection contains an error message or stack trace",
-    enabled: true,
-    template: "Debug this systematically:\n1. **Root cause** — what is failing and why?\n2. **Fix** — provide the corrected code or command\n3. **Prevention** — how to avoid this in the future\n\n{selection}",
-  },
-  {
-    id: "url", label: "URL",
-    hint: "The entire selection is a URL",
-    enabled: true,
-    template: "For this URL, provide:\n- **Topic** — one-sentence summary\n- **Key points** — 3 bullet points\n- **Audience** — who is this aimed at?\n\n{selection}",
-  },
-  {
-    id: "question", label: "Question",
-    hint: "Selection ends with a question mark",
-    enabled: true,
-    template: "Answer this question:\n1. **Direct answer** — clear and concise\n2. **Why** — brief reasoning or evidence\n3. **Example** — concrete illustration if helpful\n\n{selection}",
-  },
-  {
-    id: "data", label: "Data / Numbers",
-    hint: "Selection is mostly numbers or structured data",
-    enabled: true,
-    template: "Analyze this data:\n1. **What it shows** — key metrics or values\n2. **Trends** — notable patterns or changes\n3. **Insight** — the most meaningful takeaway\n\n{selection}",
-  },
-  {
-    id: "term", label: "Term / Keyword",
-    hint: "Short selection of 4 words or fewer",
-    enabled: true,
-    template: "Explain \"{selection}\":\n- **Definition** — simple, jargon-free\n- **Practical use** — when and why it matters\n- **Common misconception** — what people often get wrong",
-  },
-  {
-    id: "article", label: "Article / Text",
-    hint: "Default for longer natural-language selections",
-    enabled: true,
-    template: "Summarize this text:\n**TL;DR:** one-sentence essence\n**Key points:**\n- Main argument\n- Supporting evidence (2–3 bullets)\n\n**Takeaway:** most actionable insight\n\n{selection}",
-  },
-  {
-    id: "default", label: "Default (fallback)",
-    hint: "Applied when no other rule matches or all others are disabled",
-    enabled: true,
-    template: "{selection}",
-  },
-];
+// GEMINI_URL, DEFAULT_PROMPT_ENG_RULES, DEFAULT_SUMMARIZE_PREFIX,
+// DEFAULT_TEMPLATES_BY_MODEL loaded from ../shared/constants.js
 
 const PE_TEMPLATE_MAX = 400;
 
-const DEFAULT_TEMPLATES_BY_MODEL = {
-  flash: [
-    "Summarise: ",
-    "Translate to English: ",
-    "Explain simply: ",
-    "Pros and cons of: ",
-  ],
-  thinking: [
-    "Think through this step-by-step: ",
-    "What are the edge cases for: ",
-    "Analyze deeply: ",
-  ],
-  pro: [
-    "Deep analysis of: ",
-    "Fix this code:\n",
-    "Compare and contrast: ",
-    "Write a comprehensive report on: ",
-  ],
-};
-
-const DEFAULT_SUMMARIZE_PREFIX = "Summarise the following:\n\n";
-const SUMMARIZE_PREFIX_MAX     = 300;
+const SUMMARIZE_PREFIX_MAX = 300;
 
 // ── Textarea auto-resize (max 7 visible lines, scrollbar beyond) ──
 function autoResizeTextarea(ta) {
@@ -830,11 +758,8 @@ function renderPromptEngRules(rules) {
   const resetAllBtn = document.createElement("button");
   resetAllBtn.className = "btn-ghost";
   resetAllBtn.textContent = "Reset all rules to defaults";
-  resetAllBtn.addEventListener("click", async () => {
-    _peSettings.rules = _mergeRules([]);
-    await chrome.storage.sync.set({ askGeminiPromptEng: _peSettings });
-    renderPromptEngRules(_peSettings.rules);
-    showToast("All rules reset to defaults");
+  resetAllBtn.addEventListener("click", () => {
+    document.getElementById("peResetAllOverlay").classList.add("visible");
   });
   footer.appendChild(resetAllBtn);
   promptEngRulesWrap.appendChild(footer);
@@ -857,6 +782,22 @@ async function loadPromptEngSettings() {
   _peSetVisibility(_peSettings.enabled);
   renderPromptEngRules(_peSettings.rules);
 }
+
+const peResetAllOverlay  = document.getElementById("peResetAllOverlay");
+const peResetAllCancel   = document.getElementById("peResetAllCancel");
+const peResetAllConfirm  = document.getElementById("peResetAllConfirm");
+
+peResetAllCancel.addEventListener("click", () => peResetAllOverlay.classList.remove("visible"));
+peResetAllOverlay.addEventListener("click", (e) => {
+  if (e.target === peResetAllOverlay) peResetAllOverlay.classList.remove("visible");
+});
+peResetAllConfirm.addEventListener("click", async () => {
+  peResetAllOverlay.classList.remove("visible");
+  _peSettings.rules = _mergeRules([]);
+  await chrome.storage.sync.set({ askGeminiPromptEng: _peSettings });
+  renderPromptEngRules(_peSettings.rules);
+  showToast("All rules reset to defaults");
+});
 
 // ══════════════════════════════════════════════════════════════════
 // 10. HELPERS
