@@ -81,6 +81,18 @@ const DEFAULT_TEMPLATES_BY_MODEL = {
 const DEFAULT_SUMMARIZE_PREFIX = "Summarise the following:\n\n";
 const SUMMARIZE_PREFIX_MAX     = 300;
 
+// ── Textarea auto-resize (max 7 visible lines, scrollbar beyond) ──
+function autoResizeTextarea(ta) {
+  const MAX_LINES = 7;
+  ta.style.height = "auto";
+  const style = getComputedStyle(ta);
+  const lineHeight = parseFloat(style.lineHeight);
+  const paddingV = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+  const maxHeight = lineHeight * MAX_LINES + paddingV;
+  ta.style.height = Math.min(ta.scrollHeight, maxHeight) + "px";
+  ta.style.overflowY = ta.scrollHeight > maxHeight ? "auto" : "hidden";
+}
+
 // ══════════════════════════════════════════════════════════════════
 // 1. SECTION NAVIGATION
 // ══════════════════════════════════════════════════════════════════
@@ -92,7 +104,9 @@ document.querySelectorAll(".nav-item").forEach(link => {
     document.querySelectorAll(".nav-item").forEach(l => l.classList.remove("active"));
     document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
     link.classList.add("active");
-    document.getElementById(`section-${target}`)?.classList.add("active");
+    const section = document.getElementById(`section-${target}`);
+    section?.classList.add("active");
+    section?.querySelectorAll(".pe-rule-textarea").forEach(autoResizeTextarea);
   });
 });
 
@@ -719,7 +733,7 @@ function _buildRuleCard(rule) {
   // ── Textarea ──────────────────────────────────────────────────
   const textarea = document.createElement("textarea");
   textarea.className = "tmpl-textarea pe-rule-textarea";
-  textarea.rows = 3;
+  textarea.rows = 1;
   textarea.maxLength = PE_TEMPLATE_MAX;
   textarea.value = rule.template;
   textarea.placeholder = "Template — use {selection} for the selected text";
@@ -761,6 +775,7 @@ function _buildRuleCard(rule) {
 
   textarea.addEventListener("input", () => {
     const len = textarea.value.length;
+    autoResizeTextarea(textarea);
     _updatePeCharCount(charCount, len);
     _updatePePreview(previewText, textarea.value);
     const r = _peSettings.rules.find(x => x.id === rule.id);
@@ -772,6 +787,7 @@ function _buildRuleCard(rule) {
     const def = DEFAULT_PROMPT_ENG_RULES.find(x => x.id === rule.id);
     if (!def) return;
     textarea.value = def.template;
+    autoResizeTextarea(textarea);
     const r = _peSettings.rules.find(x => x.id === rule.id);
     if (r) r.template = def.template;
     _updatePeCharCount(charCount, def.template.length);
@@ -806,6 +822,7 @@ function renderPromptEngRules(rules) {
   rules.forEach(rule => {
     promptEngRulesWrap.appendChild(_buildRuleCard(rule));
   });
+  promptEngRulesWrap.querySelectorAll(".pe-rule-textarea").forEach(autoResizeTextarea);
 
   // Reset-all button at the bottom of the rules list
   const footer = document.createElement("div");
