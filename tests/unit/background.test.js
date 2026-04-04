@@ -40,15 +40,15 @@ describe("badge — injectionResult message", () => {
     vi.useRealTimers();
   });
 
-  it("success=false sets red badge and clears after 3 s", () => {
+  it("success=false sets red badge and clears after 6 s", () => {
     vi.useFakeTimers();
     onMessage({ type: "injectionResult", success: false });
 
     expect(chrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({ color: "#ef4444" });
     expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: "!" });
 
-    // Not yet cleared at 2999 ms
-    vi.advanceTimersByTime(2999);
+    // Not yet cleared at 5999 ms
+    vi.advanceTimersByTime(5999);
     const lastArg = chrome.action.setBadgeText.mock.lastCall?.[0];
     expect(lastArg).not.toEqual({ text: "" });
 
@@ -133,8 +133,8 @@ describe("contextMenus.onClicked — navigation items", () => {
 
 describe("contextMenus.onClicked — ask-gemini-selection", () => {
   beforeEach(() => {
-    // Default storage response for model + prefix
-    chrome.storage.local.get.mockResolvedValue({
+    // Default storage response for model + prefix (read from sync in background.js)
+    chrome.storage.sync.get.mockResolvedValue({
       askGeminiModel:           "flash",
       askGeminiSummarizePrefix: "My prefix",
     });
@@ -146,15 +146,17 @@ describe("contextMenus.onClicked — ask-gemini-selection", () => {
       selectionText: "test text",
     });
 
-    expect(chrome.storage.local.set).toHaveBeenCalledWith({
-      pendingMessage: "My prefix\n\ntest text",
-      pendingModel:   "flash",
-    });
+    expect(chrome.storage.local.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pendingMessage: "My prefix\n\ntest text",
+        pendingModel:   "flash",
+      })
+    );
     expect(chrome.tabs.create).toHaveBeenCalledWith({ url: "https://gemini.google.com/app" });
   });
 
   it("trims trailing whitespace from prefix before joining", async () => {
-    chrome.storage.local.get.mockResolvedValue({
+    chrome.storage.sync.get.mockResolvedValue({
       askGeminiModel:           "pro",
       askGeminiSummarizePrefix: "Clean up:   \n\n",
     });
@@ -169,7 +171,7 @@ describe("contextMenus.onClicked — ask-gemini-selection", () => {
   });
 
   it("uses default prefix when none is saved", async () => {
-    chrome.storage.local.get.mockResolvedValue({ askGeminiModel: "flash" });
+    chrome.storage.sync.get.mockResolvedValue({ askGeminiModel: "flash" });
 
     await onContextMenuClicked({
       menuItemId:    "ask-gemini-selection",
@@ -177,7 +179,7 @@ describe("contextMenus.onClicked — ask-gemini-selection", () => {
     });
 
     const { pendingMessage } = chrome.storage.local.set.mock.calls[0][0];
-    expect(pendingMessage).toContain("Summarise the following:");
+    expect(pendingMessage).toContain("Summarize the following:");
     expect(pendingMessage).toContain("some text");
   });
 
@@ -187,7 +189,7 @@ describe("contextMenus.onClicked — ask-gemini-selection", () => {
   });
 
   it("passes the stored model to dispatchToGemini", async () => {
-    chrome.storage.local.get.mockResolvedValue({
+    chrome.storage.sync.get.mockResolvedValue({
       askGeminiModel:           "thinking",
       askGeminiSummarizePrefix: "Think about:",
     });

@@ -29,6 +29,13 @@ export function setupPopupDom() {
     </div>
     <button id="tmplTriggerBtn"></button>
     <a      id="tmplSettingsLink"></a>
+    <button id="attachBtn"></button>
+    <input  id="fileInput" type="file" />
+    <div    id="fileChips"></div>
+    <div    id="injectWarning"></div>
+    <button id="injectCancel"></button>
+    <button id="injectSendAnyway"></button>
+    <span   id="phCycler"></span>
   `;
 }
 

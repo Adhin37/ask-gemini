@@ -6,7 +6,7 @@ let renderHistory, loadTemplates, loadContextMenuSettings;
 let updateCharCount, updateSummarizePrefixCharCount;
 let _setAllHistory, _setAllTemplates, _setCurrentTheme, _setCurrentModel;
 
-const DEFAULT_SUMMARIZE_PREFIX = "Summarise the following:\n\n";
+const DEFAULT_SUMMARIZE_PREFIX = "Summarize the following:\n\n";
 
 beforeAll(async () => {
   setupOptionsDom();
@@ -161,7 +161,7 @@ describe("theme control", () => {
     darkBtn.click();
     // Give the async handler a tick to complete
     await Promise.resolve();
-    expect(chrome.storage.local.set).toHaveBeenCalledWith(
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith(
       expect.objectContaining({ askGeminiTheme: "dark" })
     );
   });
@@ -171,7 +171,7 @@ describe("theme control", () => {
     const autoBtn = document.querySelector('#themeControl [data-value="auto"]');
     autoBtn.click();
     await Promise.resolve();
-    expect(chrome.storage.local.set).not.toHaveBeenCalled();
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled();
   });
 });
 
@@ -184,7 +184,7 @@ describe("model control", () => {
     const proBtn = document.querySelector('#modelControl [data-value="pro"]');
     proBtn.click();
     await Promise.resolve();
-    expect(chrome.storage.local.set).toHaveBeenCalledWith(
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith(
       expect.objectContaining({ askGeminiModel: "pro" })
     );
   });
@@ -194,7 +194,7 @@ describe("model control", () => {
     const flashBtn = document.querySelector('#modelControl [data-value="flash"]');
     flashBtn.click();
     await Promise.resolve();
-    expect(chrome.storage.local.set).not.toHaveBeenCalled();
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled();
   });
 });
 
@@ -235,7 +235,7 @@ describe("summarize prefix", () => {
     saveBtn.disabled  = false;
     saveBtn.click();
     await Promise.resolve();
-    expect(chrome.storage.local.set).toHaveBeenCalledWith(
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith(
       expect.objectContaining({ askGeminiSummarizePrefix: "My custom prefix" })
     );
   });
@@ -247,7 +247,7 @@ describe("summarize prefix", () => {
     resetBtn.click();
     await Promise.resolve();
     expect(ta.value).toBe(DEFAULT_SUMMARIZE_PREFIX);
-    expect(chrome.storage.local.set).toHaveBeenCalledWith(
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith(
       expect.objectContaining({ askGeminiSummarizePrefix: DEFAULT_SUMMARIZE_PREFIX })
     );
   });
@@ -289,17 +289,19 @@ describe("template char count", () => {
 
 describe("loadTemplates", () => {
   it("seeds DEFAULT_TEMPLATES when storage has no templates", async () => {
-    chrome.storage.local.get.mockResolvedValue({});
+    chrome.storage.sync.get.mockResolvedValue({});
     await loadTemplates();
-    expect(chrome.storage.local.set).toHaveBeenCalledWith(
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith(
       expect.objectContaining({
-        askGeminiTemplates: expect.arrayContaining(["Summarise: "]),
+        askGeminiTemplates: expect.objectContaining({
+          flash: expect.arrayContaining(["Summarize: "]),
+        }),
       })
     );
   });
 
   it("renders template cards when storage has templates", async () => {
-    chrome.storage.local.get.mockResolvedValue({
+    chrome.storage.sync.get.mockResolvedValue({
       askGeminiTemplates: ["Template A", "Template B"],
     });
     await loadTemplates();
@@ -352,7 +354,7 @@ describe("history overlay", () => {
 
 describe("loadContextMenuSettings", () => {
   it("loads the stored prefix into the textarea", async () => {
-    chrome.storage.local.get.mockResolvedValue({
+    chrome.storage.sync.get.mockResolvedValue({
       askGeminiSummarizePrefix: "Custom prefix:",
     });
     await loadContextMenuSettings();
@@ -360,7 +362,7 @@ describe("loadContextMenuSettings", () => {
   });
 
   it("falls back to DEFAULT_SUMMARIZE_PREFIX when nothing is stored", async () => {
-    chrome.storage.local.get.mockResolvedValue({});
+    chrome.storage.sync.get.mockResolvedValue({});
     await loadContextMenuSettings();
     expect(document.getElementById("summarizePrefixTextarea").value).toBe(DEFAULT_SUMMARIZE_PREFIX);
   });

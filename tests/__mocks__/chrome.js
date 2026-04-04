@@ -49,6 +49,7 @@ export function createChromeMock() {
     storage: {
       local:     makeStorageArea(new Map()),
       session:   makeStorageArea(new Map()),
+      sync:      makeStorageArea(new Map()),
       onChanged: makeListenerSet(),
     },
     runtime: {
@@ -68,11 +69,13 @@ export function createChromeMock() {
     },
     commands: {
       onCommand: makeListenerSet(),
+      getAll:    vi.fn().mockResolvedValue([]),
     },
     tabs: {
-      create: vi.fn().mockResolvedValue({ id: 1 }),
-      query:  vi.fn().mockResolvedValue([]),
-      update: vi.fn().mockResolvedValue({}),
+      create:    vi.fn().mockResolvedValue({ id: 1 }),
+      query:     vi.fn().mockResolvedValue([]),
+      update:    vi.fn().mockResolvedValue({}),
+      onUpdated: makeListenerSet(),
     },
     windows: {
       create: vi.fn().mockResolvedValue({}),

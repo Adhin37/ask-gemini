@@ -813,6 +813,11 @@ peResetAllConfirm.addEventListener("click", async () => {
 // 10. HELPERS
 // ══════════════════════════════════════════════════════════════════
 
+function resolveTheme(pref) {
+  if (pref === "light" || pref === "dark") return pref;
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
 function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
@@ -867,11 +872,12 @@ function showToast(msg) {
 /* istanbul ignore next — test hook, never runs inside the real extension */
 if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
   Object.assign(globalThis.__TEST__, {
-    escapeHtml, escAttr, highlightMatch, formatTime,
+    escapeHtml, escAttr, highlightMatch, formatTime, resolveTheme,
     renderHistory, renderTemplates, loadHistory, loadTemplates, loadContextMenuSettings, loadPromptEngSettings,
     updateCharCount, updateSummarizePrefixCharCount,
     _setAllHistory:          (h) => { allHistory          = h; },
     _setAllTemplatesByModel: (t) => { allTemplatesByModel = t; },
+    _setAllTemplates:        (t) => { allTemplatesByModel = t; },
     _setActiveTemplateModel: (m) => { activeTemplateModel = m; },
     _setCurrentTheme:        (v) => { currentTheme        = v; },
     _setCurrentModel:        (v) => { currentModel        = v; },

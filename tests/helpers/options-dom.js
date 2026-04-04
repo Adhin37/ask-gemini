@@ -64,6 +64,26 @@ export function setupOptionsDom() {
     <section class="section" id="section-templates"></section>
     <section class="section" id="section-appearance"></section>
     <section class="section" id="section-contextmenu"></section>
+
+    <button id="brandLogoBtn"></button>
+    <button id="aboutLogoBtn"></button>
+    <span   id="shortcutDisplay"></span>
+    <button id="shortcutEditBtn"></button>
+
+    <div id="tmplModelTabs">
+      <button class="tmpl-model-tab" data-model="flash">Fast<span class="tmpl-tab-badge">0</span></button>
+      <button class="tmpl-model-tab" data-model="thinking">Think<span class="tmpl-tab-badge">0</span></button>
+      <button class="tmpl-model-tab" data-model="pro">Pro<span class="tmpl-tab-badge">0</span></button>
+    </div>
+
+    <input  id="promptEngToggle" type="checkbox" />
+    <div    id="promptEngRules"></div>
+    <div    id="summarizePrefixSection"></div>
+
+    <div    id="peResetAllOverlay">
+      <button id="peResetAllCancel"></button>
+      <button id="peResetAllConfirm"></button>
+    </div>
   `;
 }
 
