@@ -368,8 +368,18 @@ chrome.commands.onCommand.addListener((command) => {
 
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
-    chrome.tabs.create({
-      url: chrome.runtime.getURL("src/welcome/welcome.html"),
+    // Guard against unpacked-extension quirk: Chrome fires onInstalled with
+    // reason "install" on every browser launch for --load-extension paths,
+    // even after the first real install. The flag ensures the welcome page
+    // only ever opens once per Chrome profile.
+    chrome.storage.local.get(["welcomeShown"], ({ welcomeShown }) => {
+      if (chrome.runtime.lastError) return;
+      if (!welcomeShown) {
+        chrome.storage.local.set({ welcomeShown: true });
+        chrome.tabs.create({
+          url: chrome.runtime.getURL("src/welcome/welcome.html"),
+        });
+      }
     });
   }
   registerMenus();
