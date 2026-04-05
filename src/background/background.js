@@ -329,7 +329,7 @@ async function openPopup() {
     await chrome.action.openPopup();
   } catch (_err) {
     // Fallback: floating popup window (works in fullscreen / from content script).
-    const popupUrl = chrome.runtime.getURL("src/popup/popup.html");
+    const popupUrl = chrome.runtime.getURL("src/popup/popup.html") + "?windowMode=1";
 
     let popupW = 376;
     let popupH = 290;

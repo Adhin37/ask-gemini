@@ -10,6 +10,10 @@ import {
 
 const MAX_CHARS = 2000;
 
+// True when the popup is opened as a detached floating window (fullscreen fallback).
+// The background script appends ?windowMode=1 to the URL in that case.
+const IS_WINDOW_MODE = new URLSearchParams(location.search).get("windowMode") === "1";
+
 // In floating-window mode the popup can be taller than the normal 360 px popup,
 // so allow the textarea to grow proportionally. Clamped between 180 and 420 px.
 const MAX_INPUT_H = Math.min(Math.max(180, Math.floor(window.innerHeight * 0.45)), 420);
@@ -818,12 +822,18 @@ async function askGemini() {
     chrome.storage.session.remove("askGeminiDraft");
     input.value = "";
 
-    const tabs = await chrome.tabs.query({ url: "https://gemini.google.com/*" });
-    if (tabs.length > 0) {
-      await chrome.tabs.update(tabs[0].id, { url: GEMINI_URL, active: true });
-      chrome.windows.update(tabs[0].windowId, { focused: true });
+    if (IS_WINDOW_MODE) {
+      // In window mode the browser is likely fullscreen — open Gemini in a new
+      // normal window so the user doesn't have to leave fullscreen to reach it.
+      chrome.windows.create({ url: GEMINI_URL, type: "normal" });
     } else {
-      chrome.tabs.create({ url: GEMINI_URL });
+      const tabs = await chrome.tabs.query({ url: "https://gemini.google.com/*" });
+      if (tabs.length > 0) {
+        await chrome.tabs.update(tabs[0].id, { url: GEMINI_URL, active: true });
+        chrome.windows.update(tabs[0].windowId, { focused: true });
+      } else {
+        chrome.tabs.create({ url: GEMINI_URL });
+      }
     }
   } catch (err) {
     console.error("Ask Gemini error:", err);
@@ -840,7 +850,14 @@ async function askGemini() {
 // 10. FOOTER BUTTONS
 // ══════════════════════════════════════════════════════════════════
 
-logoBtn.addEventListener("click", () => { chrome.tabs.create({ url: GEMINI_URL }); window.close(); });
+logoBtn.addEventListener("click", () => {
+  if (IS_WINDOW_MODE) {
+    chrome.windows.create({ url: GEMINI_URL, type: "normal" });
+  } else {
+    chrome.tabs.create({ url: GEMINI_URL });
+  }
+  window.close();
+});
 
 // ══════════════════════════════════════════════════════════════════
 // 11. HELPERS
