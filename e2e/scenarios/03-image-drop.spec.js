@@ -63,7 +63,7 @@ test("popup — drag & drop image then send", async () => {
   await popup.locator("#questionInput").click();
   await popup.locator("#questionInput").type(
     "Describe what you see in this image",
-    { delay: 60 }
+    { delay: 18 }
   );
   await popup.waitForTimeout(600);
 
@@ -79,6 +79,7 @@ test("popup — drag & drop image then send", async () => {
     popup.locator("#sendBtn").click(),
   ]);
 
+  await geminiPage.goto("about:blank");
   await context.serviceWorkers()[0].evaluate(
     ({ msg, mdl }) => chrome.storage.local.set({ pendingMessage: msg, pendingModel: mdl }),
     { msg: message, mdl: model }

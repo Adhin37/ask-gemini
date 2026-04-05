@@ -42,7 +42,7 @@ test("popup — model switch then send", async () => {
   await popup.locator("#questionInput").click();
   await popup.locator("#questionInput").type(
     "What are the key differences between REST and GraphQL?",
-    { delay: 55 }
+    { delay: 18 }
   );
   await popup.waitForTimeout(600);
 
@@ -58,9 +58,13 @@ test("popup — model switch then send", async () => {
     popup.locator("#sendBtn").click(),
   ]);
 
-  // Re-write pendingMessage: content.js may have cleared it during the
-  // brief native navigation that chrome.tabs.create starts before our
-  // goto intercepts it.
+  // Navigate to about:blank first to kill any content.js that started on
+  // the initial chrome.tabs.create navigation. Without this, the faster
+  // typing speed (18 ms/key) causes content.js to read+clear pendingMessage
+  // from storage *after* the re-write below, leaving the final goto page
+  // with nothing to inject. about:blank is outside the content-script
+  // match pattern, so no new content.js runs there.
+  await geminiPage.goto("about:blank");
   await context.serviceWorkers()[0].evaluate(
     ({ msg, mdl }) => chrome.storage.local.set({ pendingMessage: msg, pendingModel: mdl }),
     { msg: message, mdl: model }

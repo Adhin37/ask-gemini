@@ -48,7 +48,7 @@ test("popup — template dropdown and autocomplete", async () => {
 
   await popup.locator("#questionInput").type(
     "the history of the Eiffel Tower in 3 bullet points",
-    { delay: 55 }
+    { delay: 18 }
   );
   await popup.waitForTimeout(700);
 
@@ -57,7 +57,7 @@ test("popup — template dropdown and autocomplete", async () => {
   await popup.locator("#questionInput").dispatchEvent("input");
   await popup.waitForTimeout(400);
 
-  await popup.locator("#questionInput").type("/sum", { delay: 130 });
+  await popup.locator("#questionInput").type("/sum", { delay: 40 });
 
   // Wait until the AC strip is actually visible before pressing Tab —
   // avoids a race where Tab fires before the AC state machine activates.
@@ -74,7 +74,7 @@ test("popup — template dropdown and autocomplete", async () => {
   expect(afterAC).not.toMatch(/^\//);
   expect(afterAC.length).toBeGreaterThan(0);
 
-  await popup.locator("#questionInput").type("recent AI breakthroughs", { delay: 60 });
+  await popup.locator("#questionInput").type("recent AI breakthroughs", { delay: 18 });
   await popup.waitForTimeout(600);
 
   // ── Read before send ──────────────────────────────────────────────
@@ -91,6 +91,7 @@ test("popup — template dropdown and autocomplete", async () => {
     popup.locator("#sendBtn").click(),
   ]);
 
+  await geminiPage.goto("about:blank");
   await context.serviceWorkers()[0].evaluate(
     ({ msg, mdl }) => chrome.storage.local.set({ pendingMessage: msg, pendingModel: mdl }),
     { msg: message, mdl: model }
