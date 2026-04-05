@@ -53,25 +53,28 @@ test("popup — model switch then send", async () => {
   );
 
   // ── Send ──────────────────────────────────────────────────────────
-  const [geminiPage] = await Promise.all([
+  const [initialPage] = await Promise.all([
     context.waitForEvent("page"),
     popup.locator("#sendBtn").click(),
   ]);
 
-  // Navigate to about:blank first to kill any content.js that started on
-  // the initial chrome.tabs.create navigation. Without this, the faster
-  // typing speed (18 ms/key) causes content.js to read+clear pendingMessage
-  // from storage *after* the re-write below, leaving the final goto page
-  // with nothing to inject. about:blank is outside the content-script
-  // match pattern, so no new content.js runs there.
-  await geminiPage.goto("about:blank");
+  // Close the background tab opened by chrome.tabs.create immediately.
+  // This terminates any content.js that started on that navigation, which
+  // eliminates the race where content.js consumes the re-written
+  // pendingMessage before the demo page can read it.
+  // We then open a fresh foreground page so the recording captures the
+  // mock Gemini at full rendering quality (background tabs are throttled
+  // by Chrome and produce near-blank frames in the screencast).
+  await initialPage.close();
   await context.serviceWorkers()[0].evaluate(
     ({ msg, mdl }) => chrome.storage.local.set({ pendingMessage: msg, pendingModel: mdl }),
     { msg: message, mdl: model }
   );
 
-  await geminiPage.goto("https://gemini.google.com/app");
+  const geminiPage = await context.newPage();
+  await geminiPage.setViewportSize({ width: 1280, height: 720 });
   await geminiPage.bringToFront();
+  await geminiPage.goto("https://gemini.google.com/app");
   await geminiPage.waitForLoadState("domcontentloaded");
 
   // ── Assert: user message appears, then Gemini responds ───────────

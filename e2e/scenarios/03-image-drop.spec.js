@@ -74,19 +74,21 @@ test("popup — drag & drop image then send", async () => {
   );
 
   // ── Send ──────────────────────────────────────────────────────────
-  const [geminiPage] = await Promise.all([
+  const [initialPage] = await Promise.all([
     context.waitForEvent("page"),
     popup.locator("#sendBtn").click(),
   ]);
 
-  await geminiPage.goto("about:blank");
+  await initialPage.close();
   await context.serviceWorkers()[0].evaluate(
     ({ msg, mdl }) => chrome.storage.local.set({ pendingMessage: msg, pendingModel: mdl }),
     { msg: message, mdl: model }
   );
 
-  await geminiPage.goto("https://gemini.google.com/app");
+  const geminiPage = await context.newPage();
+  await geminiPage.setViewportSize({ width: 1280, height: 720 });
   await geminiPage.bringToFront();
+  await geminiPage.goto("https://gemini.google.com/app");
   await geminiPage.waitForLoadState("domcontentloaded");
 
   // ── Assert ────────────────────────────────────────────────────────

@@ -37,9 +37,12 @@ if (!fs.existsSync(videosDir)) {
 
 // Playwright puts each test's video inside a numbered subdirectory.
 // Walk one level deep to find all .webm files.
-// Minimum file size to include — filters out blank/about:blank tab recordings
-// which Playwright creates for every new page, even transient ones (~5-30 KB).
-const MIN_SIZE_BYTES = 150_000; // 150 KB
+// Minimum file size to include — filters out blank recordings from transient
+// tabs (truly empty pages: < 10 KB; brief background tabs: 10-40 KB).
+// Set to 50 KB so static-content pages like the mock article (mostly
+// unchanged frames compress aggressively with VP8, landing ~50-150 KB) are
+// still included, while one-frame-and-done blank clips are filtered.
+const MIN_SIZE_BYTES = 50_000; // 50 KB
 
 const webmFiles = fs.readdirSync(videosDir, { withFileTypes: true })
   .flatMap(entry => {

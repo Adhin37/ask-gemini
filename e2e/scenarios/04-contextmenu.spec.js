@@ -75,7 +75,7 @@ test("context menu — select text then Ask Gemini", async () => {
   // Default flow (no prompt engineering): summarizePrefix + "\n\n" + selection.
   const message = `Summarize the following:\n\n${selectionText}`;
 
-  const [geminiPage] = await Promise.all([
+  const [initialPage] = await Promise.all([
     context.waitForEvent("page"),
     context.serviceWorkers()[0].evaluate(
       ({ msg, mdl }) => chrome.storage.local
@@ -85,8 +85,19 @@ test("context menu — select text then Ask Gemini", async () => {
     ),
   ]);
 
-  await geminiPage.goto("https://gemini.google.com/app");
+  // Close the background tab from chrome.tabs.create to stop any in-flight
+  // content.js, then re-write storage so the fresh foreground page has a
+  // clean read (guards against content.js having already consumed it).
+  await initialPage.close();
+  await context.serviceWorkers()[0].evaluate(
+    ({ msg, mdl }) => chrome.storage.local.set({ pendingMessage: msg, pendingModel: mdl }),
+    { msg: message, mdl: "flash" }
+  );
+
+  const geminiPage = await context.newPage();
+  await geminiPage.setViewportSize({ width: 1280, height: 720 });
   await geminiPage.bringToFront();
+  await geminiPage.goto("https://gemini.google.com/app");
   await geminiPage.waitForLoadState("domcontentloaded");
 
   // ── 6. Assert message injected into mock Gemini ───────────────────
