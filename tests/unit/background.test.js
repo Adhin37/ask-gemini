@@ -91,6 +91,35 @@ describe("badge — storage watcher", () => {
 });
 
 // ════════════════════════════════════════════════════════════════════
+// Welcome tab — onInstalled
+// ════════════════════════════════════════════════════════════════════
+
+describe("welcome tab (onInstalled)", () => {
+  it("opens the welcome tab on fresh install", () => {
+    onInstalled({ reason: "install" });
+    expect(chrome.tabs.create).toHaveBeenCalledWith({
+      url: "chrome-extension://fake/src/welcome/welcome.html",
+    });
+  });
+
+  it("does NOT open the welcome tab on extension update", () => {
+    onInstalled({ reason: "update" });
+    expect(chrome.tabs.create).not.toHaveBeenCalled();
+  });
+
+  it("does NOT open the welcome tab on browser update", () => {
+    onInstalled({ reason: "chrome_update" });
+    expect(chrome.tabs.create).not.toHaveBeenCalled();
+  });
+
+  it("still registers menus on fresh install", () => {
+    onInstalled({ reason: "install" });
+    expect(chrome.contextMenus.removeAll).toHaveBeenCalled();
+    expect(chrome.contextMenus.create).toHaveBeenCalled();
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════
 // Context menu registration
 // ════════════════════════════════════════════════════════════════════
 

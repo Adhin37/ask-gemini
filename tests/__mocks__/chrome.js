@@ -72,10 +72,12 @@ export function createChromeMock() {
       getAll:    vi.fn().mockResolvedValue([]),
     },
     tabs: {
-      create:    vi.fn().mockResolvedValue({ id: 1 }),
-      query:     vi.fn().mockResolvedValue([]),
-      update:    vi.fn().mockResolvedValue({}),
-      onUpdated: makeListenerSet(),
+      create:     vi.fn().mockResolvedValue({ id: 1 }),
+      query:      vi.fn().mockResolvedValue([]),
+      update:     vi.fn().mockResolvedValue({}),
+      remove:     vi.fn(),
+      getCurrent: vi.fn(cb => cb({ id: 42 })),
+      onUpdated:  makeListenerSet(),
     },
     windows: {
       create: vi.fn().mockResolvedValue({}),
