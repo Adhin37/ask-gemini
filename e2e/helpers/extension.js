@@ -26,9 +26,11 @@ function resolveChromePath() {
  * @param {import("@playwright/test").BrowserType} chromium
  * @param {object} [opts]
  * @param {number} [opts.slowMo=600]
+ * @param {boolean} [opts.suppressWelcome=true] - Auto-close welcome tabs as they appear.
+ *   Pass false in the welcome scenario so the test can open the page itself.
  * @returns {Promise<{ context: import("@playwright/test").BrowserContext, extensionId: string }>}
  */
-export async function launchExtension(chromium, { slowMo = 600 } = {}) {
+export async function launchExtension(chromium, { slowMo = 600, suppressWelcome = true } = {}) {
   const extensionPath = path.resolve(__dirname, "../../");
   const profileDir    = process.env.CHROME_PROFILE
     || path.join(__dirname, "../.chrome-profile");
@@ -80,12 +82,21 @@ export async function launchExtension(chromium, { slowMo = 600 } = {}) {
   const extensionId = sw.url().split("/")[2];
   console.log("[e2e] extensionId   :", extensionId);
 
-  // Close the welcome tab opened by background.js on first install.
+  // Close any welcome tab opened by onInstalled (only fires on a fresh profile).
+  // Also register a listener so any welcome tab that appears later in the test
+  // run (e.g. from a service-worker restart) is dismissed automatically.
+  // The welcome scenario passes suppressWelcome:false and opens the page itself.
   await new Promise(r => setTimeout(r, 1500));
   for (const p of context.pages()) {
-    if (p.url().includes("welcome")) {
-      await p.close();
-    }
+    if (p.url().includes("welcome")) await p.close();
+  }
+  if (suppressWelcome) {
+    context.on("page", async (page) => {
+      try {
+        await page.waitForLoadState("domcontentloaded", { timeout: 5_000 });
+        if (page.url().includes("welcome")) await page.close();
+      } catch { /* page already closed or navigated away */ }
+    });
   }
 
   return { context, extensionId };
