@@ -1,33 +1,39 @@
 /**
  * Scenario 00 — Welcome page
  *
- * Opens the welcome page directly (navigating to the extension URL rather
- * than relying on the onInstalled trigger), verifies the key UI sections
- * are visible, then clicks "Start browsing" and asserts the tab closes.
+ * Waits for the tab that onInstalled opens automatically, then verifies
+ * the key UI sections are visible and closes via "Start browsing".
+ * This also validates that the install trigger itself works correctly —
+ * no manual navigation needed.
  */
 
 import { test, expect } from "@playwright/test";
 import { launchExtension } from "../helpers/extension.js";
 
 let context;
-let extensionId;
 
 test.beforeAll(async ({ playwright }) => {
-  // suppressWelcome:false — this scenario opens the welcome page itself,
-  // so we must not have the auto-close listener active during this context.
-  ({ context, extensionId } = await launchExtension(playwright.chromium, { slowMo: 500, suppressWelcome: false }));
+  // suppressWelcome:false — the welcome tab must stay open so this test
+  // can interact with it.
+  ({ context } = await launchExtension(playwright.chromium, { slowMo: 500, suppressWelcome: false }));
 });
 
 test.afterAll(async () => {
   await context.close();
 });
 
-test("welcome page — renders and closes via Start browsing", async () => {
-  const welcomeUrl = `chrome-extension://${extensionId}/src/welcome/welcome.html`;
+test("welcome page — opened by onInstalled, renders and closes via Start browsing", async () => {
+  // onInstalled fires when the extension loads into a fresh profile and
+  // opens the welcome tab automatically. Catch it here rather than
+  // navigating manually — this validates the install trigger too.
+  const existing = context.pages().find(p => p.url().includes("welcome"));
+  const page = existing ?? await context.waitForEvent("page", {
+    predicate: p => p.url().includes("welcome"),
+    timeout: 10_000,
+  });
 
-  const page = await context.newPage();
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto(welcomeUrl);
+  await page.bringToFront();
   await page.waitForLoadState("domcontentloaded");
   await page.waitForTimeout(1500); // let entry animations settle
 
