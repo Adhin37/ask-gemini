@@ -33,6 +33,11 @@ test("popup — template dropdown and autocomplete", async () => {
   // ── Template grid dropdown ────────────────────────────────────────
   await popup.locator("#tmplTriggerBtn").click();
   await popup.waitForTimeout(1200);
+  // Hover first so the recording clearly shows "Summarize:" highlighted
+  // before the click — without this, the cursor sits near the 3rd item
+  // (from the trigger button position) and that item shows hover instead.
+  await popup.locator(".tmpl-item").first().hover();
+  await popup.waitForTimeout(600);
   await popup.locator(".tmpl-item").first().click();
   await popup.waitForTimeout(800);
 
