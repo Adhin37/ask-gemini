@@ -1,128 +1,420 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
-  <title>Gemini (mock)</title>
+  <title>Gemini</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: "Google Sans", sans-serif;
-      background: #1e1e2e;
-      color: #cdd6f4;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #131314;
+      --sidebar-bg:  #1e1f20;
+      --surface:     #282a2c;
+      --surface2:    #303134;
+      --border:      rgba(255,255,255,0.12);
+      --text:        #e3e3e3;
+      --text-dim:    #9aa0a6;
+      --accent:      #a8c7fa;
+      --send-active: #a8c7fa;
+      --user-bubble: #004a77;
+      --gem-bg:      #1e2a3a;
+      --radius:      24px;
     }
-    header {
-      padding: 16px 24px;
-      font-size: 20px;
-      font-weight: 600;
-      color: #89b4fa;
-      border-bottom: 1px solid #313244;
+
+    html, body { height: 100%; font-family: "Google Sans", Roboto, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+
+    /* ── Layout ── */
+    .shell { display: flex; height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 256px; min-width: 256px; background: var(--sidebar-bg);
+      display: flex; flex-direction: column; padding: 12px 8px; gap: 4px;
+      border-right: 1px solid var(--border);
     }
+    .sidebar-logo {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; margin-bottom: 8px;
+    }
+    .gem-icon { width: 28px; height: 28px; flex-shrink: 0; }
+    .sidebar-logo-text { font-size: 18px; font-weight: 600; letter-spacing: -0.2px; }
+    .new-chat-btn {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface2); border: none; color: var(--text);
+      padding: 10px 16px; border-radius: 28px; cursor: pointer;
+      font: 500 14px "Google Sans", sans-serif; width: 100%; margin-bottom: 8px;
+      transition: background 0.15s;
+    }
+    .new-chat-btn:hover { background: var(--surface); }
+    .recent-label { font-size: 11px; color: var(--text-dim); padding: 6px 14px; text-transform: uppercase; letter-spacing: 0.6px; }
+    .recent-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; border-radius: 12px; cursor: pointer;
+      font-size: 13.5px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      transition: background 0.12s;
+    }
+    .recent-item:hover { background: var(--surface); color: var(--text); }
+    .sidebar-spacer { flex: 1; }
+    .sidebar-foot { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #4285f4, #a142f4); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+
+    /* ── Main ── */
+    .main { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+
+    /* ── Top bar ── */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 20px; border-bottom: 1px solid var(--border);
+      background: var(--bg); flex-shrink: 0;
+    }
+    .model-trigger {
+      display: flex; align-items: center; gap: 8px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text); padding: 6px 14px; border-radius: 24px;
+      cursor: pointer; font: 500 13px "Google Sans", sans-serif;
+      transition: background 0.15s; position: relative;
+    }
+    .model-trigger:hover { background: var(--surface); }
+    .model-trigger svg { opacity: 0.7; }
+
+    /* Model dropdown */
+    .model-menu {
+      display: none; position: absolute; top: calc(100% + 6px); left: 0;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; min-width: 240px; overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 100;
+    }
+    .model-menu.open { display: block; }
+    .model-option {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; cursor: pointer; font-size: 14px;
+      transition: background 0.12s; gap: 8px;
+    }
+    .model-option:hover { background: var(--surface2); }
+    .model-option[aria-selected="true"] { color: var(--accent); }
+    .model-option[aria-selected="true"] .check { display: block; }
+    .check { display: none; color: var(--accent); font-size: 16px; }
+    .model-desc { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+
+    /* ── Chat area ── */
     .chat-area {
-      flex: 1;
-      padding: 24px;
-      overflow-y: auto;
+      flex: 1; overflow-y: auto; padding: 32px 0 20px;
+      display: flex; flex-direction: column; align-items: center; gap: 0;
+      scroll-behavior: smooth;
     }
-    .message {
-      background: #313244;
-      border-radius: 12px;
-      padding: 12px 16px;
-      margin-bottom: 12px;
-      max-width: 80%;
+    .chat-area::-webkit-scrollbar { width: 6px; }
+    .chat-area::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+
+    /* Greeting (hidden once chat starts) */
+    .greeting {
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+      margin-top: 80px; text-align: center; transition: opacity 0.3s;
     }
-    .message.user { margin-left: auto; background: #45475a; }
-    .input-bar {
-      display: flex;
-      gap: 8px;
-      padding: 16px 24px;
-      border-top: 1px solid #313244;
-      background: #1e1e2e;
-      align-items: flex-end;
+    .greeting.hidden { display: none; }
+    .greeting-icon { width: 56px; height: 56px; }
+    .greeting h1 { font-size: 30px; font-weight: 400; letter-spacing: -0.5px; background: linear-gradient(135deg, #8ab4f8 0%, #c084fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .greeting p { font-size: 15px; color: var(--text-dim); }
+
+    /* Messages */
+    .msg-wrap { width: 100%; max-width: 740px; padding: 0 24px; }
+    .msg { display: flex; gap: 12px; padding: 16px 0; }
+    .msg.user { flex-direction: row-reverse; }
+    .msg-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+    .msg.user .msg-avatar { background: linear-gradient(135deg, #4285f4, #a142f4); }
+    .msg.gemini .msg-avatar { background: transparent; }
+    .msg-body { max-width: 80%; }
+    .msg.user .msg-body { background: var(--user-bubble); padding: 12px 16px; border-radius: 18px 18px 4px 18px; font-size: 14.5px; line-height: 1.55; }
+    .msg.gemini .msg-body { font-size: 14.5px; line-height: 1.7; color: var(--text); padding: 4px 0; }
+
+    /* Streaming dots */
+    .typing-dots { display: flex; gap: 4px; padding: 4px 0; }
+    .typing-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); animation: dot-pulse 1.2s ease-in-out infinite; }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dot-pulse { 0%,80%,100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
+    /* ── Input zone ── */
+    .input-zone {
+      flex-shrink: 0; padding: 0 20px 20px; display: flex; justify-content: center;
     }
-    /* content.js targets: div.ql-editor[contenteditable="true"] */
+    .input-container {
+      width: 100%; max-width: 740px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: visible; position: relative;
+    }
+    rich-textarea { display: block; }
     .ql-editor {
-      flex: 1;
-      min-height: 48px;
-      max-height: 200px;
-      overflow-y: auto;
-      background: #313244;
-      border: 1px solid #45475a;
-      border-radius: 24px;
-      padding: 12px 18px;
-      outline: none;
-      font-size: 15px;
-      color: #cdd6f4;
-      line-height: 1.5;
-      white-space: pre-wrap;
+      min-height: 52px; max-height: 200px; overflow-y: auto;
+      padding: 16px 56px 16px 18px;
+      font: 400 15px/1.5 "Google Sans", sans-serif;
+      color: var(--text); outline: none; white-space: pre-wrap; word-break: break-word;
     }
     .ql-editor:empty::before {
-      content: "Ask Gemini...";
-      color: #585b70;
+      content: "Ask Gemini";
+      color: var(--text-dim); pointer-events: none;
     }
-    /* content.js targets: button[aria-label="Send message"] */
-    button[aria-label="Send message"] {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      border: none;
-      background: #89b4fa;
-      color: #1e1e2e;
-      font-size: 20px;
-      cursor: pointer;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s;
+    .input-footer { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 12px; gap: 8px; }
+    .input-tools { display: flex; gap: 6px; }
+    .tool-btn {
+      width: 36px; height: 36px; border-radius: 50%; border: none;
+      background: transparent; color: var(--text-dim); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.12s, color 0.12s;
     }
-    button[aria-label="Send message"]:hover { background: #b4befe; }
+    .tool-btn:hover { background: var(--surface2); color: var(--text); }
+    .send-button {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--surface2); color: var(--text-dim); cursor: default;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, color 0.2s; flex-shrink: 0;
+    }
+    .send-button:not([disabled]) { background: var(--send-active); color: #000; cursor: pointer; }
+    .send-button:not([disabled]):hover { opacity: 0.85; }
+    .disclaimer { font-size: 11.5px; color: var(--text-dim); text-align: center; padding: 6px 0 0; }
   </style>
 </head>
 <body>
-  <header>Gemini <span style="font-size:13px;color:#585b70;font-weight:400;">(demo mock)</span></header>
-  <div class="chat-area" id="chatArea"></div>
-  <div class="input-bar">
-    <div
-      class="ql-editor"
-      contenteditable="true"
-      role="textbox"
-      aria-label="Ask Gemini"
-    ></div>
-    <button aria-label="Send message" title="Send message">&#9658;</button>
-  </div>
+<div class="shell">
 
-  <script>
-    // Simulate receiving an injected message — mirrors what content.js does
-    // so the recording shows text appearing then a response
-    const editor  = document.querySelector(".ql-editor[contenteditable]");
-    const sendBtn = document.querySelector("button[aria-label='Send message']");
-    const chat    = document.getElementById("chatArea");
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <!-- Gemini G logo approximation -->
+      <svg class="gem-icon" viewBox="0 0 28 28" fill="none">
+        <defs>
+          <linearGradient id="gg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#4285f4"/>
+            <stop offset="50%" stop-color="#9c27b0"/>
+            <stop offset="100%" stop-color="#e91e63"/>
+          </linearGradient>
+        </defs>
+        <path d="M14 2C14 2 14 8 8 14C14 20 14 26 14 26C14 26 14 20 20 14C14 8 14 2 14 2Z" fill="url(#gg)"/>
+      </svg>
+      <span class="sidebar-logo-text">Gemini</span>
+    </div>
 
-    function addMessage(text, role) {
-      const div = document.createElement("div");
-      div.className = "message " + role;
-      div.textContent = text;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-    }
+    <button class="new-chat-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      New chat
+    </button>
 
-    sendBtn.addEventListener("click", () => {
-      const text = editor.innerText.trim();
-      if (!text) return;
-      addMessage(text, "user");
-      editor.innerText = "";
-      // Fake Gemini "thinking" then responding
-      setTimeout(() => {
-        addMessage("Sure! Here's a summary: " + text.substring(0, 80) + "...", "assistant");
-      }, 1200);
+    <div class="recent-label">Recent</div>
+    <div class="recent-item">Explain quantum computing</div>
+    <div class="recent-item">React vs Vue comparison</div>
+    <div class="recent-item">Python async tutorial</div>
+    <div class="recent-item">Summarize: GPT-4 paper</div>
+
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-foot">
+      <div class="avatar">U</div>
+      <span style="font-size:13px;color:var(--text-dim)">user@gmail.com</span>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="main">
+
+    <!-- Top bar with model picker -->
+    <div class="topbar">
+      <!-- Model picker trigger — content.js looks for data-test-id="bard-mode-menu-button" -->
+      <div style="position:relative">
+        <button class="model-trigger" data-test-id="bard-mode-menu-button" aria-label="Open mode picker" id="modelTrigger">
+          <svg width="14" height="14" viewBox="0 0 28 28" fill="none"><path d="M14 2C14 2 14 8 8 14C14 20 14 26 14 26C14 26 14 20 20 14C14 8 14 2 14 2Z" fill="#a8c7fa"/></svg>
+          <!-- content.js reads text from [data-test-id="logo-pill-label-container"] > span -->
+          <div data-test-id="logo-pill-label-container" id="modelLabel">
+            <span id="modelName">Gemini 2.0 Flash</span>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+
+        <!-- Model dropdown — options use role="option" -->
+        <div class="model-menu" id="modelMenu">
+          <div class="model-option" role="option" aria-selected="true" data-model="flash" id="opt-flash">
+            <div>
+              <div>Gemini 2.0 Flash</div>
+              <div class="model-desc">Fast and versatile</div>
+            </div>
+            <span class="check">✓</span>
+          </div>
+          <div class="model-option" role="option" aria-selected="false" data-model="thinking" id="opt-thinking">
+            <div>
+              <div>Gemini 2.0 Flash Thinking</div>
+              <div class="model-desc">Advanced reasoning</div>
+            </div>
+            <span class="check">✓</span>
+          </div>
+          <div class="model-option" role="option" aria-selected="false" data-model="pro" id="opt-pro">
+            <div>
+              <div>Gemini Advanced Pro</div>
+              <div class="model-desc">Most capable</div>
+            </div>
+            <span class="check">✓</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="tool-btn" title="Share"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="1.8"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" stroke-width="1.8"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" stroke-width="1.8"/></svg></button>
+        <div class="avatar" style="width:28px;height:28px;font-size:11px">U</div>
+      </div>
+    </div>
+
+    <!-- Chat area -->
+    <div class="chat-area" id="chatArea">
+      <div class="greeting" id="greeting">
+        <svg class="greeting-icon" viewBox="0 0 56 56" fill="none">
+          <defs><linearGradient id="ggi" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4285f4"/><stop offset="50%" stop-color="#9c27b0"/><stop offset="100%" stop-color="#e91e63"/></linearGradient></defs>
+          <path d="M28 4C28 4 28 16 16 28C28 40 28 52 28 52C28 52 28 40 40 28C28 16 28 4 28 4Z" fill="url(#ggi)"/>
+        </svg>
+        <h1>Hello there</h1>
+        <p>How can I help you today?</p>
+      </div>
+    </div>
+
+    <!-- Input zone -->
+    <div class="input-zone">
+      <div class="input-container" data-node-type="input-area">
+        <rich-textarea>
+          <div
+            class="ql-editor"
+            contenteditable="true"
+            role="textbox"
+            aria-label="Ask Gemini"
+            aria-multiline="true"
+          ></div>
+        </rich-textarea>
+        <div class="input-footer">
+          <div class="input-tools">
+            <button class="tool-btn" title="Attach files"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <button class="tool-btn" title="Use microphone"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="2" width="6" height="12" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M5 10a7 7 0 0014 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="12" y1="19" x2="12" y2="22" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+          </div>
+          <!-- send-button class + aria-label="Send message" — required by content.js -->
+          <button class="send-button" aria-label="Send message" id="sendBtn" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <div class="disclaimer">Gemini can make mistakes. Check important info.</div>
+      </div>
+    </div>
+
+  </div><!-- .main -->
+</div><!-- .shell -->
+
+<script>
+  const editor    = document.querySelector(".ql-editor");
+  const sendBtn   = document.getElementById("sendBtn");
+  const chatArea  = document.getElementById("chatArea");
+  const greeting  = document.getElementById("greeting");
+  const modelTrigger = document.getElementById("modelTrigger");
+  const modelMenu    = document.getElementById("modelMenu");
+  const modelName    = document.getElementById("modelName");
+
+  let currentModel = "flash";
+
+  // ── Model picker ──────────────────────────────────────────────────
+  modelTrigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    modelMenu.classList.toggle("open");
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") modelMenu.classList.remove("open");
+  });
+
+  document.addEventListener("click", () => modelMenu.classList.remove("open"));
+
+  document.querySelectorAll(".model-option").forEach(opt => {
+    opt.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const m = opt.dataset.model;
+      currentModel = m;
+      document.querySelectorAll(".model-option").forEach(o => {
+        o.setAttribute("aria-selected", o === opt ? "true" : "false");
+      });
+      const labels = { flash: "Gemini 2.0 Flash", thinking: "Gemini 2.0 Flash Thinking", pro: "Gemini Advanced Pro" };
+      modelName.textContent = labels[m] || "Gemini 2.0 Flash";
+      modelMenu.classList.remove("open");
     });
+  });
 
-    // content.js dispatches an "input" event then clicks the send button.
-    // Expose a flag so tests can wait for the response to appear.
-    window.__mockReady = true;
-  </script>
+  // ── Input / send button state ────────────────────────────────��────
+  editor.addEventListener("input", () => {
+    const hasText = editor.innerText.trim().length > 0;
+    sendBtn.disabled = !hasText;
+  });
+
+  // ── Chat helpers ──────────────────────────────────────────────────
+  function addMessage(text, role) {
+    greeting.classList.add("hidden");
+    const wrap = document.createElement("div");
+    wrap.className = "msg-wrap";
+    const msg = document.createElement("div");
+    msg.className = "msg " + role;
+    const av = document.createElement("div");
+    av.className = "msg-avatar";
+    av.textContent = role === "user" ? "U" : "";
+    if (role === "gemini") {
+      av.innerHTML = `<svg viewBox="0 0 28 28" width="24" height="24" fill="none"><defs><linearGradient id="avgg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4285f4"/><stop offset="100%" stop-color="#e91e63"/></linearGradient></defs><path d="M14 2C14 2 14 8 8 14C14 20 14 26 14 26C14 26 14 20 20 14C14 8 14 2 14 2Z" fill="url(#avgg)"/></svg>`;
+    }
+    const body = document.createElement("div");
+    body.className = "msg-body";
+    body.textContent = text;
+    msg.appendChild(av);
+    msg.appendChild(body);
+    wrap.appendChild(msg);
+    chatArea.appendChild(wrap);
+    chatArea.scrollTop = chatArea.scrollHeight;
+    return body;
+  }
+
+  function simulateResponse(userText) {
+    const wrap = document.createElement("div");
+    wrap.className = "msg-wrap";
+    const msg = document.createElement("div");
+    msg.className = "msg gemini";
+    const av = document.createElement("div");
+    av.className = "msg-avatar";
+    av.innerHTML = `<svg viewBox="0 0 28 28" width="24" height="24" fill="none"><defs><linearGradient id="avgg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4285f4"/><stop offset="100%" stop-color="#e91e63"/></linearGradient></defs><path d="M14 2C14 2 14 8 8 14C14 20 14 26 14 26C14 26 14 20 20 14C14 8 14 2 14 2Z" fill="url(#avgg2)"/></svg>`;
+    const body = document.createElement("div");
+    body.className = "msg-body";
+    const dots = document.createElement("div");
+    dots.className = "typing-dots";
+    dots.innerHTML = "<span></span><span></span><span></span>";
+    body.appendChild(dots);
+    msg.appendChild(av);
+    msg.appendChild(body);
+    wrap.appendChild(msg);
+    chatArea.appendChild(wrap);
+    chatArea.scrollTop = chatArea.scrollHeight;
+
+    const preview = userText.length > 60 ? userText.slice(0, 60) + "…" : userText;
+    const response =
+      `Sure! Here's what I found regarding your request:\n\n` +
+      `"${preview}"\n\n` +
+      `This is a demonstration response from the Ask Gemini extension mock page. ` +
+      `In the real Gemini app, a full AI-generated response would appear here.`;
+
+    setTimeout(() => {
+      dots.remove();
+      body.textContent = response;
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }, 1400);
+  }
+
+  // ── Send ──────────────────────────────────────────────────────────
+  sendBtn.addEventListener("click", () => {
+    const text = editor.innerText.trim();
+    if (!text) return;
+    addMessage(text, "user");
+    editor.innerText = "";
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    simulateResponse(text);
+  });
+
+  // ── Signal ready (used by tests that inject content.min.js manually) ─
+  window.__mockReady = true;
+</script>
 </body>
 </html>

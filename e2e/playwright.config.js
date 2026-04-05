@@ -11,13 +11,12 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   timeout: 30_000,
+  // outputDir is top-level — this is where Playwright writes per-test artifact
+  // folders (video.webm, screenshots, traces). stitch.mjs reads from here.
+  outputDir: path.join(__dirname, "videos"),
   use: {
-    // Slow down actions so the recording looks deliberate
     actionTimeout: 10_000,
-    // Video is captured per test; stitch.mjs assembles them into one clip
     video: "on",
-    // Artifacts go here
-    outputDir: path.join(__dirname, "videos"),
   },
   // No built-in reporter HTML needed — this is a demo pipeline, not a CI suite
   reporter: [["list"]],

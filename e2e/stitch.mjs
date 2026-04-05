@@ -37,23 +37,30 @@ if (!fs.existsSync(videosDir)) {
 
 // Playwright puts each test's video inside a numbered subdirectory.
 // Walk one level deep to find all .webm files.
+// Minimum file size to include — filters out blank/about:blank tab recordings
+// which Playwright creates for every new page, even transient ones (~5-30 KB).
+const MIN_SIZE_BYTES = 150_000; // 150 KB
+
 const webmFiles = fs.readdirSync(videosDir, { withFileTypes: true })
   .flatMap(entry => {
     if (entry.isDirectory()) {
       const sub = path.join(videosDir, entry.name);
       return fs.readdirSync(sub)
         .filter(f => f.endsWith(".webm"))
-        .map(f => ({
-          file: path.join(sub, f),
-          mtime: fs.statSync(path.join(sub, f)).mtimeMs,
-        }));
+        .map(f => {
+          const file = path.join(sub, f);
+          const { mtimeMs, size } = fs.statSync(file);
+          return { file, mtime: mtimeMs, size };
+        });
     }
     if (entry.name.endsWith(".webm")) {
       const file = path.join(videosDir, entry.name);
-      return [{ file, mtime: fs.statSync(file).mtimeMs }];
+      const { mtimeMs, size } = fs.statSync(file);
+      return [{ file, mtime: mtimeMs, size }];
     }
     return [];
   })
+  .filter(e => e.size >= MIN_SIZE_BYTES)
   .sort((a, b) => a.mtime - b.mtime)
   .map(e => e.file);
 
@@ -63,8 +70,17 @@ if (webmFiles.length === 0) {
   process.exit(1);
 }
 
-console.log(`[stitch] Found ${webmFiles.length} clip(s):`);
-webmFiles.forEach(f => console.log("  •", path.relative(__dirname, f)));
+const allCount = fs.readdirSync(videosDir, { withFileTypes: true })
+  .flatMap(e => e.isDirectory()
+    ? fs.readdirSync(path.join(videosDir, e.name)).filter(f => f.endsWith(".webm"))
+    : e.name.endsWith(".webm") ? [e.name] : []
+  ).length;
+
+console.log(`[stitch] ${webmFiles.length} of ${allCount} clips kept (≥ ${MIN_SIZE_BYTES / 1000} KB):`);
+webmFiles.forEach(f => {
+  const kb = Math.round(fs.statSync(f).size / 1024);
+  console.log(`  • ${path.relative(__dirname, f)}  (${kb} KB)`);
+});
 
 // ── Write ffmpeg concat list ──────────────────────────────────────────────────
 const listFile = path.join(__dirname, "output", "_concat.txt");
