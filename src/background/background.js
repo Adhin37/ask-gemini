@@ -331,23 +331,31 @@ async function openPopup() {
     // Fallback: floating popup window (works in fullscreen / from content script).
     const popupUrl = chrome.runtime.getURL("src/popup/popup.html");
 
+    let popupW = 376;
+    let popupH = 290;
     let left, top;
     try {
       const wins = await chrome.windows.getAll({ windowTypes: ["normal"] });
       const focusedWin = wins.find(w => w.focused);
       if (focusedWin) {
-        left = Math.round((focusedWin.left ?? 0) + (focusedWin.width  ?? 0) / 2 - 200);
-        top  = Math.round((focusedWin.top  ?? 0) + (focusedWin.height ?? 0) / 2 - 280);
+        const winW = focusedWin.width  ?? 0;
+        const winH = focusedWin.height ?? 0;
+        // Scale the popup proportionally to the browser window size so it
+        // makes better use of large / maximized windows (min 376×290, max 536×620).
+        popupW = Math.round(Math.min(Math.max(376, winW * 0.30), 536));
+        popupH = Math.round(Math.min(Math.max(290, winH * 0.45), 620));
+        left = Math.round((focusedWin.left ?? 0) + winW / 2 - popupW / 2);
+        top  = Math.round((focusedWin.top  ?? 0) + winH / 2 - popupH / 2);
       }
     } catch (_errWin) { console.warn(_errWin); }
 
     chrome.windows.create({
       url: popupUrl,
       type: "popup",
-      width: 376,
-      height: 270,
-      left: left ?? 100,
-      top: top ?? 100,
+      width:   popupW,
+      height:  popupH,
+      left:    left ?? 100,
+      top:     top  ?? 100,
       focused: true,
     });
   }

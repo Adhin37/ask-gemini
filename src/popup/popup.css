@@ -1059,3 +1059,14 @@ html, body {
   justify-content: space-between;
 }
 
+/* ── Floating window mode (fullscreen / maximized fallback) ───────
+   The normal extension popup is always 360 px wide (viewport = 360 px),
+   so this block never fires there. When the popup is opened as a
+   detached window at a larger size, the viewport is wider and the
+   popup fills the available space without breaking its layout.     */
+@media (min-width: 400px) {
+  html, body {
+    width: 100%;
+  }
+}
+

@@ -10,6 +10,10 @@ import {
 
 const MAX_CHARS = 2000;
 
+// In floating-window mode the popup can be taller than the normal 360 px popup,
+// so allow the textarea to grow proportionally. Clamped between 180 and 420 px.
+const MAX_INPUT_H = Math.min(Math.max(180, Math.floor(window.innerHeight * 0.45)), 420);
+
 // ══════════════════════════════════════════════════════════════════
 // PROMPT INJECTION DETECTION
 // ══════════════════════════════════════════════════════════════════
@@ -642,7 +646,7 @@ inputWrapper.addEventListener("drop", (e) => {
 input.addEventListener("input", () => {
   // Auto-resize
   input.style.height = "auto";
-  input.style.height = Math.min(input.scrollHeight, 180) + "px";
+  input.style.height = Math.min(input.scrollHeight, MAX_INPUT_H) + "px";
 
   // Char counter / hint
   const len = input.value.length;
