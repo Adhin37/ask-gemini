@@ -5,3 +5,7 @@ node_modules
 src/**/*.min.js
 src/**/*.min.css
 .claude/settings.local.json
+e2e/videos/
+e2e/output/
+e2e/.chrome-profile/
+test-results/
