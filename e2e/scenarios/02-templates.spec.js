@@ -53,7 +53,11 @@ test("popup — template dropdown and autocomplete", async () => {
   await popup.waitForTimeout(400);
 
   await popup.locator("#questionInput").type("/sum", { delay: 130 });
-  await popup.waitForTimeout(1200); // AC strip should be visible
+
+  // Wait until the AC strip is actually visible before pressing Tab —
+  // avoids a race where Tab fires before the AC state machine activates.
+  await popup.locator("#acStrip.visible").waitFor({ state: "attached", timeout: 5_000 });
+  await popup.waitForTimeout(400);
 
   // Use locator.press() — targets the element directly via CDP,
   // unlike page.keyboard.press() which depends on OS window focus.
