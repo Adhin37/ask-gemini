@@ -86,11 +86,11 @@ export async function launchExtension(chromium, { slowMo = 600, suppressWelcome 
   // Also register a listener so any welcome tab that appears later in the test
   // run (e.g. from a service-worker restart) is dismissed automatically.
   // The welcome scenario passes suppressWelcome:false and opens the page itself.
-  await new Promise(r => setTimeout(r, 600));
-  for (const p of context.pages()) {
-    if (p.url().includes("welcome")) await p.close();
-  }
   if (suppressWelcome) {
+    await new Promise(r => setTimeout(r, 600));
+    for (const p of context.pages()) {
+      if (p.url().includes("welcome")) await p.close();
+    }
     context.on("page", async (page) => {
       try {
         // "commit" fires as soon as the URL is finalised, before any content

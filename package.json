@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "e2e:purge": "node -e \"require('fs').rmSync('e2e/videos', {recursive:true, force:true})\"",
+    "e2e:purge": "node -e \"require('fs').rmSync('e2e/videos', { recursive: true, force: true })\"",
     "e2e": "npm run e2e:purge && playwright test --config=e2e/playwright.config.js",
     "e2e:stitch": "node e2e/stitch.mjs",
     "e2e:demo": "npm run e2e && npm run e2e:stitch"

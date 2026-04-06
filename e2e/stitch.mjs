@@ -39,10 +39,10 @@ if (!fs.existsSync(videosDir)) {
 // Walk one level deep to find all .webm files.
 // Minimum file size to include — filters out blank recordings from transient
 // tabs (truly empty pages: < 10 KB; brief background tabs: 10-40 KB).
-// Set to 50 KB so static-content pages like the mock article (mostly
+// Set to 70 KB so static-content pages like the mock article (mostly
 // unchanged frames compress aggressively with VP8, landing ~50-150 KB) are
 // still included, while one-frame-and-done blank clips are filtered.
-const MIN_SIZE_BYTES = 50_000; // 50 KB
+const MIN_SIZE_BYTES = 70_000; // 70 KB
 
 const webmFiles = fs.readdirSync(videosDir, { withFileTypes: true })
   .flatMap(entry => {
