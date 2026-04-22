@@ -89,10 +89,10 @@ You must run `npm run build` before loading the extension in Chrome or packaging
 
 ```bash
 npm run build   # must run first
-./package.sh    # creates ask-gemini-extension.zip
+./package.sh    # creates dist/ask-gemini-extension.zip
 ```
 
-Produces one zip: `ask-gemini-extension.zip` — contains both the original source files (for CWS human review) and the `*.min.*` files (loaded at runtime). Upload this single zip to the Chrome Web Store.
+Produces one zip: `dist/ask-gemini-extension.zip` — contains both the original source files (for CWS human review) and the `*.min.*` files (loaded at runtime). Upload this single zip to the Chrome Web Store.
 
 ## Linting
 

@@ -11,7 +11,8 @@
 
 set -euo pipefail
 
-RELEASE_ZIP="ask-gemini-extension.zip"
+DIST_DIR="dist"
+RELEASE_ZIP="$DIST_DIR/ask-gemini-extension.zip"
 
 # ── 1. Validate required files exist ─────────────────────────────────
 echo "Validating build output..."
@@ -68,6 +69,7 @@ echo "  All required files present."
 # generated *.min.js / *.min.css files (loaded by the extension at runtime).
 echo ""
 echo "Creating $RELEASE_ZIP..."
+mkdir -p "$DIST_DIR"
 rm -f "$RELEASE_ZIP"
 zip -r "$RELEASE_ZIP" \
   manifest.json LICENSE README.md POLICIES.md CONTRIBUTING.md \

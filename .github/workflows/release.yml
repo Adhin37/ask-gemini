@@ -70,7 +70,7 @@ jobs:
         run: |
           chmod +x package.sh
           ./package.sh
-          test -s ask-gemini-extension.zip
+          test -s dist/ask-gemini-extension.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -79,6 +79,6 @@ jobs:
           body_path: CHANGELOG.md
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
-            ask-gemini-extension.zip
+            dist/ask-gemini-extension.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

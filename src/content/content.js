@@ -193,11 +193,15 @@ function waitForCondition(predicate, timeoutMs = 5_000, root = document.body) {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      clearInterval(poller);
       observer.disconnect();
       resolve(value);
     };
 
-    const timer = setTimeout(() => finish(false), timeoutMs);
+    const timer  = setTimeout(() => finish(false), timeoutMs);
+    // Polling fallback: catches updates that don't fire a MutationObserver
+    // (e.g. Angular text-node interpolation, async Angular CD cycles).
+    const poller = setInterval(() => { if (predicate()) finish(true); }, 100);
 
     const observer = new MutationObserver(() => {
       if (predicate()) finish(true);
@@ -207,6 +211,7 @@ function waitForCondition(predicate, timeoutMs = 5_000, root = document.body) {
       childList:       true,
       subtree:         true,
       attributes:      true,
+      characterData:   true,   // catches Angular in-place text-node updates
       attributeFilter: ["aria-disabled", "disabled", "class", "tabindex"],
     });
   });
@@ -417,17 +422,14 @@ async function ensureModel(target) {
 
   await performModelSwitch(target);
 
-  const btn = findModelTrigger();
-  const labelContainer = btn
-    ? btn.querySelector('[data-test-id="logo-pill-label-container"]') ||
-      btn.querySelector(".logo-pill-label-container") ||
-      btn
-    : document.body;
+  // Give Angular's change-detection one tick to update the button label
+  // before starting the observer/poller.
+  await new Promise((r) => setTimeout(r, 150));
 
   const switched = await waitForCondition(
     () => readModelFromButton() === target,
-    3_000,
-    labelContainer
+    5_000,
+    document.body
   );
 
   const after = readModelFromButton();
