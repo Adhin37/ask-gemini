@@ -33,9 +33,9 @@ test("popup — model switch then send", async () => {
   // ── Cycle models ──────────────────────────────────────────────────
   await popup.locator(".model-opt[data-model='thinking']").click();
   await popup.waitForTimeout(900);
-  await popup.locator(".model-opt[data-model='pro']").click();
-  await popup.waitForTimeout(900);
   await popup.locator(".model-opt[data-model='flash']").click();
+  await popup.waitForTimeout(900);
+  await popup.locator(".model-opt[data-model='pro']").click();
   await popup.waitForTimeout(700);
 
   // ── Type a question ───────────────────────────────────────────────
@@ -76,6 +76,9 @@ test("popup — model switch then send", async () => {
   await geminiPage.bringToFront();
   await geminiPage.goto("https://gemini.google.com/app");
   await geminiPage.waitForLoadState("domcontentloaded");
+
+  // ── Assert: model was switched to "pro" by content.js ────────────
+  await expect(geminiPage.locator("#modelName")).toHaveText("Pro", { timeout: 8_000 });
 
   // ── Assert: user message appears, then Gemini responds ───────────
   await expect(geminiPage.locator(".msg.user")).toBeVisible({ timeout: 10_000 });

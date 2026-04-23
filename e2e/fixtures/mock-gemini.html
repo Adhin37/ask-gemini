@@ -293,7 +293,7 @@
             <div style="position:relative">
               <button class="model-pill" data-test-id="bard-mode-menu-button" aria-label="Open mode picker" id="modelTrigger">
                 <div data-test-id="logo-pill-label-container" id="modelLabel">
-                  <span id="modelName">Flash</span>
+                  <span id="modelName">Fast</span>
                 </div>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
@@ -302,22 +302,22 @@
               <div class="model-menu" id="modelMenu">
                 <div class="model-option" role="option" aria-selected="true" data-model="flash" id="opt-flash">
                   <div>
-                    <div>Gemini 2.0 Flash</div>
-                    <div class="model-desc">Fast and versatile</div>
+                    <div>Fast</div>
+                    <div class="model-desc">Answers quickly</div>
                   </div>
                   <span class="check">✓</span>
                 </div>
                 <div class="model-option" role="option" aria-selected="false" data-model="thinking" id="opt-thinking">
                   <div>
-                    <div>Gemini 2.0 Flash Thinking</div>
-                    <div class="model-desc">Advanced reasoning</div>
+                    <div>Thinking</div>
+                    <div class="model-desc">Solves complex problems</div>
                   </div>
                   <span class="check">✓</span>
                 </div>
                 <div class="model-option" role="option" aria-selected="false" data-model="pro" id="opt-pro">
                   <div>
-                    <div>Gemini Advanced Pro</div>
-                    <div class="model-desc">Most capable</div>
+                    <div>Pro</div>
+                    <div class="model-desc">Advanced maths and code with 3.1 Pro</div>
                   </div>
                   <span class="check">✓</span>
                 </div>
@@ -377,9 +377,13 @@
       document.querySelectorAll(".model-option").forEach(o => {
         o.setAttribute("aria-selected", o === opt ? "true" : "false");
       });
-      const labels = { flash: "Flash", thinking: "Flash Thinking", pro: "Advanced" };
-      modelName.textContent = labels[m] || "Flash";
       modelMenu.classList.remove("open");
+      // Simulate async Angular change-detection cycle — label updates after a
+      // short delay, matching real Gemini's behaviour on fresh/redirected pages.
+      setTimeout(() => {
+        const labels = { flash: "Fast", thinking: "Thinking", pro: "Pro" };
+        modelName.textContent = labels[m] || "Flash";
+      }, 250);
     });
   });
 

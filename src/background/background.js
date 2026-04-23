@@ -178,14 +178,40 @@ function setBadgeError() {
   _clearBadgeAfter(6_000);
 }
 
-// Detect failed tab navigations (no network, DNS error, etc.).
-// Chrome redirects broken navigations to chrome-error://chromewebdata/
-// — the content script never runs in that case, so we catch it here.
-chrome.tabs.onUpdated.addListener((_tabId, info, tab) => {
-  if (!_hasPendingResult) return;
+// Tabs that navigated to consent.google.com during a pending Ask Gemini
+// operation — we click "Accept all" once they finish loading.
+const _consentTabs = new Set();
+
+chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   const url = info.url ?? tab.url ?? "";
-  if (url.startsWith("chrome-error://")) {
+
+  // Detect failed tab navigations (chrome-error://chromewebdata/).
+  if (_hasPendingResult && url.startsWith("chrome-error://")) {
     setBadgeError();
+  }
+
+  // When a tab redirects to the Google consent page and the extension has a
+  // pending message (meaning WE opened this Gemini tab), auto-click "Accept all"
+  // so the user doesn't have to. We only intervene on our own navigations.
+  if (info.url?.includes("consent.google.com")) {
+    const { pendingMessage } = await chrome.storage.local.get("pendingMessage");
+    if (pendingMessage) _consentTabs.add(tabId);
+  }
+
+  if (_consentTabs.has(tabId) && info.status === "complete") {
+    _consentTabs.delete(tabId);
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => {
+          const btn = Array.from(document.querySelectorAll("button"))
+            .find(b => /accept all/i.test(b.textContent.trim()));
+          if (btn) btn.click();
+        },
+      });
+    } catch (err) {
+      console.warn("[Ask Gemini] Consent auto-accept failed:", err.message);
+    }
   }
 });
 

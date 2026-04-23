@@ -295,7 +295,9 @@ function matchesTarget(optionText, target) {
     case "thinking":
       return hasThink;
     case "pro":
-      return hasPro;
+      // Guard !hasThink: options like "Flash Thinking" have "Advanced" in their
+      // description text ("Advanced reasoning"), which would cause a false match.
+      return hasPro && !hasThink;
     default:
       return false;
   }
@@ -407,13 +409,16 @@ function isSelectedOption(el) {
 
 /**
  * Ensures the given model is active, switching if necessary, and waits for
- * the UI to confirm the change.
+ * the UI to confirm the change. Retries up to MAX_ATTEMPTS times in case
+ * the page is still initialising (e.g. Angular hasn't settled after a redirect).
  * @param {"flash"|"thinking"|"pro"} target
+ * @param {number} [_attempt]
  * @returns {Promise<boolean>} true if the correct model is confirmed active
  */
-async function ensureModel(target) {
+async function ensureModel(target, _attempt = 1) {
+  const MAX_ATTEMPTS = 3;
   const current = readModelFromButton();
-  console.debug(`[Ask Gemini] ensureModel: current="${current}" target="${target}"`);
+  console.debug(`[Ask Gemini] ensureModel attempt ${_attempt}/${MAX_ATTEMPTS}: current="${current}" target="${target}"`);
 
   if (current === target) {
     console.info("[Ask Gemini] Model already correct — no switch needed.");
@@ -422,9 +427,8 @@ async function ensureModel(target) {
 
   await performModelSwitch(target);
 
-  // Give Angular's change-detection one tick to update the button label
-  // before starting the observer/poller.
-  await new Promise((r) => setTimeout(r, 150));
+  // Wait for Angular's change-detection to propagate the label update.
+  await new Promise((r) => setTimeout(r, 300));
 
   const switched = await waitForCondition(
     () => readModelFromButton() === target,
@@ -434,12 +438,23 @@ async function ensureModel(target) {
 
   const after = readModelFromButton();
   console.debug(`[Ask Gemini] ensureModel after switch: "${after}" (observer resolved: ${switched})`);
-  return after === target;
+
+  if (after === target) return true;
+
+  if (_attempt < MAX_ATTEMPTS) {
+    console.debug(`[Ask Gemini] Model switch not confirmed — retrying (${_attempt + 1}/${MAX_ATTEMPTS})…`);
+    await new Promise((r) => setTimeout(r, 500));
+    return ensureModel(target, _attempt + 1);
+  }
+
+  return false;
 }
 
 /**
  * Opens the model picker dropdown and clicks the option matching `target`.
- * Closes the dropdown without switching if no matching option is found.
+ * Waits specifically for the target option to appear (not just any option)
+ * to avoid premature resolution when other [role="option"] elements exist
+ * elsewhere on the page. Closes the dropdown if no match is found.
  * @param {"flash"|"thinking"|"pro"} target
  */
 async function performModelSwitch(target) {
@@ -451,19 +466,22 @@ async function performModelSwitch(target) {
 
   triggerBtn.click();
 
-  await waitForElement(
-    () => OPTION_SELECTORS.reduce((found, s) => found || document.querySelector(s), null),
+  const targetOption = await waitForElement(
+    () => {
+      for (const sel of OPTION_SELECTORS) {
+        for (const opt of document.querySelectorAll(sel)) {
+          if (matchesTarget(opt.textContent, target)) return opt;
+        }
+      }
+      return null;
+    },
     2_000
   );
 
-  for (const sel of OPTION_SELECTORS) {
-    for (const opt of document.querySelectorAll(sel)) {
-      if (matchesTarget(opt.textContent, target)) {
-        console.debug(`[Ask Gemini] Clicking: "${opt.textContent.trim()}" for target="${target}"`);
-        opt.click();
-        return;
-      }
-    }
+  if (targetOption) {
+    console.debug(`[Ask Gemini] Clicking: "${targetOption.textContent.trim()}" for target="${target}"`);
+    targetOption.click();
+    return;
   }
 
   console.debug(`[Ask Gemini] No option matched "${target}" — closing dropdown`);
