@@ -272,7 +272,7 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
           Upgrade to Google AI Plus
         </button>
-        <div class="avatar">T</div>
+        <div class="avatar">U</div>
       </div>
     </div>
 
@@ -290,7 +290,7 @@
           <path d="M4 24 C4 24.8 10 25.5 24 25.2 C10 24.8 4 24 4 24Z" fill="#ea4335"/>
           <path d="M4 24 C4 23.2 10 22.5 24 22.8 C10 23.2 4 24 4 24Z" fill="#ea4335"/>
         </svg>
-        <p class="greeting-hi">Hi Thomas</p>
+        <p class="greeting-hi">Hi User</p>
         <p class="greeting-sub">Where should we start?</p>
       </div>
     </div>
@@ -499,14 +499,18 @@
     }, 250);
   });
 
-  // Allow tests to set an initial model via ?model=<key> in the URL.
-  // Must run before detach so querySelectorAll still finds the options.
-  (function applyInitialModel() {
-    const m = new URLSearchParams(window.location.search).get("model");
+  // Test hook: read the desired initial model from sessionStorage before
+  // attaching the detach/reattach overlay logic.
+  // Tests set this via Playwright's addInitScript(), which runs before any
+  // inline page script. The real Gemini retains model selection server-side
+  // across sessions; this simulates that without changing the URL.
+  (function applyTestInitialModel() {
+    const m = sessionStorage.getItem("__testInitialModel");
     if (!m || m === "flash") return;
     const labels = { flash: "Fast", thinking: "Thinking", pro: "Pro" };
     if (!labels[m]) return;
     modelName.textContent = labels[m];
+    // modelMenu is still in DOM here (detach happens below)
     modelMenu.querySelectorAll(".mat-mdc-menu-item[data-model]").forEach(o => {
       o.setAttribute("aria-selected", o.dataset.model === m ? "true" : "false");
     });
@@ -561,7 +565,7 @@
         <path d="M4 24 C4 23.2 10 22.5 24 22.8 C10 23.2 4 24 4 24Z" fill="#ea4335"/>
       </svg>`;
     } else {
-      av.textContent = "T";
+      av.textContent = "U";
     }
 
     const body = document.createElement("div");

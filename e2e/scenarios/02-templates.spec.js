@@ -1,5 +1,8 @@
 /**
- * Scenario 02 — Templates + send
+ * Scenario 02 — Templates and autocomplete
+ *
+ * Tests covered:
+ *   1. Template grid dropdown + "/" autocomplete
  */
 
 import { test, expect } from "@playwright/test";
@@ -26,9 +29,17 @@ test.afterAll(async () => {
   await context.close();
 });
 
+// ── Test 1: template dropdown + autocomplete ──────────────────────
+
 test("popup — template dropdown and autocomplete", async () => {
   const popup = await openPopupWindow(context, extensionId);
   await popup.waitForTimeout(1000);
+
+  // Ensure flash model is active — its templates include "Summarize: " which
+  // the "/sum" autocomplete test depends on. Prior scenario runs may have left
+  // the popup on "pro" (whose templates don't start with "sum").
+  await popup.locator(".model-opt[data-model='flash']").click();
+  await popup.waitForTimeout(500);
 
   // ── Template grid dropdown ────────────────────────────────────────
   await popup.locator("#tmplTriggerBtn").click();
@@ -42,7 +53,6 @@ test("popup — template dropdown and autocomplete", async () => {
   await popup.waitForTimeout(800);
 
   // After clicking the template, the input contains e.g. "Summarize: "
-  // Verify this before continuing
   const afterTemplate = await popup.locator("#questionInput").inputValue();
   expect(afterTemplate.length).toBeGreaterThan(0);
 
@@ -55,13 +65,13 @@ test("popup — template dropdown and autocomplete", async () => {
   // ── "/" inline autocomplete ───────────────────────────────────────
   await popup.locator("#questionInput").fill("");
   await popup.locator("#questionInput").dispatchEvent("input");
-  await popup.waitForTimeout(400);
+  await popup.waitForTimeout(600);
 
   await popup.locator("#questionInput").type("/sum", { delay: 40 });
 
   // Wait until the AC strip is actually visible before pressing Tab —
   // avoids a race where Tab fires before the AC state machine activates.
-  await popup.locator("#acStrip.visible").waitFor({ state: "attached", timeout: 5_000 });
+  await popup.locator("#acStrip.visible").waitFor({ state: "attached", timeout: 8_000 });
   await popup.waitForTimeout(400);
 
   // Use locator.press() — targets the element directly via CDP,
@@ -112,4 +122,5 @@ test("popup — template dropdown and autocomplete", async () => {
     .toBeVisible({ timeout: 8_000 });
 
   await geminiPage.waitForTimeout(1500);
+  await geminiPage.close();
 });

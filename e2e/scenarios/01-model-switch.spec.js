@@ -1,5 +1,12 @@
 /**
  * Scenario 01 — Model switcher + send
+ *
+ * Tests covered:
+ *   1. Popup model cycle then send (existing smoke test — ends on pro)
+ *   2. Flash model already active — content.js skips the picker (no switch)
+ *   3. Switch to Fast     (mock starts on Thinking → content.js switches back to Fast)
+ *   4. Switch to Thinking (mock starts on Fast    → content.js switches to Thinking)
+ *   5. Switch to Pro      (mock starts on Fast    → content.js switches to Pro)
  */
 
 import { test, expect } from "@playwright/test";
@@ -25,6 +32,48 @@ test.beforeAll(async ({ playwright }) => {
 test.afterAll(async () => {
   await context.close();
 });
+
+// ── Helper ────────────────────────────────────────────────────────
+
+/**
+ * Opens a fresh mock Gemini page with the given pending message/model
+ * already written to extension storage.
+ *
+ * @param {string} msg                    — the message content.js will inject
+ * @param {string} model                  — "flash" | "thinking" | "pro"
+ * @param {string} [initialModel="flash"] — model the mock page should start on.
+ *   The real Gemini retains the user's last-selected model across sessions.
+ *   We simulate this by writing "__testInitialModel" to sessionStorage via
+ *   addInitScript() — which runs before any inline page script — so the mock
+ *   can read it and pre-select the option before content.js starts.
+ * @returns {Promise<import("@playwright/test").Page>}
+ */
+async function openGeminiWithPending(msg, model, initialModel = "flash") {
+  const page = await context.newPage();
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.bringToFront();
+
+  // addInitScript runs in the page's main world before any inline script —
+  // so the mock reads this value before content.js can call readModelFromButton().
+  if (initialModel !== "flash") {
+    await page.addInitScript(
+      (m) => sessionStorage.setItem("__testInitialModel", m),
+      initialModel
+    );
+  }
+
+  // Set storage before navigating so content.js finds pendingMessage on load.
+  await context.serviceWorkers()[0].evaluate(
+    ({ msg, mdl }) => chrome.storage.local.set({ pendingMessage: msg, pendingModel: mdl }),
+    { msg, mdl: model }
+  );
+
+  await page.goto("https://gemini.google.com/app");
+  await page.waitForLoadState("domcontentloaded");
+  return page;
+}
+
+// ── Test 1: popup model cycle then send ──────────────────────────
 
 test("popup — model switch then send", async () => {
   const popup = await openPopupWindow(context, extensionId);
@@ -89,4 +138,104 @@ test("popup — model switch then send", async () => {
     .toBeVisible({ timeout: 8_000 });
 
   await geminiPage.waitForTimeout(1500);
+  await geminiPage.close();
 });
+
+// ── Test 2: flash already selected — content.js skips the picker ──
+
+test("Gemini — flash model already active, content.js skips model switch", async () => {
+  // This test focuses on content.js behavior, not the popup send flow.
+  // It directly sets storage and opens a fresh page, verifying that content.js
+  // detects current === target and skips the picker entirely.
+  const geminiPage = await openGeminiWithPending("What is the speed of light?", "flash");
+
+  // #modelName must stay "Fast" — content.js should not open the picker
+  await expect(geminiPage.locator("#modelName")).toHaveText("Fast", { timeout: 8_000 });
+
+  await expect(geminiPage.locator(".msg.user")).toBeVisible({ timeout: 10_000 });
+  await expect(geminiPage.locator(".msg.user .msg-body"))
+    .toContainText("speed of light", { timeout: 5_000 });
+  await expect(geminiPage.locator(".msg.gemini .msg-body:not(:has(.typing-dots))"))
+    .toBeVisible({ timeout: 8_000 });
+
+  await geminiPage.waitForTimeout(800);
+  await geminiPage.close();
+});
+
+// ── Tests 3-5: model switch (fast / thinking / pro) ──────────────
+
+/**
+ * @type {Array<{
+ *   popupModel:    string,
+ *   initialModel:  string,
+ *   expectedLabel: string,
+ *   question:      string,
+ *   contains:      string,
+ * }>}
+ */
+const MODEL_SWITCH_CASES = [
+  {
+    popupModel:    "flash",
+    initialModel:  "thinking",   // mock starts on Thinking; content.js switches back
+    expectedLabel: "Fast",
+    question:      "Explain HTTP in one sentence.",
+    contains:      "HTTP",
+  },
+  {
+    popupModel:    "thinking",
+    initialModel:  "flash",      // mock starts on Fast; content.js switches to Thinking
+    expectedLabel: "Thinking",
+    question:      "What is quantum entanglement?",
+    contains:      "quantum",
+  },
+  {
+    popupModel:    "pro",
+    initialModel:  "flash",      // mock starts on Fast; content.js switches to Pro
+    expectedLabel: "Pro",
+    question:      "Summarize the history of computing.",
+    contains:      "computing",
+  },
+];
+
+for (const { popupModel, initialModel, expectedLabel, question, contains } of MODEL_SWITCH_CASES) {
+  test(`Gemini — model switch to ${popupModel} then send`, async () => {
+    const popup = await openPopupWindow(context, extensionId);
+    await popup.waitForTimeout(800);
+
+    // Select the target model in the popup
+    await popup.locator(`.model-opt[data-model='${popupModel}']`).click();
+    await popup.waitForTimeout(600);
+
+    await popup.locator("#questionInput").click();
+    await popup.locator("#questionInput").type(question, { delay: 18 });
+    await popup.waitForTimeout(500);
+
+    const message = await popup.locator("#questionInput").inputValue();
+    const selectedModel = await popup.evaluate(() =>
+      document.querySelector(".model-opt.active")?.dataset.model ?? "flash"
+    );
+    expect(selectedModel).toBe(popupModel);
+
+    const [initialPage] = await Promise.all([
+      context.waitForEvent("page"),
+      popup.locator("#sendBtn").click(),
+    ]);
+    await initialPage.close();
+
+    // Mock starts on `initialModel`; content.js must switch it to `popupModel`.
+    const geminiPage = await openGeminiWithPending(message, selectedModel, initialModel);
+
+    // Model label must reflect the switch
+    await expect(geminiPage.locator("#modelName")).toHaveText(expectedLabel, { timeout: 10_000 });
+
+    // Message was injected and a response simulated
+    await expect(geminiPage.locator(".msg.user")).toBeVisible({ timeout: 10_000 });
+    await expect(geminiPage.locator(".msg.user .msg-body"))
+      .toContainText(contains, { timeout: 5_000 });
+    await expect(geminiPage.locator(".msg.gemini .msg-body:not(:has(.typing-dots))"))
+      .toBeVisible({ timeout: 8_000 });
+
+    await geminiPage.waitForTimeout(800);
+    await geminiPage.close();
+  });
+}
