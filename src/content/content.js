@@ -92,8 +92,14 @@ function hideStatus() {
 
   showStatus("Ask Gemini…");
 
-  // ── 1. Wait for the model trigger button ───────────────────────
-  const ready = await waitForElement(() => findModelTrigger(), 10_000);
+  // ── 1. Wait for the model trigger button AND the textarea ─────
+  // Both must be present before we interact with the model picker.
+  // The textarea renders later in Angular's hydration cycle, so its
+  // presence is a stronger "page is ready" signal than the button alone.
+  const [ready] = await Promise.all([
+    waitForElement(() => findModelTrigger(), 10_000),
+    waitForElement(() => findTextareaInput(), 10_000),
+  ]);
 
   if (!ready) {
     console.warn("[Ask Gemini] Model trigger not found after 10 s — skipping model check");
@@ -229,6 +235,7 @@ function waitForCondition(predicate, timeoutMs = 5_000, root = document.body) {
 function findModelTrigger() {
   return (
     document.querySelector('button[data-test-id="bard-mode-menu-button"]') ||
+    document.querySelector("button.input-area-switch")                      ||
     document.querySelector('button[aria-label="Open mode picker"]')         ||
     null
   );
@@ -280,24 +287,26 @@ function classifyModelText(text) {
 
 /**
  * Returns true if the dropdown option text corresponds to the target model.
+ * Matching is done on the first line of the option's inner text so that
+ * description text (second line) does not cause false positives.
  * @param {string} optionText
  * @param {"flash"|"thinking"|"pro"} target
  * @returns {boolean}
  */
 function matchesTarget(optionText, target) {
-  const t        = optionText.toLowerCase();
-  const hasThink = t.includes("think") || t.includes("reason");
-  const hasPro   = t.includes("pro")   || t.includes("advanced");
+  // Use only the title line — the real Gemini picker uses multi-line innerText
+  // where line 0 is the model name and line 1+ are descriptions.
+  const firstLine = optionText.trim().split("\n")[0].trim();
+  const t         = firstLine.toLowerCase();
 
   switch (target) {
     case "flash":
-      return (t.includes("flash") || t.includes("fast") || t.includes("quick")) && !hasThink && !hasPro;
+      return t === "fast" || t.includes("flash") || t.includes("quick");
     case "thinking":
-      return hasThink;
+      return t.includes("think") || t.includes("reason");
     case "pro":
-      // Guard !hasThink: options like "Flash Thinking" have "Advanced" in their
-      // description text ("Advanced reasoning"), which would cause a false match.
-      return hasPro && !hasThink;
+      return (t === "pro" || (t.includes("pro") && !t.includes("think"))) &&
+             !t.includes("reason");
     default:
       return false;
   }
@@ -308,10 +317,18 @@ function matchesTarget(optionText, target) {
 // SHARED SELECTORS
 // ══════════════════════════════════════════════════════════════════
 
-/** Selectors tried in order to locate model-picker dropdown options. */
+/**
+ * Selectors tried in order to locate model-picker dropdown options.
+ * Primary: Material Design menu items used by the real Gemini UI.
+ * Fallbacks cover layout variants and possible future DOM changes.
+ */
 const OPTION_SELECTORS = [
-  '[role="option"]', '[role="menuitem"]', '[role="listitem"]',
-  "li[data-value]",  '[class*="model-item" i]',
+  "button.mat-mdc-menu-item",
+  '[role="menuitem"]',
+  '[role="option"]',
+  '[role="listitem"]',
+  "li[data-value]",
+  '[class*="model-item" i]',
 ];
 
 /** Selectors tried in order to locate Gemini's send button. */
@@ -427,8 +444,12 @@ async function ensureModel(target, _attempt = 1) {
 
   await performModelSwitch(target);
 
-  // Wait for Angular's change-detection to propagate the label update.
-  await new Promise((r) => setTimeout(r, 300));
+  // Wait for the dropdown to close — that's the reliable signal Angular
+  // processed the option click (avoids an arbitrary fixed sleep).
+  await waitForCondition(
+    () => !OPTION_SELECTORS.some(s => document.querySelector(s)),
+    3_000
+  );
 
   const switched = await waitForCondition(
     () => readModelFromButton() === target,
@@ -466,20 +487,27 @@ async function performModelSwitch(target) {
 
   triggerBtn.click();
 
+  // Wait for the Material menu panel to open before querying options.
+  // 400 ms matches the observed render delay on the real Gemini page.
+  await new Promise((r) => setTimeout(r, 400));
+
   const targetOption = await waitForElement(
     () => {
       for (const sel of OPTION_SELECTORS) {
         for (const opt of document.querySelectorAll(sel)) {
-          if (matchesTarget(opt.textContent, target)) return opt;
+          // Use innerText so block-element newlines separate title from description,
+          // matching the first-line strategy in matchesTarget.
+          if (matchesTarget(opt.innerText || opt.textContent, target)) return opt;
         }
       }
       return null;
     },
-    2_000
+    4_000
   );
 
   if (targetOption) {
-    console.debug(`[Ask Gemini] Clicking: "${targetOption.textContent.trim()}" for target="${target}"`);
+    console.debug(`[Ask Gemini] Clicking: "${(targetOption.innerText || targetOption.textContent).trim().slice(0, 50)}" for target="${target}"`);
+    targetOption.scrollIntoView({ block: "nearest" });
     targetOption.click();
     return;
   }
