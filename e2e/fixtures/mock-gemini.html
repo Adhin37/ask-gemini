@@ -9,14 +9,13 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0a0a0a;
-      --sidebar-bg:#111;
-      --surface:   #1e1e1e;
-      --surface2:  #2a2a2a;
-      --border:    rgba(255,255,255,0.10);
-      --text:      #fff;
-      --text-dim:  rgba(255,255,255,0.50);
-      --accent:    #a8c7fa;
+      --bg:        #1b1b1f;
+      --surface:   #28282c;
+      --surface2:  #35353a;
+      --border:    rgba(255,255,255,0.12);
+      --text:      #e3e2e6;
+      --text-dim:  rgba(227,226,230,0.55);
+      --accent:    #4285f4;
       --user-bubble: #004a77;
       --radius:    28px;
     }
@@ -26,18 +25,19 @@
     /* ── Shell ── */
     .shell { display: flex; height: 100vh; }
 
-    /* ── Sidebar (icon-only, narrow) ── */
+    /* ── Narrow sidebar ── */
     .sidebar {
-      width: 72px; min-width: 72px;
-      background: var(--sidebar-bg);
+      width: 56px; min-width: 56px;
+      background: var(--bg);
       display: flex; flex-direction: column;
-      align-items: center; padding: 12px 0; gap: 4px;
+      align-items: center; padding: 10px 0; gap: 2px;
+      border-right: 1px solid var(--border);
     }
     .sidebar-btn {
-      width: 44px; height: 44px; border-radius: 50%;
+      width: 40px; height: 40px; border-radius: 50%;
       background: transparent; border: none; color: var(--text-dim);
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer; transition: background 0.15s, color 0.15s;
+      cursor: pointer; transition: background 0.15s;
     }
     .sidebar-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
 
@@ -47,31 +47,22 @@
     /* ── Top bar ── */
     .topbar {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 20px; flex-shrink: 0;
+      padding: 12px 20px; flex-shrink: 0;
     }
-    .logo-text { font-size: 18px; font-weight: 500; color: var(--text); letter-spacing: -0.2px; }
+    .logo-text { font-size: 20px; font-weight: 400; color: var(--text); }
     .topbar-right { display: flex; align-items: center; gap: 10px; }
-    .upgrade-btn {
+    .upgrade-btn-top {
       display: flex; align-items: center; gap: 6px;
-      background: transparent; border: 1px solid rgba(100,200,230,0.5);
-      color: #7dd3f7; padding: 7px 16px; border-radius: 20px;
+      background: var(--accent); color: #fff;
+      padding: 7px 16px; border-radius: 20px; border: none;
       font: 500 13px "Google Sans", sans-serif; cursor: pointer;
-      transition: background 0.15s;
     }
-    .upgrade-btn:hover { background: rgba(100,200,230,0.08); }
-    .icon-btn {
-      width: 36px; height: 36px; border-radius: 50%;
-      background: transparent; border: none; color: var(--text-dim);
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; transition: background 0.15s;
-    }
-    .icon-btn:hover { background: rgba(255,255,255,0.08); }
     .avatar {
-      width: 34px; height: 34px; border-radius: 50%;
+      width: 32px; height: 32px; border-radius: 50%;
       background: linear-gradient(135deg, #4285f4, #a142f4);
-      font-size: 13px; font-weight: 600;
+      font-size: 12px; font-weight: 600;
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer; flex-shrink: 0;
+      cursor: pointer;
     }
 
     /* ── Chat area ── */
@@ -80,29 +71,25 @@
       flex-direction: column; align-items: center;
       padding: 24px 0 16px;
     }
-    .chat-area::-webkit-scrollbar { width: 6px; }
-    .chat-area::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+    .chat-area::-webkit-scrollbar { width: 4px; }
+    .chat-area::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 2px; }
 
     /* ── Greeting ── */
     .greeting {
       display: flex; flex-direction: column; align-items: center;
-      gap: 6px; margin: auto 0; text-align: center; padding: 0 24px;
+      gap: 8px; margin: auto 0; text-align: center; padding: 0 24px;
     }
     .greeting.hidden { display: none; }
-    .greeting-row {
-      display: flex; align-items: center; gap: 10px; margin-bottom: 2px;
-    }
-    .greeting-tag { font-size: 22px; color: var(--text-dim); }
-    .greeting-hi  { font-size: 28px; font-weight: 400; color: rgba(255,255,255,0.85); }
-    .greeting-sub { font-size: 28px; font-weight: 400; color: var(--text); letter-spacing: -0.3px; }
+    .greeting-hi  { font-size: 28px; font-weight: 400; color: var(--text); }
+    .greeting-sub { font-size: 28px; font-weight: 400; color: var(--text-dim); }
 
     /* ── Messages ── */
     .msg-wrap { width: 100%; max-width: 720px; padding: 0 24px; }
     .msg { display: flex; gap: 12px; padding: 12px 0; }
     .msg.user { flex-direction: row-reverse; }
     .msg-avatar {
-      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600;
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;
     }
     .msg.user   .msg-avatar { background: linear-gradient(135deg, #4285f4, #a142f4); }
     .msg.gemini .msg-avatar { background: transparent; }
@@ -119,74 +106,59 @@
 
     /* ── Input zone ── */
     .input-zone {
-      flex-shrink: 0; padding: 0 20px 20px;
+      flex-shrink: 0; padding: 0 20px 24px;
       display: flex; flex-direction: column; align-items: center; gap: 12px;
     }
     .input-container {
-      width: 100%; max-width: 700px;
+      width: 100%; max-width: 720px;
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius); position: relative;
     }
-    .input-row {
-      display: flex; align-items: center; gap: 6px;
-      padding: 10px 10px 10px 14px;
-    }
 
-    /* Attach (+) button */
-    .attach-btn {
-      width: 34px; height: 34px; border-radius: 50%; border: none;
-      background: transparent; color: var(--text-dim); cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; transition: background 0.12s;
-    }
-    .attach-btn:hover { background: var(--surface2); color: var(--text); }
-
-    /* Editor */
-    rich-textarea { flex: 1; display: block; min-width: 0; }
+    /* Textarea row */
+    .textarea-row { padding: 16px 16px 0; }
+    rich-textarea { display: block; }
     .ql-editor {
       min-height: 26px; max-height: 180px; overflow-y: auto;
       font: 400 15px/1.5 "Google Sans", sans-serif;
       color: var(--text); outline: none; white-space: pre-wrap; word-break: break-word;
-      padding: 4px 0;
     }
     .ql-editor:empty::before { content: "Ask Gemini"; color: var(--text-dim); pointer-events: none; }
 
-    /* Right-side input controls */
-    .input-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    /* Bottom controls row */
+    .controls-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 8px 8px 12px;
+    }
+    .controls-left { display: flex; align-items: center; gap: 2px; }
+    .controls-right { display: flex; align-items: center; gap: 4px; }
 
-    /* Model pill (inside input) */
-    .model-pill {
+    .icon-btn-sm {
+      height: 36px; border-radius: 18px; border: none;
+      background: transparent; color: var(--text-dim); cursor: pointer;
+      display: flex; align-items: center; gap: 6px; padding: 0 10px;
+      font: 400 13px "Google Sans", sans-serif;
+      transition: background 0.12s;
+    }
+    .icon-btn-sm:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+
+    /* ── Model picker trigger ──────────────────────────────────────────
+       Matches real Gemini: inline button at bottom-right of input area.
+       content.js targets via:
+         1. [data-test-id="bard-mode-menu-button"]
+         2. button.input-area-switch                                     */
+    .input-area-switch {
       display: flex; align-items: center; gap: 4px;
       background: transparent; border: 1px solid var(--border);
-      color: var(--text); padding: 5px 10px; border-radius: 20px;
+      color: var(--text); padding: 5px 10px; border-radius: 18px;
       cursor: pointer; font: 500 13px "Google Sans", sans-serif;
-      white-space: nowrap; transition: background 0.15s;
+      white-space: nowrap; transition: background 0.15s; flex-shrink: 0;
     }
-    .model-pill:hover { background: var(--surface2); }
-    .model-pill svg { opacity: 0.6; flex-shrink: 0; }
-
-    /* Model dropdown (opens upward) */
-    .model-menu {
-      display: none; position: absolute; bottom: calc(100% + 8px); right: 0;
-      background: #2a2a2a; border: 1px solid var(--border);
-      border-radius: 16px; min-width: 230px; overflow: hidden;
-      box-shadow: 0 -8px 32px rgba(0,0,0,0.5); z-index: 100;
-    }
-    .model-menu.open { display: block; }
-    .model-option {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 11px 16px; cursor: pointer; font-size: 14px;
-      transition: background 0.12s; gap: 8px;
-    }
-    .model-option:hover { background: var(--surface2); }
-    .model-option[aria-selected="true"] { color: var(--accent); }
-    .model-option[aria-selected="true"] .check { display: block; }
-    .check { display: none; color: var(--accent); font-size: 15px; }
-    .model-desc { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+    .input-area-switch:hover { background: rgba(255,255,255,0.08); }
 
     /* Send / mic button */
     .send-button {
-      width: 38px; height: 38px; border-radius: 50%; border: none; flex-shrink: 0;
+      width: 36px; height: 36px; border-radius: 50%; border: none; flex-shrink: 0;
       background: transparent; color: var(--text-dim); cursor: default;
       display: flex; align-items: center; justify-content: center;
       transition: background 0.2s, color 0.2s;
@@ -196,7 +168,69 @@
     .send-button:not([disabled]) { background: var(--text); color: #000; cursor: pointer; }
     .send-button:not([disabled]) .icon-send { display: flex; }
     .send-button:not([disabled]) .icon-mic  { display: none; }
-    .send-button:not([disabled]):hover { opacity: 0.85; }
+
+    /* ── Model menu panel ─────────────────────────────────────────────
+       Mirrors Angular Material's .mat-mdc-menu-panel overlay.
+       Appended to <body> when open, removed when closed.
+       content.js detects closure via: !document.querySelector("button.mat-mdc-menu-item") */
+    .mat-mdc-menu-panel {
+      background: #2d2d31; border-radius: 16px;
+      min-width: 260px; overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08);
+      z-index: 1000;
+    }
+
+    .mat-mdc-menu-group-label {
+      padding: 12px 16px 6px;
+      font-size: 11px; font-weight: 600;
+      color: var(--text-dim); letter-spacing: 0.3px; text-transform: none;
+    }
+
+    /* Real Gemini uses button.mat-mdc-menu-item for each option */
+    .mat-mdc-menu-item {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%; padding: 10px 16px;
+      background: transparent; border: none; color: var(--text);
+      cursor: pointer; text-align: left; gap: 12px;
+      font-family: "Google Sans", Roboto, sans-serif;
+      transition: background 0.12s;
+    }
+    .mat-mdc-menu-item:hover { background: rgba(255,255,255,0.07); }
+
+    .model-item-content { flex: 1; }
+    .model-item-title {
+      font-size: 14px; font-weight: 500; color: var(--text);
+      display: block;
+    }
+    .model-item-desc {
+      font-size: 11.5px; color: var(--text-dim); margin-top: 2px;
+      display: block;
+    }
+
+    /* Blue circle checkmark — shown only on selected option */
+    .model-item-check {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--accent);
+      display: none; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .model-item-check svg { display: block; }
+    .mat-mdc-menu-item[aria-selected="true"] .model-item-check { display: flex; }
+
+    /* Upgrade row at the bottom of the picker */
+    .model-upgrade-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px 12px; border-top: 1px solid var(--border);
+      gap: 12px;
+    }
+    .model-upgrade-title { font-size: 13px; font-weight: 500; color: var(--text); }
+    .model-upgrade-desc  { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+    .upgrade-inline-btn {
+      background: transparent; border: 1px solid rgba(100,200,230,0.5);
+      color: #7dd3f7; padding: 4px 12px; border-radius: 12px;
+      font: 500 12px "Google Sans", sans-serif; cursor: pointer;
+      white-space: nowrap; flex-shrink: 0;
+    }
 
     /* ── Chips ── */
     .chips-row {
@@ -217,13 +251,13 @@
 <body>
 <div class="shell">
 
-  <!-- ── Narrow icon sidebar ── -->
+  <!-- ── Narrow sidebar ── -->
   <aside class="sidebar">
     <button class="sidebar-btn" title="Menu">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
     </button>
     <button class="sidebar-btn" title="New chat">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
   </aside>
 
@@ -234,36 +268,30 @@
     <div class="topbar">
       <span class="logo-text">Gemini</span>
       <div class="topbar-right">
-        <button class="upgrade-btn">
+        <button class="upgrade-btn-top">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
           Upgrade to Google AI Plus
         </button>
-        <button class="icon-btn" title="Fullscreen">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <!-- Profile avatar — gradient circle with "U" (same as popup mock) -->
-        <div class="avatar">U</div>
+        <div class="avatar">T</div>
       </div>
     </div>
 
-    <!-- Chat area (greeting + messages) -->
+    <!-- Chat area -->
     <div class="chat-area" id="chatArea">
       <div class="greeting" id="greeting">
-        <div class="greeting-row">
-          <!-- Gemini 4-colour star -->
-          <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
-            <path d="M24 4 C24.8 4 25.5 10 25.2 24 C24.8 10 24 4 24 4Z" fill="#4285f4" stroke="#4285f4" stroke-width="0.5"/>
-            <path d="M24 4 C23.2 4 22.5 10 22.8 24 C23.2 10 24 4 24 4Z" fill="#4285f4" stroke="#4285f4" stroke-width="0.5"/>
-            <path d="M24 44 C24.8 44 25.5 38 25.2 24 C24.8 38 24 44 24 44Z" fill="#fbbc04" stroke="#fbbc04" stroke-width="0.5"/>
-            <path d="M24 44 C23.2 44 22.5 38 22.8 24 C23.2 38 24 44 24 44Z" fill="#fbbc04" stroke="#fbbc04" stroke-width="0.5"/>
-            <path d="M44 24 C44 24.8 38 25.5 24 25.2 C38 24.8 44 24 44 24Z" fill="#34a853" stroke="#34a853" stroke-width="0.5"/>
-            <path d="M44 24 C44 23.2 38 22.5 24 22.8 C38 23.2 44 24 44 24Z" fill="#34a853" stroke="#34a853" stroke-width="0.5"/>
-            <path d="M4 24 C4 24.8 10 25.5 24 25.2 C10 24.8 4 24 4 24Z" fill="#ea4335" stroke="#ea4335" stroke-width="0.5"/>
-            <path d="M4 24 C4 23.2 10 22.5 24 22.8 C10 23.2 4 24 4 24Z" fill="#ea4335" stroke="#ea4335" stroke-width="0.5"/>
-          </svg>
-          <span class="greeting-hi">Hi User</span>
-        </div>
-        <span class="greeting-sub">Where should we start?</span>
+        <!-- Gemini 4-colour star -->
+        <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
+          <path d="M24 4 C24.8 4 25.5 10 25.2 24 C24.8 10 24 4 24 4Z" fill="#4285f4"/>
+          <path d="M24 4 C23.2 4 22.5 10 22.8 24 C23.2 10 24 4 24 4Z" fill="#4285f4"/>
+          <path d="M24 44 C24.8 44 25.5 38 25.2 24 C24.8 38 24 44 24 44Z" fill="#fbbc04"/>
+          <path d="M24 44 C23.2 44 22.5 38 22.8 24 C23.2 38 24 44 24 44Z" fill="#fbbc04"/>
+          <path d="M44 24 C44 24.8 38 25.5 24 25.2 C38 24.8 44 24 44 24Z" fill="#34a853"/>
+          <path d="M44 24 C44 23.2 38 22.5 24 22.8 C38 23.2 44 24 44 24Z" fill="#34a853"/>
+          <path d="M4 24 C4 24.8 10 25.5 24 25.2 C10 24.8 4 24 4 24Z" fill="#ea4335"/>
+          <path d="M4 24 C4 23.2 10 22.5 24 22.8 C10 23.2 4 24 4 24Z" fill="#ea4335"/>
+        </svg>
+        <p class="greeting-hi">Hi Thomas</p>
+        <p class="greeting-sub">Where should we start?</p>
       </div>
     </div>
 
@@ -271,13 +299,9 @@
     <div class="input-zone">
 
       <div class="input-container" data-node-type="input-area">
-        <div class="input-row">
-          <!-- Attach button -->
-          <button class="attach-btn" title="Attach files">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
 
-          <!-- Contenteditable input (required by content.js) -->
+        <!-- Contenteditable textarea (content.js: rich-textarea div.ql-editor[contenteditable]) -->
+        <div class="textarea-row">
           <rich-textarea>
             <div
               class="ql-editor"
@@ -287,104 +311,222 @@
               aria-multiline="true"
             ></div>
           </rich-textarea>
+        </div>
 
-          <div class="input-right">
-            <!-- Model picker — content.js targets data-test-id="bard-mode-menu-button" -->
-            <div style="position:relative">
-              <button class="model-pill" data-test-id="bard-mode-menu-button" aria-label="Open mode picker" id="modelTrigger">
-                <div data-test-id="logo-pill-label-container" id="modelLabel">
-                  <span id="modelName">Fast</span>
-                </div>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
+        <!-- Controls row: mirrors real Gemini's bottom toolbar -->
+        <div class="controls-row">
+          <div class="controls-left">
+            <!-- Attach (+) -->
+            <button class="icon-btn-sm" title="Add files">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <!-- Tools -->
+            <button class="icon-btn-sm" title="Tools">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.8"/></svg>
+              Tools
+            </button>
+          </div>
 
-              <!-- Dropdown — options use role="option" as required by content.js -->
-              <div class="model-menu" id="modelMenu">
-                <div class="model-option" role="option" aria-selected="true" data-model="flash" id="opt-flash">
-                  <div>
-                    <div>Fast</div>
-                    <div class="model-desc">Answers quickly</div>
-                  </div>
-                  <span class="check">✓</span>
-                </div>
-                <div class="model-option" role="option" aria-selected="false" data-model="thinking" id="opt-thinking">
-                  <div>
-                    <div>Thinking</div>
-                    <div class="model-desc">Solves complex problems</div>
-                  </div>
-                  <span class="check">✓</span>
-                </div>
-                <div class="model-option" role="option" aria-selected="false" data-model="pro" id="opt-pro">
-                  <div>
-                    <div>Pro</div>
-                    <div class="model-desc">Advanced maths and code with 3.1 Pro</div>
-                  </div>
-                  <span class="check">✓</span>
-                </div>
+          <div class="controls-right">
+            <!--
+              Model picker trigger.
+              Selectors used by content.js (in priority order):
+                1. button[data-test-id="bard-mode-menu-button"]  (primary)
+                2. button.input-area-switch                       (fallback)
+              Label read via: [data-test-id="logo-pill-label-container"] > span
+            -->
+            <button
+              class="input-area-switch"
+              data-test-id="bard-mode-menu-button"
+              aria-label="Open mode picker"
+              id="modelTrigger"
+            >
+              <div data-test-id="logo-pill-label-container" id="modelLabel">
+                <span id="modelName">Fast</span>
               </div>
-            </div>
+              <!-- Chevron -->
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
 
-            <!-- Send button (shows mic icon when empty, arrow when text present) -->
+            <!-- Send / mic -->
             <button class="send-button" aria-label="Send message" id="sendBtn" disabled>
               <span class="icon-send" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </span>
               <span class="icon-mic" aria-hidden="true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="9" y="2" width="6" height="12" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M5 10a7 7 0 0014 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="12" y1="19" x2="12" y2="22" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="9" y="2" width="6" height="12" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M5 10a7 7 0 0014 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="12" y1="19" x2="12" y2="22" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               </span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Action chips (visible until first message is sent) -->
+      <!-- Action chips -->
       <div class="chips-row" id="chipsRow">
         <button class="chip">🖼️ Create image</button>
         <button class="chip">🎵 Create music</button>
         <button class="chip">Help me learn</button>
         <button class="chip">Write anything</button>
-        <button class="chip">Boost my day</button>
       </div>
 
     </div><!-- .input-zone -->
   </div><!-- .main -->
 </div><!-- .shell -->
 
+<!--
+  Model picker dropdown panel.
+  Mirrors Angular Material's .mat-mdc-menu-panel overlay:
+  - detached from DOM when closed (so document.querySelector("button.mat-mdc-menu-item") → null)
+  - appended to <body> when open
+  This lets content.js reliably detect that the dropdown closed via:
+    !OPTION_SELECTORS.some(s => document.querySelector(s))
+-->
+<div class="mat-mdc-menu-panel" id="modelMenu" role="menu" aria-label="Select model">
+
+  <!-- Group label — matches real Gemini's "Gemini 3" header -->
+  <div class="mat-mdc-menu-group-label" aria-hidden="true">Gemini 3</div>
+
+  <!--
+    Model options: button.mat-mdc-menu-item[role="menuitem"]
+    content.js OPTION_SELECTORS[0] = "button.mat-mdc-menu-item"
+    matchesTarget() uses opt.innerText.split('\n')[0] for the title line.
+    Block <span> elements produce the newline that separates title from description.
+  -->
+  <button class="mat-mdc-menu-item" role="menuitem" aria-selected="true" data-model="flash" id="opt-flash">
+    <div class="model-item-content">
+      <span class="model-item-title">Fast</span>
+      <span class="model-item-desc">Answers quickly</span>
+    </div>
+    <span class="model-item-check" aria-hidden="true">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+  </button>
+
+  <button class="mat-mdc-menu-item" role="menuitem" aria-selected="false" data-model="thinking" id="opt-thinking">
+    <div class="model-item-content">
+      <span class="model-item-title">Thinking</span>
+      <span class="model-item-desc">Solves complex problems</span>
+    </div>
+    <span class="model-item-check" aria-hidden="true">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+  </button>
+
+  <button class="mat-mdc-menu-item" role="menuitem" aria-selected="false" data-model="pro" id="opt-pro">
+    <div class="model-item-content">
+      <span class="model-item-title">Pro</span>
+      <span class="model-item-desc">Advanced maths and code with 3.1 Pro</span>
+    </div>
+    <span class="model-item-check" aria-hidden="true">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+  </button>
+
+  <!-- Upgrade row — matches the "Google AI Plus" entry in the real picker -->
+  <div class="model-upgrade-row">
+    <div>
+      <div class="model-upgrade-title">Google AI Plus</div>
+      <div class="model-upgrade-desc">Get more access to models and features</div>
+    </div>
+    <button class="upgrade-inline-btn">Upgrade</button>
+  </div>
+
+</div><!-- #modelMenu (detached from DOM; appended to body on open) -->
+
 <script>
-  const editor      = document.querySelector(".ql-editor");
-  const sendBtn     = document.getElementById("sendBtn");
-  const chatArea    = document.getElementById("chatArea");
-  const greeting    = document.getElementById("greeting");
-  const chipsRow    = document.getElementById("chipsRow");
+  const editor       = document.querySelector(".ql-editor");
+  const sendBtn      = document.getElementById("sendBtn");
+  const chatArea     = document.getElementById("chatArea");
+  const greeting     = document.getElementById("greeting");
+  const chipsRow     = document.getElementById("chipsRow");
   const modelTrigger = document.getElementById("modelTrigger");
-  const modelMenu   = document.getElementById("modelMenu");
-  const modelName   = document.getElementById("modelName");
+  const modelMenu    = document.getElementById("modelMenu");
+  const modelName    = document.getElementById("modelName");
 
   // ── Model picker ──────────────────────────────────────────────────
+  //
+  // Angular Material overlays work by appending the panel to <body> on open
+  // and removing it on close.  content.js detects the "closed" state with:
+  //   !OPTION_SELECTORS.some(s => document.querySelector(s))
+  // where OPTION_SELECTORS[0] = "button.mat-mdc-menu-item".
+  // So we MUST detach the panel from DOM when it is not visible.
+  //
+  // IMPORTANT: event listeners must be attached to the modelMenu element
+  // directly (via delegation) BEFORE detaching from the DOM.
+  // document.querySelectorAll() won't find detached elements, so direct
+  // forEach on option buttons won't work after detachment.
+
+  let menuOpen = false;
+
+  function positionAndOpen() {
+    const rect = modelTrigger.getBoundingClientRect();
+    Object.assign(modelMenu.style, {
+      position: "fixed",
+      right:    Math.max(0, window.innerWidth - rect.right) + "px",
+      bottom:   Math.max(0, window.innerHeight - rect.top + 6) + "px",
+    });
+    document.body.appendChild(modelMenu);
+    menuOpen = true;
+  }
+
+  function closeMenu() {
+    if (modelMenu.parentNode) modelMenu.parentNode.removeChild(modelMenu);
+    menuOpen = false;
+  }
+
+  // Use event delegation on modelMenu — listener stays attached even when the
+  // element is detached from document (Angular Material does the same).
+  modelMenu.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const opt = e.target.closest(".mat-mdc-menu-item[data-model]");
+    if (!opt) return; // click on non-option (e.g. upgrade row)
+
+    const m = opt.dataset.model;
+
+    // Update aria-selected on all siblings (querySelectorAll on the detached
+    // element itself works fine since we're querying within modelMenu).
+    modelMenu.querySelectorAll(".mat-mdc-menu-item[data-model]").forEach(o => {
+      o.setAttribute("aria-selected", o === opt ? "true" : "false");
+    });
+
+    closeMenu();
+
+    // Simulate Angular's async change-detection cycle —
+    // the trigger label updates after a short delay, exactly as on the real page.
+    setTimeout(() => {
+      const labels = { flash: "Fast", thinking: "Thinking", pro: "Pro" };
+      modelName.textContent = labels[m] || "Fast";
+    }, 250);
+  });
+
+  // Allow tests to set an initial model via ?model=<key> in the URL.
+  // Must run before detach so querySelectorAll still finds the options.
+  (function applyInitialModel() {
+    const m = new URLSearchParams(window.location.search).get("model");
+    if (!m || m === "flash") return;
+    const labels = { flash: "Fast", thinking: "Thinking", pro: "Pro" };
+    if (!labels[m]) return;
+    modelName.textContent = labels[m];
+    modelMenu.querySelectorAll(".mat-mdc-menu-item[data-model]").forEach(o => {
+      o.setAttribute("aria-selected", o.dataset.model === m ? "true" : "false");
+    });
+  })();
+
+  // Detach AFTER attaching the delegated listener — menu starts closed.
+  modelMenu.parentNode.removeChild(modelMenu);
+
   modelTrigger.addEventListener("click", (e) => {
     e.stopPropagation();
-    modelMenu.classList.toggle("open");
+    menuOpen ? closeMenu() : positionAndOpen();
   });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") modelMenu.classList.remove("open");
-  });
-  document.addEventListener("click", () => modelMenu.classList.remove("open"));
 
-  document.querySelectorAll(".model-option").forEach(opt => {
-    opt.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const m = opt.dataset.model;
-      document.querySelectorAll(".model-option").forEach(o => {
-        o.setAttribute("aria-selected", o === opt ? "true" : "false");
-      });
-      modelMenu.classList.remove("open");
-      // Simulate async Angular change-detection cycle — label updates after a
-      // short delay, matching real Gemini's behaviour on fresh/redirected pages.
-      setTimeout(() => {
-        const labels = { flash: "Fast", thinking: "Thinking", pro: "Pro" };
-        modelName.textContent = labels[m] || "Flash";
-      }, 250);
-    });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && menuOpen) closeMenu();
+  });
+
+  // Close on outside click (stopPropagation inside modelMenu prevents false close)
+  document.addEventListener("click", () => {
+    if (menuOpen) closeMenu();
   });
 
   // ── Input → send button state ─────────────────────────────────────
@@ -402,13 +544,13 @@
     startChat();
     const wrap = document.createElement("div");
     wrap.className = "msg-wrap";
-    const msg = document.createElement("div");
+    const msg  = document.createElement("div");
     msg.className = "msg " + role;
 
     const av = document.createElement("div");
     av.className = "msg-avatar";
     if (role === "gemini") {
-      av.innerHTML = `<svg viewBox="0 0 48 48" width="24" height="24" fill="none">
+      av.innerHTML = `<svg viewBox="0 0 48 48" width="22" height="22" fill="none">
         <path d="M24 4 C24.8 4 25.5 10 25.2 24 C24.8 10 24 4 24 4Z" fill="#4285f4"/>
         <path d="M24 4 C23.2 4 22.5 10 22.8 24 C23.2 10 24 4 24 4Z" fill="#4285f4"/>
         <path d="M24 44 C24.8 44 25.5 38 25.2 24 C24.8 38 24 44 24 44Z" fill="#fbbc04"/>
@@ -419,7 +561,7 @@
         <path d="M4 24 C4 23.2 10 22.5 24 22.8 C10 23.2 4 24 4 24Z" fill="#ea4335"/>
       </svg>`;
     } else {
-      av.textContent = "U";
+      av.textContent = "T";
     }
 
     const body = document.createElement("div");
@@ -443,7 +585,7 @@
 
     const av = document.createElement("div");
     av.className = "msg-avatar";
-    av.innerHTML = `<svg viewBox="0 0 48 48" width="24" height="24" fill="none">
+    av.innerHTML = `<svg viewBox="0 0 48 48" width="22" height="22" fill="none">
       <path d="M24 4 C24.8 4 25.5 10 25.2 24 C24.8 10 24 4 24 4Z" fill="#4285f4"/>
       <path d="M24 4 C23.2 4 22.5 10 22.8 24 C23.2 10 24 4 24 4Z" fill="#4285f4"/>
       <path d="M24 44 C24.8 44 25.5 38 25.2 24 C24.8 38 24 44 24 44Z" fill="#fbbc04"/>
