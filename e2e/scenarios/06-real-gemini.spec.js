@@ -63,13 +63,19 @@ async function openGeminiPage(ctx) {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(GEMINI_URL, { waitUntil: "domcontentloaded" });
 
-  // Auto-accept consent overlay (consent.google.com redirect or inline button)
+  // Handle consent overlay: wait briefly so a real user could make their own
+  // choice, then fall back to "Accept all" only if still on the consent page.
   const acceptBtn = page.getByRole("button", { name: /accept all/i });
   try {
     await acceptBtn.waitFor({ state: "visible", timeout: 6_000 });
-    await acceptBtn.click();
-    await page.waitForURL(/gemini\.google\.com/, { timeout: 15_000 });
-  } catch { /* not shown or already accepted */ }
+    // Mirror the 3 s grace period from background.js — give the user a moment.
+    await page.waitForTimeout(3_000);
+    // If the user (or a prior test run) already navigated to Gemini, skip.
+    if (page.url().includes("consent.google.com")) {
+      await acceptBtn.click();
+      await page.waitForURL(/gemini\.google\.com/, { timeout: 15_000 });
+    }
+  } catch { /* consent page not shown or already past it */ }
 
   return page;
 }

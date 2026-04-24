@@ -179,8 +179,13 @@ function setBadgeError() {
 }
 
 // Tabs that navigated to consent.google.com during a pending Ask Gemini
-// operation — we click "Accept all" once they finish loading.
-const _consentTabs = new Set();
+// operation. Maps tabId → pending setTimeout ID (null while page is loading).
+// We wait a few seconds before auto-accepting so the user can make their own
+// choice — if they navigate away first we cancel entirely.
+const _consentTabs = new Map();
+
+/** Delay before falling back to "Accept all" when the user does not interact. */
+const CONSENT_WAIT_MS = 3_000;
 
 chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   const url = info.url ?? tab.url ?? "";
@@ -191,27 +196,47 @@ chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   }
 
   // When a tab redirects to the Google consent page and the extension has a
-  // pending message (meaning WE opened this Gemini tab), auto-click "Accept all"
-  // so the user doesn't have to. We only intervene on our own navigations.
+  // pending message (meaning WE opened this Gemini tab), track it.
   if (info.url?.includes("consent.google.com")) {
     const { pendingMessage } = await chrome.storage.local.get("pendingMessage");
-    if (pendingMessage) _consentTabs.add(tabId);
+    if (pendingMessage) _consentTabs.set(tabId, null);
   }
 
-  if (_consentTabs.has(tabId) && info.status === "complete") {
+  // If the tab navigated away from consent.google.com (user made a choice),
+  // cancel the pending fallback — no need to intervene.
+  if (_consentTabs.has(tabId) && info.url && !info.url.includes("consent.google.com")) {
+    const pending = _consentTabs.get(tabId);
+    if (pending !== null) clearTimeout(pending);
     _consentTabs.delete(tabId);
-    try {
-      await chrome.scripting.executeScript({
-        target: { tabId },
-        func: () => {
-          const btn = Array.from(document.querySelectorAll("button"))
-            .find(b => /accept all/i.test(b.textContent.trim()));
-          if (btn) btn.click();
-        },
-      });
-    } catch (err) {
-      console.warn("[Ask Gemini] Consent auto-accept failed:", err.message);
-    }
+  }
+
+  // Once the consent page has finished loading, wait before auto-accepting.
+  if (_consentTabs.has(tabId) && info.status === "complete") {
+    const existing = _consentTabs.get(tabId);
+    if (existing !== null) clearTimeout(existing);
+
+    const timeoutId = setTimeout(async () => {
+      if (!_consentTabs.has(tabId)) return; // user already navigated away
+      _consentTabs.delete(tabId);
+      try {
+        // Re-check the tab URL — if the user already handled it, skip.
+        const currentTab = await chrome.tabs.get(tabId).catch(() => null);
+        if (!currentTab?.url?.includes("consent.google.com")) return;
+
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          func: () => {
+            const btn = Array.from(document.querySelectorAll("button"))
+              .find(b => /accept all/i.test(b.textContent.trim()));
+            if (btn) btn.click();
+          },
+        });
+      } catch (err) {
+        console.warn("[Ask Gemini] Consent auto-accept failed:", err.message);
+      }
+    }, CONSENT_WAIT_MS);
+
+    _consentTabs.set(tabId, timeoutId);
   }
 });
 
