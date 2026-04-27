@@ -39,6 +39,11 @@ jobs:
           NEW_VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
           jq ".version = \"$NEW_VERSION\"" manifest.json > manifest.tmp && mv manifest.tmp manifest.json
 
+      - name: Update Package Version
+        run: |
+          NEW_VERSION=$(echo "${{ github.ref_name }}" | sed 's/^v//')
+          jq ".version = \"$NEW_VERSION\"" package.json > package.tmp && mv package.tmp package.json
+
       - name: Update README.md Version Badge
         run: |
           NEW_VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
@@ -50,7 +55,7 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add manifest.json README.md
+          git add manifest.json package.json README.md
           git commit -m "chore: bump version to ${{ github.ref_name }} [skip ci]"
           git push origin HEAD:main
 
