@@ -50,12 +50,29 @@ jobs:
           # This replaces the version number inside the Shields.io badge URL
           sed -i "s/version-[0-9]\+\.[0-9]\+\.[0-9]\+-informational/version-$NEW_VERSION-informational/g" README.md
 
+      - name: Generate Release Notes
+        run: |
+          chmod +x generate-changelog.sh
+          ./generate-changelog.sh
+          test -s RELEASE_NOTES.md
+
+      - name: Update Cumulative CHANGELOG.md
+        run: |
+          NEW=$(cat RELEASE_NOTES.md)
+          if [ -f CHANGELOG.md ]; then
+            HEADER=$(awk '/^## /{exit} {print}' CHANGELOG.md)
+            BODY=$(awk '/^## /{found=1} found{print}' CHANGELOG.md)
+            printf '%s\n\n%s\n\n%s\n' "$HEADER" "$NEW" "$BODY" > CHANGELOG.md
+          else
+            printf '# Changelog\n\nAll notable changes to this project will be documented in this file.\n\n%s\n' "$NEW" > CHANGELOG.md
+          fi
+
       - name: Commit and Push Version Bump
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add manifest.json package.json README.md
+          git add manifest.json package.json README.md CHANGELOG.md
           git commit -m "chore: bump version to ${{ github.ref_name }} [skip ci]"
           git push origin HEAD:main
 
@@ -64,12 +81,6 @@ jobs:
 
       - name: Build extension
         run: npm run build
-
-      - name: Generate Manual Changelog
-        run: |
-          chmod +x generate-changelog.sh
-          ./generate-changelog.sh
-          test -s CHANGELOG.md
 
       - name: Run Packaging Script
         run: |
@@ -81,7 +92,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ github.ref_name }}
-          body_path: CHANGELOG.md
+          body_path: RELEASE_NOTES.md
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             dist/ask-gemini-extension.zip

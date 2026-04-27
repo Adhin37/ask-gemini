@@ -50,4 +50,4 @@ fi
         echo "* **Full Changelog:** [View Changes]($COMPARE_URL)"
     fi
 
-} > CHANGELOG.md
+} > RELEASE_NOTES.md
