@@ -163,6 +163,12 @@ The following are prohibited and will result in removal:
   clearly in the description.
 - Clearly identify yourself — not Google — as the seller.
 
+> **Ask Gemini note:** The popup includes a Ko-fi tip button (☕). This is a
+> voluntary donation link to an external site (`ko-fi.com`) — the extension
+> is fully functional without clicking it. Ensure the store description makes
+> clear that the extension is free and the Ko-fi link is optional support for
+> the developer, not a required payment.
+
 ### 4.4 Misleading or Unexpected Behavior
 
 - No deceptive content in titles, descriptions, icons, or screenshots.
@@ -349,7 +355,9 @@ Use this checklist before every submission or update.
 - [ ] `name` and `description` are accurate and up to date
 - [ ] Only the minimum required permissions are declared:
   `storage`, `contextMenus`, `tabs`, `scripting`, `activeTab`
-- [ ] `host_permissions` limited to `https://gemini.google.com/*`
+- [ ] `host_permissions` limited to `https://gemini.google.com/*` and
+  `https://consent.google.com/*` (Google's consent interstitial — required
+  to complete navigation to Gemini in some regions)
 - [ ] No `eval()` or remotely hosted scripts
 - [ ] Icons provided at 16×16, 48×48, and 128×128 px
 
@@ -366,11 +374,18 @@ Use this checklist before every submission or update.
 
 ### Privacy & Data
 
-- [ ] The extension stores messages temporarily in `chrome.storage.local`
-  to pass them to the Gemini tab — this qualifies as user data handling
-- [ ] Confirm no data is sent to third-party servers
-- [ ] Confirm no data is persisted beyond the local browser storage
-- [ ] Privacy policy (if required) discloses local storage usage
+- [ ] **`chrome.storage.local`** — used for: pending message (cleared after
+  injection), prompt history (up to 20 entries, user-clearable)
+- [ ] **`chrome.storage.sync`** — used for: selected model (`flash` /
+  `thinking` / `pro`), UI theme, per-model prompt templates; syncs across
+  the user's Chrome profile — disclose this in the privacy policy
+- [ ] Prompt injection sanitization is applied to all user-supplied text
+  before storage (`INJECTION_PATTERNS`) — document this as a security measure
+- [ ] Confirm no data is sent to any external or third-party server
+- [ ] Confirm no analytics, telemetry, or crash-reporting libraries are
+  included
+- [ ] Privacy policy discloses: local and sync storage usage, what data is
+  stored, and that no data leaves the device
 
 ### Code
 
@@ -400,7 +415,7 @@ Based on official documentation and developer community reports:
 | **Privacy field mismatch** | Ensure dashboard privacy fields match the README/policy |
 | **Obfuscated code** | Not applicable — all code is readable; minification is fine |
 | **Remote code execution** | Not applicable — no `eval()`, no remote scripts |
-| **Misleading functionality claims** | Describe injection as "best-effort"; Gemini's DOM may change |
+| **Misleading functionality claims** | Describe injection as "best-effort"; Gemini's DOM may change; model switching may fail silently if Gemini renames controls |
 | **Single purpose violation** | ✅ Extension has one clear purpose: sending prompts to Gemini |
 | **Deceptive install tactics** | N/A — no ads or install funnels |
 
@@ -410,9 +425,16 @@ Based on official documentation and developer community reports:
 
 - **Avoid broad host permissions.** `<all_urls>` or `https://*/*` dramatically
   increase review time and scrutiny. Ask Gemini correctly uses only
-  `https://gemini.google.com/*`.
+  `https://gemini.google.com/*` and `https://consent.google.com/*`.
+- **Justify `consent.google.com`.** Reviewers may flag a second Google host.
+  Include a brief note in the listing that this is Google's own consent
+  interstitial, required to reach Gemini in some regions — no user data
+  is collected from that domain.
 - **Use `activeTab` over persistent tab permissions** where possible.
 - **Keep code readable.** Minify if needed, but do not obfuscate.
+- **Disclose `chrome.storage.sync`.** Settings that sync across the user's
+  Chrome profile must be mentioned in the privacy policy even though no data
+  leaves the device — reviewers check privacy field accuracy.
 - **Accurate metadata.** Mismatches between the listing and actual behavior
   are a top reason for rejection and re-review.
 - **Review times vary.** Most submissions complete in under 24 hours; 90%
