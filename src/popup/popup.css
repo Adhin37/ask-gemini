@@ -1064,9 +1064,43 @@ html, body {
    so this block never fires there. When the popup is opened as a
    detached window at a larger size, the viewport is wider and the
    popup fills the available space without breaking its layout.     */
-@media (min-width: 400px) {
+@media (width >= 400px) {
   html, body {
     width: 100%;
   }
+}
+
+/* ── Window mode: stretch textarea to fill the window height ──────
+   popup.js adds body.window-mode when ?windowMode=1 is present.
+   Turns .popup into a flex column so .main (and its textarea) grow
+   to absorb any leftover space — no blank gap at the bottom.       */
+body.window-mode {
+  height: 100vh;
+}
+
+body.window-mode .popup {
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+body.window-mode .main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+  min-height: 0;
+}
+
+body.window-mode .input-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+body.window-mode .question-input {
+  flex: 1;
+  min-height: 60px;
 }
 
