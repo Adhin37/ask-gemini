@@ -217,6 +217,17 @@
     .model-item-check svg { display: block; }
     .mat-mdc-menu-item[aria-selected="true"] .model-item-check { display: flex; }
 
+    /* Disabled (quota-locked) option — mirrors real Gemini's locked model appearance */
+    .mat-mdc-menu-item[disabled],
+    .mat-mdc-menu-item[aria-disabled="true"] {
+      opacity: 0.45;
+      cursor: default;
+    }
+    .mat-mdc-menu-item[disabled] .model-item-title,
+    .mat-mdc-menu-item[aria-disabled="true"] .model-item-title {
+      color: var(--text-dim);
+    }
+
     /* Upgrade row at the bottom of the picker */
     .model-upgrade-row {
       display: flex; align-items: center; justify-content: space-between;
@@ -480,6 +491,7 @@
     e.stopPropagation();
     const opt = e.target.closest(".mat-mdc-menu-item[data-model]");
     if (!opt) return; // click on non-option (e.g. upgrade row)
+    if (opt.hasAttribute("disabled") || opt.getAttribute("aria-disabled") === "true") return;
 
     const m = opt.dataset.model;
 
@@ -513,6 +525,21 @@
     // modelMenu is still in DOM here (detach happens below)
     modelMenu.querySelectorAll(".mat-mdc-menu-item[data-model]").forEach(o => {
       o.setAttribute("aria-selected", o.dataset.model === m ? "true" : "false");
+    });
+  })();
+
+  // Test hook: mark specific model options as disabled (quota / sign-in simulation).
+  // Tests set "__testLockedModels" to a comma-separated list of model ids, e.g. "pro,thinking".
+  // Mirrors the real Gemini DOM: disabled="true" aria-disabled="true" on the button element.
+  (function applyTestLockedModels() {
+    const raw = sessionStorage.getItem("__testLockedModels");
+    if (!raw) return;
+    const locked = new Set(raw.split(",").map(s => s.trim()));
+    modelMenu.querySelectorAll(".mat-mdc-menu-item[data-model]").forEach(o => {
+      if (locked.has(o.dataset.model)) {
+        o.setAttribute("disabled", "true");
+        o.setAttribute("aria-disabled", "true");
+      }
     });
   })();
 

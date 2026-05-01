@@ -115,8 +115,11 @@ function hideStatus() {
 
   // ── 2. Guarantee the correct model is active ───────────────────
   if (readModelFromButton() !== modelPref) showStatus("Switching model…");
-  const confirmed = await ensureModel(modelPref);
-  if (!confirmed) {
+  const modelResult = await ensureModel(modelPref);
+  if (modelResult.fellBack === "flash") {
+    showStatus(`${prettyModelName(modelPref)} unavailable — using Fast`);
+    await new Promise((r) => setTimeout(r, 2200));
+  } else if (!modelResult.confirmed) {
     console.warn(
       `[Ask Gemini] Could not confirm model "${modelPref}" after switch. Proceeding anyway.`
     );
@@ -270,6 +273,17 @@ function readModelFromButton() {
 // ══════════════════════════════════════════════════════════════════
 
 /**
+ * Returns a human-readable display name for a canonical model id.
+ * @param {"flash"|"thinking"|"pro"} modelId
+ * @returns {string}
+ */
+function prettyModelName(modelId) {
+  if (modelId === "thinking") return "Thinking";
+  if (modelId === "pro")      return "Pro";
+  return "Fast";
+}
+
+/**
  * Maps a free-form model label string to a canonical model id.
  * @param {string} text
  * @returns {"flash"|"thinking"|"pro"|null}
@@ -419,6 +433,17 @@ function isSelectedOption(el) {
   return false;
 }
 
+/**
+ * Returns true if the picker option is locked (quota exhausted / not signed in / paywall).
+ * @param {Element} el
+ * @returns {boolean}
+ */
+function isOptionDisabled(el) {
+  return el.getAttribute("aria-disabled") === "true" ||
+         el.hasAttribute("disabled") ||
+         el.disabled === true;
+}
+
 
 // ══════════════════════════════════════════════════════════════════
 // MODEL SWITCHING WITH VERIFY
@@ -428,9 +453,14 @@ function isSelectedOption(el) {
  * Ensures the given model is active, switching if necessary, and waits for
  * the UI to confirm the change. Retries up to MAX_ATTEMPTS times in case
  * the page is still initialising (e.g. Angular hasn't settled after a redirect).
+ *
+ * When the requested option is disabled (quota / sign-in) and `target` is
+ * "thinking" or "pro", falls back to "flash" instead of retrying, and returns
+ * `{ confirmed, fellBack: "flash", reason: "locked" }`.
+ *
  * @param {"flash"|"thinking"|"pro"} target
  * @param {number} [_attempt]
- * @returns {Promise<boolean>} true if the correct model is confirmed active
+ * @returns {Promise<{confirmed: boolean, fellBack?: "flash", reason?: "locked"}>}
  */
 async function ensureModel(target, _attempt = 1) {
   const MAX_ATTEMPTS = 3;
@@ -439,10 +469,18 @@ async function ensureModel(target, _attempt = 1) {
 
   if (current === target) {
     console.info("[Ask Gemini] Model already correct — no switch needed.");
-    return true;
+    return { confirmed: true };
   }
 
-  await performModelSwitch(target);
+  const switchStatus = await performModelSwitch(target);
+
+  // If the option is locked and the user asked for a premium model, fall back
+  // to flash immediately — no point retrying a disabled button.
+  if (switchStatus === "disabled" && target !== "flash") {
+    console.warn(`[Ask Gemini] Model "${target}" is locked (quota / sign-in) — falling back to "flash"`);
+    const fallbackResult = await ensureModel("flash");
+    return { confirmed: fallbackResult.confirmed, fellBack: "flash", reason: "locked" };
+  }
 
   // Wait for the dropdown to close — that's the reliable signal Angular
   // processed the option click (avoids an arbitrary fixed sleep).
@@ -460,7 +498,7 @@ async function ensureModel(target, _attempt = 1) {
   const after = readModelFromButton();
   console.debug(`[Ask Gemini] ensureModel after switch: "${after}" (observer resolved: ${switched})`);
 
-  if (after === target) return true;
+  if (after === target) return { confirmed: true };
 
   if (_attempt < MAX_ATTEMPTS) {
     console.debug(`[Ask Gemini] Model switch not confirmed — retrying (${_attempt + 1}/${MAX_ATTEMPTS})…`);
@@ -468,7 +506,7 @@ async function ensureModel(target, _attempt = 1) {
     return ensureModel(target, _attempt + 1);
   }
 
-  return false;
+  return { confirmed: false };
 }
 
 /**
@@ -477,12 +515,13 @@ async function ensureModel(target, _attempt = 1) {
  * to avoid premature resolution when other [role="option"] elements exist
  * elsewhere on the page. Closes the dropdown if no match is found.
  * @param {"flash"|"thinking"|"pro"} target
+ * @returns {Promise<"switched"|"disabled"|"not-found">}
  */
 async function performModelSwitch(target) {
   const triggerBtn = findModelTrigger();
   if (!triggerBtn) {
     console.debug("[Ask Gemini] performModelSwitch: trigger not found");
-    return;
+    return "not-found";
   }
 
   triggerBtn.click();
@@ -505,15 +544,22 @@ async function performModelSwitch(target) {
     4_000
   );
 
-  if (targetOption) {
-    console.debug(`[Ask Gemini] Clicking: "${(targetOption.innerText || targetOption.textContent).trim().slice(0, 50)}" for target="${target}"`);
-    targetOption.scrollIntoView({ block: "nearest" });
-    targetOption.click();
-    return;
+  if (!targetOption) {
+    console.debug(`[Ask Gemini] No option matched "${target}" — closing dropdown`);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    return "not-found";
   }
 
-  console.debug(`[Ask Gemini] No option matched "${target}" — closing dropdown`);
-  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  if (isOptionDisabled(targetOption)) {
+    console.debug(`[Ask Gemini] Option "${target}" is disabled (quota/sign-in) — closing dropdown`);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    return "disabled";
+  }
+
+  console.debug(`[Ask Gemini] Clicking: "${(targetOption.innerText || targetOption.textContent).trim().slice(0, 50)}" for target="${target}"`);
+  targetOption.scrollIntoView({ block: "nearest" });
+  targetOption.click();
+  return "switched";
 }
 
 

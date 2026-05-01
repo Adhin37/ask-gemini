@@ -197,6 +197,90 @@ const MODEL_SWITCH_CASES = [
   },
 ];
 
+/**
+ * Opens a fresh mock Gemini page with the given pending message/model
+ * and a set of model ids that should be rendered as locked (disabled).
+ *
+ * @param {string} msg
+ * @param {string} model
+ * @param {string[]} lockedModels  — model ids to mark as disabled in the picker
+ * @param {string} [initialModel]
+ * @returns {Promise<import("@playwright/test").Page>}
+ */
+async function openGeminiWithLocked(msg, model, lockedModels, initialModel = "flash") {
+  const page = await context.newPage();
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.bringToFront();
+
+  if (initialModel !== "flash") {
+    await page.addInitScript(
+      (m) => sessionStorage.setItem("__testInitialModel", m),
+      initialModel
+    );
+  }
+
+  if (lockedModels.length > 0) {
+    await page.addInitScript(
+      (ids) => sessionStorage.setItem("__testLockedModels", ids),
+      lockedModels.join(",")
+    );
+  }
+
+  await context.serviceWorkers()[0].evaluate(
+    ({ msg: m, mdl }) => chrome.storage.local.set({ pendingMessage: m, pendingModel: mdl }),
+    { msg, mdl: model }
+  );
+
+  await page.goto("https://gemini.google.com/app");
+  await page.waitForLoadState("domcontentloaded");
+  return page;
+}
+
+// ── Tests 6–7: fallback to Fast when premium model is locked ─────
+
+test("Gemini — Pro locked (quota) falls back to Fast with warning", async () => {
+  const page = await openGeminiWithLocked(
+    "Why is the sky blue?",
+    "pro",
+    ["pro"]   // Pro is quota-locked; Fast is available
+  );
+
+  // content.js should detect the disabled option and fall back to Fast
+  await expect(page.locator("#modelName")).toHaveText("Fast", { timeout: 10_000 });
+
+  // The warning overlay must have been shown at some point during injection.
+  // We assert the final state: message was injected and model ended on Fast.
+  await expect(page.locator(".msg.user")).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator(".msg.user .msg-body"))
+    .toContainText("sky blue", { timeout: 5_000 });
+  await expect(page.locator(".msg.gemini .msg-body:not(:has(.typing-dots))"))
+    .toBeVisible({ timeout: 8_000 });
+
+  await page.waitForTimeout(800);
+  await page.close();
+});
+
+test("Gemini — Thinking locked (not signed in) falls back to Fast with warning", async () => {
+  // Simulate the not-signed-in case: both Pro and Thinking are disabled.
+  const page = await openGeminiWithLocked(
+    "Explain transformer architecture.",
+    "thinking",
+    ["pro", "thinking"]
+  );
+
+  // Falls back to Fast
+  await expect(page.locator("#modelName")).toHaveText("Fast", { timeout: 10_000 });
+
+  await expect(page.locator(".msg.user")).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator(".msg.user .msg-body"))
+    .toContainText("transformer", { timeout: 5_000 });
+  await expect(page.locator(".msg.gemini .msg-body:not(:has(.typing-dots))"))
+    .toBeVisible({ timeout: 8_000 });
+
+  await page.waitForTimeout(800);
+  await page.close();
+});
+
 for (const { popupModel, initialModel, expectedLabel, question, contains } of MODEL_SWITCH_CASES) {
   test(`Gemini — model switch to ${popupModel} then send`, async () => {
     const popup = await openPopupWindow(context, extensionId);
