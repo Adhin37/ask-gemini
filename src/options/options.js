@@ -8,6 +8,8 @@ import {
   DEFAULT_TEMPLATES_BY_MODEL,
   DEFAULT_PROMPT_ENG_RULES,
 } from "../shared/constants.js";
+import { t, localizeModelName } from "../shared/stringUtils.js";
+import { applyI18n } from "../shared/i18nDom.js";
 
 const PE_TEMPLATE_MAX = 400;
 
@@ -53,7 +55,7 @@ document.querySelectorAll(".nav-item").forEach(link => {
 const manifest = chrome.runtime.getManifest();
 const ver = `v${manifest.version}`;
 document.getElementById("extVersion").textContent   = ver;
-document.getElementById("aboutVersion").textContent = `Version ${manifest.version}`;
+document.getElementById("aboutVersion").textContent = t("options_about_version", manifest.version);
 
 document.getElementById("brandLogoBtn").addEventListener("click", () => chrome.tabs.create({ url: GEMINI_URL }));
 document.getElementById("aboutLogoBtn").addEventListener("click", () => chrome.tabs.create({ url: GEMINI_URL }));
@@ -74,7 +76,7 @@ function renderShortcutKeys(shortcutStr) {
   if (!shortcutStr) {
     const span = document.createElement("span");
     span.style.cssText = "color:var(--text-hint);font-size:12px";
-    span.textContent = "Not set";
+    span.textContent = t("options_shortcut_not_set");
     shortcutDisplay.appendChild(span);
     return;
   }
@@ -164,8 +166,7 @@ document.getElementById("modelControl")?.addEventListener("click", async (e) => 
   if (val === currentModel) return;
   await chrome.storage.sync.set({ askGeminiModel: val });
   applyModel(val);
-  const labels = { flash: "Fast", pro: "Pro", thinking: "Think" };
-  showToast(`Model set to ${labels[val] || val}`);
+  showToast(t("options_toast_model_set", localizeModelName(val)));
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -202,10 +203,10 @@ function renderHistory(items, query = "") {
 
   if (filtered.length === 0) {
     emptyState.style.display = "flex";
-    emptyState.querySelector("p").textContent    = query ? "No matches." : "No history yet.";
+    emptyState.querySelector("p").textContent    = query ? t("options_history_no_matches_title") : t("options_history_empty_title");
     emptyState.querySelector("span").textContent = query
-      ? `No prompts containing "${query}".`
-      : "Questions you send to Gemini will appear here.";
+      ? t("options_history_no_matches_sub", query)
+      : t("options_history_empty_sub");
     return;
   }
   emptyState.style.display = "none";
@@ -224,19 +225,19 @@ function renderHistory(items, query = "") {
         <div class="history-time">${formatTime(item.ts)}</div>
       </div>
       <div class="history-actions">
-        <button class="hist-btn" title="Send to Gemini" data-action="send" data-text="${escAttr(item.text)}">
+        <button class="hist-btn" title="${t("options_history_send_title")}" data-action="send" data-text="${escAttr(item.text)}">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
             <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M22 2L15 22 11 13 2 9l20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <button class="hist-btn" title="Copy" data-action="copy" data-text="${escAttr(item.text)}">
+        <button class="hist-btn" title="${t("options_history_copy_title")}" data-action="copy" data-text="${escAttr(item.text)}">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
             <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
             <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" stroke-width="2"/>
           </svg>
         </button>
-        <button class="hist-btn danger" title="Delete" data-action="delete" data-text="${escAttr(item.text)}">
+        <button class="hist-btn danger" title="${t("options_history_delete_title")}" data-action="delete" data-text="${escAttr(item.text)}">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
             <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -291,8 +292,8 @@ async function copyToClipboard(text, btn) {
     const origChildren = [...btn.childNodes];
     btn.innerHTML = "<svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6L9 17l-5-5\" stroke=\"#7c6af7\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>";
     setTimeout(() => { btn.replaceChildren(...origChildren); }, 1200);
-    showToast("Copied to clipboard");
-  } catch (_) { showToast("Copy failed"); }
+    showToast(t("options_toast_copied"));
+  } catch (_) { showToast(t("options_toast_copy_failed")); }
 }
 
 /**
@@ -305,7 +306,7 @@ async function deleteHistoryItem(text) {
   await chrome.storage.local.set({ askGeminiHistory: updated });
   allHistory = updated;
   renderHistory(allHistory, searchInput.value.trim());
-  showToast("Entry removed");
+  showToast(t("options_toast_entry_removed"));
 }
 
 clearBtn.addEventListener("click", () => {
@@ -321,7 +322,7 @@ confirmOk.addEventListener("click", async () => {
   allHistory = [];
   renderHistory([]);
   overlay.classList.remove("visible");
-  showToast("History cleared");
+  showToast(t("options_toast_history_cleared"));
 });
 
 searchInput.addEventListener("input", () => {
@@ -339,8 +340,7 @@ chrome.storage.onChanged.addListener((changes) => {
 // 7. TEMPLATES  (per-model)
 // ══════════════════════════════════════════════════════════════════
 
-const TMPL_MODELS       = ["flash", "thinking", "pro"];
-const TMPL_MODEL_LABELS = { flash: "Fast", thinking: "Think", pro: "Pro" };
+const TMPL_MODELS = ["flash", "thinking", "pro"];
 
 const addTemplateBtn    = document.getElementById("addTemplateBtn");
 const tmplFormCard      = document.getElementById("tmplFormCard");
@@ -443,13 +443,13 @@ function renderTemplates() {
       <span class="tmpl-card-idx">${idx + 1}</span>
       <div class="tmpl-card-text">${displayHtml}</div>
       <div class="tmpl-card-actions">
-        <button class="hist-btn" title="Edit" data-action="edit" data-idx="${idx}">
+        <button class="hist-btn" title="${t("options_tmpl_edit_title")}" data-action="edit" data-idx="${idx}">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <button class="hist-btn danger" title="Delete" data-action="delete" data-idx="${idx}">
+        <button class="hist-btn danger" title="${t("options_tmpl_delete_title")}" data-action="delete" data-idx="${idx}">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
             <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -491,7 +491,7 @@ tmplModelTabs.addEventListener("click", (e) => {
 
 addTemplateBtn.addEventListener("click", () => {
   editingIndex = -1;
-  tmplFormLabel.textContent = `New template — ${TMPL_MODEL_LABELS[activeTemplateModel]}`;
+  tmplFormLabel.textContent = t("options_tmpl_form_new", localizeModelName(activeTemplateModel));
   tmplTextarea.value = "";
   tmplSaveBtn.disabled = true;
   updateCharCount();
@@ -506,7 +506,7 @@ addTemplateBtn.addEventListener("click", () => {
  */
 function openEditForm(idx) {
   editingIndex = idx;
-  tmplFormLabel.textContent = `Edit template ${idx + 1} — ${TMPL_MODEL_LABELS[activeTemplateModel]}`;
+  tmplFormLabel.textContent = t("options_tmpl_form_edit", String(idx + 1), localizeModelName(activeTemplateModel));
   tmplTextarea.value = getActiveTemplates()[idx];
   updateCharCount();
   tmplSaveBtn.disabled = tmplTextarea.value.trim().length === 0;
@@ -554,7 +554,7 @@ tmplSaveBtn.addEventListener("click", async () => {
   editingIndex = -1;
   renderModelTabs();
   renderTemplates();
-  showToast(wasEditing ? "Template updated" : "Template saved");
+  showToast(wasEditing ? t("options_toast_tmpl_updated") : t("options_toast_tmpl_saved"));
 });
 
 /**
@@ -564,7 +564,7 @@ tmplSaveBtn.addEventListener("click", async () => {
 function confirmDeleteTemplate(idx) {
   pendingDeleteIndex = idx;
   const preview = getActiveTemplates()[idx].replace(/\n/g, "↵").slice(0, 60);
-  tmplDeleteBody.textContent = `"${preview}" will be permanently removed.`;
+  tmplDeleteBody.textContent = t("options_tmpl_delete_body", preview);
   tmplDeleteOverlay.classList.add("visible");
 }
 
@@ -590,7 +590,7 @@ tmplDeleteConfirm.addEventListener("click", async () => {
   pendingDeleteIndex = -1;
   renderModelTabs();
   renderTemplates();
-  showToast("Template deleted");
+  showToast(t("options_toast_tmpl_deleted"));
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -630,14 +630,14 @@ summarizePrefixSaveBtn.addEventListener("click", async () => {
   const val = summarizePrefixTextarea.value;
   if (!val.trim() || val.length > SUMMARIZE_PREFIX_MAX) return;
   await chrome.storage.sync.set({ askGeminiSummarizePrefix: val });
-  showToast("Summarize prefix saved");
+  showToast(t("options_toast_summarize_saved"));
 });
 
 summarizePrefixResetBtn.addEventListener("click", async () => {
   summarizePrefixTextarea.value = DEFAULT_SUMMARIZE_PREFIX;
   updateSummarizePrefixCharCount();
   await chrome.storage.sync.set({ askGeminiSummarizePrefix: DEFAULT_SUMMARIZE_PREFIX });
-  showToast("Reset to default");
+  showToast(t("options_toast_reset_default"));
 });
 
 /** Loads the summarize prefix from sync storage and populates the textarea. */
@@ -699,7 +699,7 @@ function _buildRuleCard(rule) {
 
   const toggleLabel = document.createElement("label");
   toggleLabel.className = "toggle-switch toggle-sm";
-  toggleLabel.title = rule.enabled ? "Disable rule" : "Enable rule";
+  toggleLabel.title = rule.enabled ? t("options_pe_rule_disable_title") : t("options_pe_rule_enable_title");
   const toggleInput = document.createElement("input");
   toggleInput.type = "checkbox";
   toggleInput.className = "pe-rule-toggle";
@@ -729,8 +729,8 @@ function _buildRuleCard(rule) {
 
   const resetBtn = document.createElement("button");
   resetBtn.className = "btn-ghost btn-xs pe-rule-reset";
-  resetBtn.textContent = "Reset";
-  resetBtn.title = "Reset to default template";
+  resetBtn.textContent = t("options_pe_rule_reset_btn");
+  resetBtn.title = t("options_pe_rule_reset_title");
 
   header.appendChild(toggleLabel);
   header.appendChild(labelEl);
@@ -744,7 +744,7 @@ function _buildRuleCard(rule) {
   textarea.rows = 1;
   textarea.maxLength = PE_TEMPLATE_MAX;
   textarea.value = rule.template;
-  textarea.placeholder = "Template — use {selection} for the selected text";
+  textarea.placeholder = t("options_pe_rule_placeholder");
   card.appendChild(textarea);
 
   // ── Char count + preview row ──────────────────────────────────
@@ -759,7 +759,7 @@ function _buildRuleCard(rule) {
   previewWrap.className = "ctx-preview-wrap pe-preview-wrap";
   const previewLabel = document.createElement("span");
   previewLabel.className = "ctx-preview-label";
-  previewLabel.textContent = "Preview";
+  previewLabel.textContent = t("options_pe_preview_label");
   const previewBox = document.createElement("div");
   previewBox.className = "ctx-preview-box";
   const previewText = document.createElement("span");
@@ -777,7 +777,7 @@ function _buildRuleCard(rule) {
   toggleInput.addEventListener("change", () => {
     const r = _peSettings.rules.find(x => x.id === rule.id);
     if (r) r.enabled = toggleInput.checked;
-    toggleLabel.title = toggleInput.checked ? "Disable rule" : "Enable rule";
+    toggleLabel.title = toggleInput.checked ? t("options_pe_rule_disable_title") : t("options_pe_rule_enable_title");
     _peScheduleSave(rule.id);
   });
 
@@ -801,7 +801,7 @@ function _buildRuleCard(rule) {
     _updatePeCharCount(charCount, def.template.length);
     _updatePePreview(previewText, def.template);
     _peScheduleSave(rule.id);
-    showToast("Rule reset to default");
+    showToast(t("options_toast_rule_reset"));
   });
 
   return card;
@@ -824,7 +824,7 @@ function _updatePeCharCount(el, len) {
  * @param {string}      template
  */
 function _updatePePreview(el, template) {
-  el.textContent = template.replace(/\{selection\}/g, "…your selected text…");
+  el.textContent = template.replace(/\{selection\}/g, t("options_pe_preview_placeholder"));
 }
 
 /**
@@ -835,7 +835,7 @@ function _peScheduleSave(ruleId) {
   clearTimeout(_peDebounce[ruleId]);
   _peDebounce[ruleId] = setTimeout(async () => {
     await chrome.storage.sync.set({ askGeminiPromptEng: _peSettings });
-    showToast("Saved");
+    showToast(t("options_toast_saved"));
   }, 400);
 }
 
@@ -855,7 +855,7 @@ function renderPromptEngRules(rules) {
   footer.className = "pe-rules-footer";
   const resetAllBtn = document.createElement("button");
   resetAllBtn.className = "btn-ghost";
-  resetAllBtn.textContent = "Reset all rules to defaults";
+  resetAllBtn.textContent = t("options_pe_reset_all_btn");
   resetAllBtn.addEventListener("click", () => {
     document.getElementById("peResetAllOverlay").classList.add("visible");
   });
@@ -867,7 +867,7 @@ promptEngToggle.addEventListener("change", async () => {
   _peSettings.enabled = promptEngToggle.checked;
   _peSetVisibility(_peSettings.enabled);
   await chrome.storage.sync.set({ askGeminiPromptEng: _peSettings });
-  showToast(_peSettings.enabled ? "Prompt engineering enabled" : "Prompt engineering disabled");
+  showToast(_peSettings.enabled ? t("options_toast_pe_enabled") : t("options_toast_pe_disabled"));
 });
 
 /** Loads prompt-engineering settings from sync storage and renders the rule cards. */
@@ -895,7 +895,7 @@ peResetAllConfirm.addEventListener("click", async () => {
   _peSettings.rules = _mergeRules([]);
   await chrome.storage.sync.set({ askGeminiPromptEng: _peSettings });
   renderPromptEngRules(_peSettings.rules);
-  showToast("All rules reset to defaults");
+  showToast(t("options_toast_rules_reset_all"));
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -948,10 +948,10 @@ function formatTime(ts) {
   if (!ts) return "";
   const d    = new Date(ts);
   const diff = Date.now() - d;
-  if (diff < 60_000)      return "just now";
-  if (diff < 3_600_000)   return `${Math.floor(diff / 60_000)}m ago`;
-  if (diff < 86_400_000)  return `${Math.floor(diff / 3_600_000)}h ago`;
-  if (diff < 604_800_000) return `${Math.floor(diff / 86_400_000)}d ago`;
+  if (diff < 60_000)      return t("options_time_just_now");
+  if (diff < 3_600_000)   return t("options_time_minutes_ago", String(Math.floor(diff / 60_000)));
+  if (diff < 86_400_000)  return t("options_time_hours_ago",   String(Math.floor(diff / 3_600_000)));
+  if (diff < 604_800_000) return t("options_time_days_ago",    String(Math.floor(diff / 86_400_000)));
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
@@ -978,6 +978,7 @@ function showToast(msg) {
 // ══════════════════════════════════════════════════════════════════
 
 (async () => {
+  applyI18n();
   const data = await chrome.storage.sync.get(["askGeminiTheme", "askGeminiModel"]);
   applyTheme(data.askGeminiTheme || "auto");
   applyModel(data.askGeminiModel || "flash");

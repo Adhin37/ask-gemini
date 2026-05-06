@@ -45,7 +45,7 @@
         </div>
         <div class="logo-text">
           <span class="logo-name">Ask Gemini</span>
-          <span class="logo-tag">AI Assistant</span>
+          <span class="logo-tag" data-i18n="popup_logo_tag">AI Assistant</span>
         </div>
       </div>
 
@@ -54,16 +54,21 @@
           Model switcher: 3 buttons.
           Inactive → only .model-char shows (single letter, compact).
           Active   → .model-char + .model-tail visible (animates width).
+          The char and tail text are filled by popup.js via localizeModelName()
+          so they reflect the active locale.
         -->
         <div class="model-switcher" id="modelSwitcher">
-          <button class="model-opt" data-model="flash" title="Gemini Flash — quick &amp; efficient">
-            <span class="model-char">F</span><span class="model-tail">ast</span>
+          <button class="model-opt" data-model="flash"
+            data-i18n-attr="title:popup_model_flash_title">
+            <span class="model-char" data-i18n="model_char_flash">F</span><span class="model-tail" data-i18n="model_tail_flash">ast</span>
           </button>
-          <button class="model-opt" data-model="thinking" title="Gemini Thinking — deeper reasoning (slower)">
-            <span class="model-char">T</span><span class="model-tail">hink</span>
+          <button class="model-opt" data-model="thinking"
+            data-i18n-attr="title:popup_model_thinking_title">
+            <span class="model-char" data-i18n="model_char_thinking">T</span><span class="model-tail" data-i18n="model_tail_thinking">hink</span>
           </button>
-          <button class="model-opt" data-model="pro" title="Gemini Pro ✦ — most capable (requires Gemini Advanced)">
-            <span class="model-char">P</span><span class="model-tail">ro</span>
+          <button class="model-opt" data-model="pro"
+            data-i18n-attr="title:popup_model_pro_title">
+            <span class="model-char" data-i18n="model_char_pro">P</span><span class="model-tail" data-i18n="model_tail_pro">ro</span>
           </button>
         </div>
 
@@ -76,7 +81,7 @@
               <line class="kofi-steam kofi-steam-2" x1="10" y1="1" x2="10" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
               <line class="kofi-steam kofi-steam-3" x1="14" y1="1" x2="14" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
             </svg>
-            <span class="kofi-tooltip">Buy me a coffee ☕</span>
+            <span class="kofi-tooltip" data-i18n="popup_kofi_tooltip">Buy me a coffee ☕</span>
           </a>
         </div>
       </div>
@@ -88,9 +93,10 @@
         <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="2"/>
         <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <span class="sel-label">Selection:</span>
+      <span class="sel-label" data-i18n="popup_selection_label">Selection:</span>
       <span class="sel-text" id="selectionText"></span>
-      <button class="sel-clear" id="selectionClear" title="Clear">&#x2715;</button>
+      <button class="sel-clear" id="selectionClear"
+        data-i18n-attr="title:popup_selection_clear_title">&#x2715;</button>
     </div>
 
     <!-- ── Injection warning ── -->
@@ -100,10 +106,10 @@
         <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         <line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
       </svg>
-      <span class="inject-msg">Suspicious content — may attempt to override Gemini's behavior.</span>
+      <span class="inject-msg" data-i18n="popup_inject_msg">Suspicious content — may attempt to override Gemini's behavior.</span>
       <div class="inject-actions">
-        <button class="inject-cancel-btn" id="injectCancel">Cancel</button>
-        <button class="inject-send-btn" id="injectSendAnyway">Send anyway</button>
+        <button class="inject-cancel-btn" id="injectCancel" data-i18n="popup_inject_cancel">Cancel</button>
+        <button class="inject-send-btn" id="injectSendAnyway" data-i18n="popup_inject_send_anyway">Send anyway</button>
       </div>
     </div>
 
@@ -116,8 +122,9 @@
           <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/>
           <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/>
         </svg>
-        <span>Templates</span>
-        <button class="tmpl-close-btn" id="tmplCloseBtn" title="Close">
+        <span data-i18n="popup_templates_header">Templates</span>
+        <button class="tmpl-close-btn" id="tmplCloseBtn"
+          data-i18n-attr="title:popup_templates_close_title">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
           </svg>
@@ -125,8 +132,8 @@
       </div>
       <div class="tmpl-list" id="tmplList"></div>
       <div class="tmpl-empty" id="tmplEmpty">
-        No templates —
-        <button class="tmpl-settings-link" id="tmplSettingsLink">add in Settings</button>
+        <span data-i18n="popup_templates_empty_text">No templates —</span>
+        <button class="tmpl-settings-link" id="tmplSettingsLink" data-i18n="popup_templates_add_settings">add in Settings</button>
       </div>
     </div>
 
@@ -157,14 +164,16 @@
         </div>
 
         <div class="input-footer">
-          <span class="hint" id="hint">↵ Send</span>
+          <span class="hint" id="hint" data-i18n="popup_hint_send">↵ Send</span>
           <input type="file" id="fileInput" multiple accept="image/*" style="display:none" />
-          <button class="attach-btn" id="attachBtn" title="Attach image (drag &amp; drop also works)">
+          <button class="attach-btn" id="attachBtn"
+            data-i18n-attr="title:popup_attach_title">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
               <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
-          <button class="tmpl-trigger-btn" id="tmplTriggerBtn" title="Templates (/)">
+          <button class="tmpl-trigger-btn" id="tmplTriggerBtn"
+            data-i18n-attr="title:popup_templates_trigger_title">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
               <rect class="tmpl-rect tmpl-rect-1" x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/>
               <rect class="tmpl-rect tmpl-rect-2" x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/>
@@ -172,12 +181,13 @@
               <rect class="tmpl-rect tmpl-rect-4" x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/>
             </svg>
           </button>
-          <button class="send-btn" id="sendBtn" title="Send to Gemini">
+          <button class="send-btn" id="sendBtn"
+            data-i18n-attr="title:popup_send_title">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M22 2L15 22 11 13 2 9l20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <span>Ask</span>
+            <span data-i18n="popup_send_label">Ask</span>
           </button>
         </div>
       </div>

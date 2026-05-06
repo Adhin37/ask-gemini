@@ -1,7 +1,9 @@
 // welcome.js
+import { applyI18n } from "../shared/i18nDom.js";
 
 /** Applies the saved theme and wires the close-tab button on the welcome page. */
 async function init() {
+  applyI18n();
   // 1. Apply Theme (matches your existing logic)
   const data = await chrome.storage.sync.get("askGeminiTheme");
   const theme = data.askGeminiTheme || "auto";

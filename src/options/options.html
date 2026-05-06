@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ask Gemini — Settings</title>
+  <title data-i18n="options_title">Ask Gemini — Settings</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
@@ -19,7 +19,8 @@
 
     <!-- ── Sidebar ── -->
     <nav class="sidebar">
-      <div class="brand" id="brandLogoBtn" title="Open Gemini">
+      <div class="brand" id="brandLogoBtn"
+        data-i18n-attr="title:options_open_gemini_title">
         <div class="brand-icon">
           <svg width="26" height="26" viewBox="0 0 36 36" fill="none">
             <defs>
@@ -57,7 +58,7 @@
             <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
             <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
-          History
+          <span data-i18n="options_nav_history">History</span>
         </a>
         <a class="nav-item" data-section="templates" href="#">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
@@ -66,29 +67,28 @@
             <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/>
             <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2"/>
           </svg>
-          Templates
+          <span data-i18n="options_nav_templates">Templates</span>
         </a>
         <a class="nav-item" data-section="appearance" href="#">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
             <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/>
             <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
-          Appearance
+          <span data-i18n="options_nav_appearance">Appearance</span>
         </a>
-        <!-- ── NEW nav item ── -->
         <a class="nav-item" data-section="contextmenu" href="#">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
             <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <rect x="2" y="3" width="9" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
           </svg>
-          Context Menu
+          <span data-i18n="options_nav_context_menu">Context Menu</span>
         </a>
         <a class="nav-item" data-section="shortcut" href="#">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
             <rect x="2" y="6" width="20" height="14" rx="3" stroke="currentColor" stroke-width="2"/>
             <path d="M8 10h8M8 14h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
-          Shortcut
+          <span data-i18n="options_nav_shortcut">Shortcut</span>
         </a>
         <a class="nav-item" data-section="about" href="#">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
@@ -96,7 +96,7 @@
             <line x1="12" y1="8" x2="12" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             <line x1="12" y1="12" x2="12" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
-          About
+          <span data-i18n="options_nav_about">About</span>
         </a>
       </nav>
 
@@ -108,7 +108,7 @@
           <line class="kofi-steam kofi-steam-2" x1="10" y1="1" x2="10" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
           <line class="kofi-steam kofi-steam-3" x1="14" y1="1" x2="14" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
-        Buy me a coffee
+        <span data-i18n="options_kofi_text">Buy me a coffee</span>
       </a>
     </nav>
 
@@ -119,8 +119,8 @@
       <section class="section active" id="section-history">
         <div class="section-header">
           <div>
-            <h1 class="section-title">Prompt History</h1>
-            <p class="section-desc">Your last 20 queries, most recent first. Click any entry to re-use it.</p>
+            <h1 class="section-title" data-i18n="options_history_title">Prompt History</h1>
+            <p class="section-desc" data-i18n="options_history_desc">Your last 20 queries, most recent first. Click any entry to re-use it.</p>
           </div>
           <button class="btn-ghost btn-danger" id="clearHistoryBtn">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
@@ -129,7 +129,7 @@
               <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" stroke-width="2"/>
             </svg>
-            Clear all
+            <span data-i18n="options_history_clear_btn">Clear all</span>
           </button>
         </div>
         <div class="search-wrap">
@@ -137,7 +137,8 @@
             <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
             <line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
-          <input type="text" id="historySearch" class="search-input" placeholder="Filter history…" />
+          <input type="text" id="historySearch" class="search-input"
+            data-i18n-attr="placeholder:options_history_search_ph" placeholder="Filter history…" />
         </div>
         <div class="history-list" id="historyList"></div>
         <div class="empty-state" id="emptyState" style="display:none">
@@ -145,8 +146,8 @@
             <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
             <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
           </svg>
-          <p>No history yet.</p>
-          <span>Questions you send to Gemini will appear here.</span>
+          <p data-i18n="options_history_empty_title">No history yet.</p>
+          <span data-i18n="options_history_empty_sub">Questions you send to Gemini will appear here.</span>
         </div>
       </section>
 
@@ -154,40 +155,41 @@
       <section class="section" id="section-templates">
         <div class="section-header">
           <div>
-            <h1 class="section-title">Templates</h1>
-            <p class="section-desc">Per-model prompt snippets — trigger them with <kbd class="inline-kbd">/</kbd> or the grid button in the popup. Each model has its own list.</p>
+            <h1 class="section-title" data-i18n="options_templates_title">Templates</h1>
+            <p class="section-desc" data-i18n="options_templates_desc">Per-model prompt snippets — trigger them with <kbd class="inline-kbd">/</kbd> or the grid button in the popup. Each model has its own list.</p>
           </div>
           <button class="btn-ghost" id="addTemplateBtn">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
               <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            Add template
+            <span data-i18n="options_templates_add_btn">Add template</span>
           </button>
         </div>
 
-        <!-- Model tabs -->
+        <!-- Model tabs — labels filled by applyI18n() via data-i18n -->
         <div class="tmpl-model-tabs" id="tmplModelTabs">
           <button class="tmpl-model-tab active" data-model="flash">
-            Fast <span class="tmpl-tab-badge">0</span>
+            <span data-i18n="model_label_flash">Fast</span> <span class="tmpl-tab-badge">0</span>
           </button>
           <button class="tmpl-model-tab" data-model="thinking">
-            Think <span class="tmpl-tab-badge">0</span>
+            <span data-i18n="model_label_thinking">Think</span> <span class="tmpl-tab-badge">0</span>
           </button>
           <button class="tmpl-model-tab" data-model="pro">
-            Pro <span class="tmpl-tab-badge">0</span>
+            <span data-i18n="model_label_pro">Pro</span> <span class="tmpl-tab-badge">0</span>
           </button>
         </div>
 
         <div class="card tmpl-form-card" id="tmplFormCard" style="display:none">
           <div class="tmpl-form-label" id="tmplFormLabel">New template</div>
-          <textarea id="tmplTextarea" class="tmpl-textarea" placeholder="e.g.  Summarize: " rows="3" maxlength="400"></textarea>
+          <textarea id="tmplTextarea" class="tmpl-textarea" rows="3" maxlength="400"
+            data-i18n-attr="placeholder:options_templates_placeholder"></textarea>
           <div class="tmpl-char-row">
             <span class="tmpl-char-count" id="tmplCharCount">0 / 400</span>
           </div>
           <div class="tmpl-form-actions">
-            <button class="btn-ghost" id="tmplCancelBtn">Cancel</button>
-            <button class="btn-primary" id="tmplSaveBtn" disabled>Save</button>
+            <button class="btn-ghost" id="tmplCancelBtn" data-i18n="options_templates_cancel">Cancel</button>
+            <button class="btn-primary" id="tmplSaveBtn" disabled data-i18n="options_templates_save">Save</button>
           </div>
         </div>
 
@@ -200,8 +202,8 @@
             <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
             <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
           </svg>
-          <p>No templates yet.</p>
-          <span>Click "Add template" to create your first snippet.</span>
+          <p data-i18n="options_templates_empty_title">No templates yet.</p>
+          <span data-i18n="options_templates_empty_sub">Click "Add template" to create your first snippet.</span>
         </div>
       </section>
 
@@ -209,16 +211,16 @@
       <section class="section" id="section-appearance">
         <div class="section-header">
           <div>
-            <h1 class="section-title">Appearance</h1>
-            <p class="section-desc">Theme and model preferences, synced across popup and this page.</p>
+            <h1 class="section-title" data-i18n="options_appearance_title">Appearance</h1>
+            <p class="section-desc" data-i18n="options_appearance_desc">Theme and model preferences, synced across popup and this page.</p>
           </div>
         </div>
 
         <div class="card">
           <div class="pref-row">
             <div class="pref-info">
-              <span class="pref-label">Theme</span>
-              <span class="pref-sub">Choose dark, light, or follow your system setting</span>
+              <span class="pref-label" data-i18n="options_theme_label">Theme</span>
+              <span class="pref-sub" data-i18n="options_theme_sub">Choose dark, light, or follow your system setting</span>
             </div>
             <div class="seg-control" id="themeControl">
               <button class="seg-btn" data-value="auto">
@@ -226,13 +228,13 @@
                   <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
                   <path d="M12 2v20M2 12h20" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
                 </svg>
-                Auto
+                <span data-i18n="options_theme_auto">Auto</span>
               </button>
               <button class="seg-btn" data-value="dark">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                   <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
-                Dark
+                <span data-i18n="options_theme_dark">Dark</span>
               </button>
               <button class="seg-btn" data-value="light">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
@@ -244,41 +246,39 @@
                   <line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                   <line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
-                Light
+                <span data-i18n="options_theme_light">Light</span>
               </button>
             </div>
           </div>
-          <div class="card-hint">
-            <strong>Auto</strong> follows your OS setting. Changes take effect in both the popup and this page immediately.
+          <div class="card-hint" data-i18n="options_theme_hint">
+            Auto follows your OS setting. Changes take effect in both the popup and this page immediately.
           </div>
         </div>
 
         <div class="card">
           <div class="pref-row">
             <div class="pref-info">
-              <span class="pref-label">Default Gemini model</span>
-              <span class="pref-sub">Which model to target when sending a prompt from the popup</span>
+              <span class="pref-label" data-i18n="options_model_label">Default Gemini model</span>
+              <span class="pref-sub" data-i18n="options_model_sub">Which model to target when sending a prompt from the popup</span>
             </div>
             <div class="seg-control" id="modelControl">
-              <button class="seg-btn" data-value="flash">Fast</button>
-              <button class="seg-btn" data-value="thinking">Think</button>
-              <button class="seg-btn" data-value="pro">Pro</button>
+              <button class="seg-btn" data-value="flash" data-i18n="model_label_flash">Fast</button>
+              <button class="seg-btn" data-value="thinking" data-i18n="model_label_thinking">Think</button>
+              <button class="seg-btn" data-value="pro" data-i18n="model_label_pro">Pro</button>
             </div>
           </div>
-          <div class="card-hint">
-            <strong class="tier-name-flash">Fast</strong> is Gemini's quick default — great for most tasks.
-            <strong class="tier-name-think">Think</strong> uses Gemini's reasoning model for complex problems.
-            <strong class="tier-name-pro">Pro ✦</strong> uses the advanced model — requires Gemini Advanced.
+          <div class="card-hint" data-i18n="options_model_hint">
+            Fast is Gemini's quick default — great for most tasks. Think uses Gemini's reasoning model for complex problems. Pro ✨ uses the advanced model — requires Gemini Advanced.
           </div>
         </div>
       </section>
 
-      <!-- ══ CONTEXT MENU SECTION  (NEW) ══ -->
+      <!-- ══ CONTEXT MENU SECTION ══ -->
       <section class="section" id="section-contextmenu">
         <div class="section-header">
           <div>
-            <h1 class="section-title">Context Menu</h1>
-            <p class="section-desc">Customise the right-click actions that appear when you select text on any page.</p>
+            <h1 class="section-title" data-i18n="options_contextmenu_title">Context Menu</h1>
+            <p class="section-desc" data-i18n="options_contextmenu_desc">Customise the right-click actions that appear when you select text on any page.</p>
           </div>
         </div>
 
@@ -287,7 +287,7 @@
           <div class="about-feature-list">
             <div class="feat-row">
               <span class="feat-dot"></span>
-              <span>
+              <span data-i18n="options_contextmenu_feature">
                 <strong>Ask Gemini: "…"</strong> — right-click any selected text to send it to Gemini, optionally wrapped by a smart prompt template.
               </span>
             </div>
@@ -298,16 +298,17 @@
         <div class="card">
           <div class="pref-row">
             <div class="pref-info">
-              <span class="pref-label">Prompt Engineering</span>
-              <span class="pref-sub">Auto-detect context and apply a smart prompt template</span>
+              <span class="pref-label" data-i18n="options_pe_label">Prompt Engineering</span>
+              <span class="pref-sub" data-i18n="options_pe_sub">Auto-detect context and apply a smart prompt template</span>
             </div>
-            <label class="toggle-switch" title="Toggle prompt engineering">
+            <label class="toggle-switch"
+              data-i18n-attr="title:options_pe_toggle_title">
               <input type="checkbox" id="promptEngToggle" />
               <span class="toggle-track"></span>
             </label>
           </div>
-          <div class="card-hint">
-            When on, Ask Gemini detects whether your selection is code, an error, a question, etc., and wraps it in a matching prompt. Each rule is editable. The <strong>Summarize prefix</strong> below is bypassed while this is active.
+          <div class="card-hint" data-i18n="options_pe_hint">
+            When on, Ask Gemini detects whether your selection is code, an error, a question, etc., and wraps it in a matching prompt. Each rule is editable. The Summarize prefix below is bypassed while this is active.
           </div>
         </div>
 
@@ -316,14 +317,12 @@
 
         <!-- Summarize prefix editor -->
         <div class="card" id="summarizePrefixSection">
-          <div class="tmpl-form-label" style="margin-bottom:10px;">
+          <div class="tmpl-form-label" style="margin-bottom:10px;" data-i18n="options_summarize_label">
             Summarize prefix
           </div>
-          <p style="font-size:12.5px;color:var(--text-dim);font-weight:300;line-height:1.6;margin-bottom:14px;">
-            This text is automatically prepended to your highlighted text when you choose
-            <strong style="color:var(--text);font-weight:500;">Summarize with Gemini</strong>
-            from the right-click menu. Write a full instruction — Gemini will receive
-            <em style="color:var(--accent)">prefix&nbsp;+&nbsp;selection</em>.
+          <p class="section-desc" style="font-size:12.5px;color:var(--text-dim);font-weight:300;line-height:1.6;margin-bottom:14px;"
+            data-i18n="options_summarize_desc">
+            This text is automatically prepended to your highlighted text when you choose Summarize with Gemini from the right-click menu. Write a full instruction — Gemini will receive prefix + selection.
           </p>
 
           <textarea
@@ -331,7 +330,7 @@
             class="tmpl-textarea"
             rows="4"
             maxlength="300"
-            placeholder="e.g. Summarize the following in 3 bullet points:"
+            data-i18n-attr="placeholder:options_summarize_placeholder"
           ></textarea>
 
           <div class="tmpl-char-row" style="margin-top:6px;margin-bottom:16px;">
@@ -340,9 +339,9 @@
 
           <!-- Live preview -->
           <div class="ctx-preview-wrap">
-            <span class="ctx-preview-label">Preview</span>
+            <span class="ctx-preview-label" data-i18n="options_pe_preview_label">Preview</span>
             <div class="ctx-preview-box">
-              <span class="ctx-preview-prefix" id="ctxPreviewPrefix"></span><span class="ctx-preview-selection">…your selected text…</span>
+              <span class="ctx-preview-prefix" id="ctxPreviewPrefix"></span><span class="ctx-preview-selection" data-i18n="options_summarize_preview_ph">…your selected text…</span>
             </div>
           </div>
 
@@ -352,7 +351,7 @@
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M3 3v5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              Reset to default
+              <span data-i18n="options_summarize_reset_btn">Reset to default</span>
             </button>
             <button class="btn-primary" id="summarizePrefixSaveBtn" disabled>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
@@ -360,11 +359,11 @@
                 <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              Save
+              <span data-i18n="options_summarize_save_btn">Save</span>
             </button>
           </div>
 
-          <div class="card-hint">
+          <div class="card-hint" data-i18n="options_summarize_hint">
             The prefix can include line breaks — use <kbd class="inline-kbd">Shift+Enter</kbd> inside the box. Newlines are preserved when the prompt is sent to Gemini.
           </div>
         </div>
@@ -374,15 +373,15 @@
       <section class="section" id="section-shortcut">
         <div class="section-header">
           <div>
-            <h1 class="section-title">Keyboard Shortcut</h1>
-            <p class="section-desc">Open the Ask Gemini popup from anywhere in your browser.</p>
+            <h1 class="section-title" data-i18n="options_shortcut_title">Keyboard Shortcut</h1>
+            <p class="section-desc" data-i18n="options_shortcut_desc">Open the Ask Gemini popup from anywhere in your browser.</p>
           </div>
         </div>
         <div class="card">
           <div class="shortcut-row">
             <div class="shortcut-info">
-              <span class="shortcut-label">Open popup</span>
-              <span class="shortcut-sub">Works on any page, even without the toolbar visible</span>
+              <span class="shortcut-label" data-i18n="options_shortcut_open_label">Open popup</span>
+              <span class="shortcut-sub" data-i18n="options_shortcut_open_sub">Works on any page, even without the toolbar visible</span>
             </div>
             <div class="shortcut-editor">
               <div class="keys" id="shortcutDisplay"></div>
@@ -391,32 +390,30 @@
                   <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                Change
+                <span data-i18n="options_shortcut_change_btn">Change</span>
               </button>
             </div>
           </div>
-          <div class="card-hint">
-            To reassign the key combination, click <strong>Change</strong> or visit
-            <a href="#" id="shortcutPageLink" class="inline-link">chrome://extensions/shortcuts</a>
-            and find <strong>Ask Gemini</strong>.
+          <div class="card-hint" data-i18n="options_shortcut_hint">
+            To reassign the key combination, click Change or visit chrome://extensions/shortcuts and find Ask Gemini.
           </div>
         </div>
         <div class="card">
           <div class="shortcut-row">
             <div class="shortcut-info">
-              <span class="shortcut-label">Right-click on selected text</span>
-              <span class="shortcut-sub">Auto-fills the popup with your selection</span>
+              <span class="shortcut-label" data-i18n="options_shortcut_rclick_label">Right-click on selected text</span>
+              <span class="shortcut-sub" data-i18n="options_shortcut_rclick_sub">Auto-fills the popup with your selection</span>
             </div>
-            <div class="keys"><kbd>Right-click</kbd></div>
+            <div class="keys"><kbd data-i18n="options_shortcut_rclick_kbd">Right-click</kbd></div>
           </div>
         </div>
         <div class="card">
           <div class="shortcut-row">
             <div class="shortcut-info">
-              <span class="shortcut-label">Open Gemini directly</span>
-              <span class="shortcut-sub">Right-click the extension icon in the toolbar</span>
+              <span class="shortcut-label" data-i18n="options_shortcut_icon_label">Open Gemini directly</span>
+              <span class="shortcut-sub" data-i18n="options_shortcut_icon_sub">Right-click the extension icon in the toolbar</span>
             </div>
-            <div class="keys"><kbd>Right-click icon</kbd></div>
+            <div class="keys"><kbd data-i18n="options_shortcut_icon_kbd">Right-click icon</kbd></div>
           </div>
         </div>
       </section>
@@ -425,12 +422,13 @@
       <section class="section" id="section-about">
         <div class="section-header">
           <div>
-            <h1 class="section-title">About</h1>
-            <p class="section-desc">Ask Gemini — a lean, open-source Chrome extension.</p>
+            <h1 class="section-title" data-i18n="options_about_title">About</h1>
+            <p class="section-desc" data-i18n="options_about_section_desc">Ask Gemini — a lean, open-source Chrome extension.</p>
           </div>
         </div>
         <div class="card about-card">
-          <div class="about-logo" id="aboutLogoBtn" title="Open Gemini">
+          <div class="about-logo" id="aboutLogoBtn"
+            data-i18n-attr="title:options_about_logo_title">
             <svg width="48" height="48" viewBox="0 0 36 36" fill="none">
               <defs>
                 <linearGradient id="bubbleG3" x1="0" y1="0" x2="1" y2="1">
@@ -458,17 +456,17 @@
           <div class="about-info">
             <div class="about-name">Ask Gemini</div>
             <div class="about-version" id="aboutVersion">Version 1.1.0</div>
-            <p class="about-desc">Instantly send questions to Google Gemini from your toolbar. No API key, no account needed — just type and go.</p>
+            <p class="about-desc" data-i18n="options_about_app_desc">Instantly send questions to Google Gemini from your toolbar. No API key, no account needed — just type and go.</p>
           </div>
         </div>
         <div class="card">
           <div class="about-feature-list">
-            <div class="feat-row"><span class="feat-dot"></span><span><strong>Left-click</strong> the icon to open the popup</span></div>
-            <div class="feat-row"><span class="feat-dot"></span><span><strong>Right-click</strong> the icon to open Gemini directly</span></div>
-            <div class="feat-row"><span class="feat-dot"></span><span><strong>Select text</strong> on any page, then open the popup — it auto-fills</span></div>
-            <div class="feat-row"><span class="feat-dot"></span><span><strong>Ctrl+Shift+L</strong> opens the popup from anywhere</span></div>
-            <div class="feat-row"><span class="feat-dot"></span><span>Type <strong>/</strong> in the popup to pick a template snippet</span></div>
-            <div class="feat-row"><span class="feat-dot"></span><span>Your last 20 prompts are saved in History</span></div>
+            <div class="feat-row"><span class="feat-dot"></span><span data-i18n="options_about_feat_left_click"><strong>Left-click</strong> the icon to open the popup</span></div>
+            <div class="feat-row"><span class="feat-dot"></span><span data-i18n="options_about_feat_right_click"><strong>Right-click</strong> the icon to open Gemini directly</span></div>
+            <div class="feat-row"><span class="feat-dot"></span><span data-i18n="options_about_feat_selection"><strong>Select text</strong> on any page, then open the popup — it auto-fills</span></div>
+            <div class="feat-row"><span class="feat-dot"></span><span data-i18n="options_about_feat_shortcut"><strong>Ctrl+Shift+L</strong> opens the popup from anywhere</span></div>
+            <div class="feat-row"><span class="feat-dot"></span><span data-i18n="options_about_feat_slash">Type <strong>/</strong> in the popup to pick a template snippet</span></div>
+            <div class="feat-row"><span class="feat-dot"></span><span data-i18n="options_about_feat_history">Your last 20 prompts are saved in History</span></div>
           </div>
         </div>
         <a href="https://ko-fi.com/adhin/tip" target="_blank" class="kofi-card">
@@ -480,8 +478,8 @@
             <line class="kofi-steam kofi-steam-3" x1="14" y1="1" x2="14" y2="4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
           </svg>
           <div>
-            <div class="kofi-card-title">Support the developer</div>
-            <div class="kofi-card-sub">ko-fi.com/adhin — every coffee helps ☕</div>
+            <div class="kofi-card-title" data-i18n="options_about_kofi_title">Support the developer</div>
+            <div class="kofi-card-sub" data-i18n="options_about_kofi_sub">ko-fi.com/adhin — every coffee helps ☕</div>
           </div>
           <svg class="kofi-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none">
             <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -495,11 +493,11 @@
   <!-- Confirm dialog (clear history) -->
   <div class="dialog-overlay" id="confirmOverlay">
     <div class="dialog">
-      <h3 class="dialog-title">Clear history?</h3>
-      <p class="dialog-body">All 20 saved prompts will be permanently deleted. This cannot be undone.</p>
+      <h3 class="dialog-title" data-i18n="options_dialog_clear_title">Clear history?</h3>
+      <p class="dialog-body" data-i18n="options_dialog_clear_body">All 20 saved prompts will be permanently deleted. This cannot be undone.</p>
       <div class="dialog-actions">
-        <button class="btn-ghost" id="confirmCancel">Cancel</button>
-        <button class="btn-danger" id="confirmOk">Clear all</button>
+        <button class="btn-ghost" id="confirmCancel" data-i18n="options_dialog_clear_cancel">Cancel</button>
+        <button class="btn-danger" id="confirmOk" data-i18n="options_dialog_clear_ok">Clear all</button>
       </div>
     </div>
   </div>
@@ -507,11 +505,11 @@
   <!-- Confirm dialog (delete template) -->
   <div class="dialog-overlay" id="tmplDeleteOverlay">
     <div class="dialog">
-      <h3 class="dialog-title">Delete template?</h3>
-      <p class="dialog-body" id="tmplDeleteBody">This snippet will be permanently removed.</p>
+      <h3 class="dialog-title" data-i18n="options_dialog_tmpl_title">Delete template?</h3>
+      <p class="dialog-body" id="tmplDeleteBody" data-i18n="options_dialog_tmpl_body">This snippet will be permanently removed.</p>
       <div class="dialog-actions">
-        <button class="btn-ghost" id="tmplDeleteCancel">Cancel</button>
-        <button class="btn-danger" id="tmplDeleteConfirm">Delete</button>
+        <button class="btn-ghost" id="tmplDeleteCancel" data-i18n="options_dialog_tmpl_cancel">Cancel</button>
+        <button class="btn-danger" id="tmplDeleteConfirm" data-i18n="options_dialog_tmpl_confirm">Delete</button>
       </div>
     </div>
   </div>
@@ -519,11 +517,11 @@
   <!-- Confirm dialog (reset all PE rules) -->
   <div class="dialog-overlay" id="peResetAllOverlay">
     <div class="dialog">
-      <h3 class="dialog-title">Reset all rules?</h3>
-      <p class="dialog-body">All prompt engineering rules will be restored to their defaults. Your edits will be lost.</p>
+      <h3 class="dialog-title" data-i18n="options_dialog_pe_title">Reset all rules?</h3>
+      <p class="dialog-body" data-i18n="options_dialog_pe_body">All prompt engineering rules will be restored to their defaults. Your edits will be lost.</p>
       <div class="dialog-actions">
-        <button class="btn-ghost" id="peResetAllCancel">Cancel</button>
-        <button class="btn-danger" id="peResetAllConfirm">Reset all</button>
+        <button class="btn-ghost" id="peResetAllCancel" data-i18n="options_dialog_pe_cancel">Cancel</button>
+        <button class="btn-danger" id="peResetAllConfirm" data-i18n="options_dialog_pe_confirm">Reset all</button>
       </div>
     </div>
   </div>

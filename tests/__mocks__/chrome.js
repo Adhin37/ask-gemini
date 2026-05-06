@@ -1,4 +1,33 @@
 import { vi } from "vitest";
+import { readFileSync } from "fs";
+import { resolve } from "path";
+
+// ── i18n helper — loads real English messages so t() works in tests ──
+
+let _messages = {};
+try {
+  const raw = readFileSync(resolve(process.cwd(), "_locales/en/messages.json"), "utf8");
+  _messages = JSON.parse(raw);
+} catch {
+  // fallback: getMessage will return key names (acceptable for unrelated tests)
+}
+
+function _i18nGetMessage(key, substitutions) {
+  const entry = _messages[key];
+  if (!entry || !entry.message) return "";
+  let msg = entry.message;
+  const subs = Array.isArray(substitutions) ? substitutions
+             : substitutions != null ? [substitutions] : [];
+  if (entry.placeholders && subs.length > 0) {
+    for (const [name, def] of Object.entries(entry.placeholders)) {
+      const idx = parseInt((def.content || "").replace("$", ""), 10);
+      if (!isNaN(idx) && subs[idx - 1] !== undefined) {
+        msg = msg.replace(new RegExp(`\\$${name}\\$`, "gi"), subs[idx - 1]);
+      }
+    }
+  }
+  return msg;
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -86,6 +115,11 @@ export function createChromeMock() {
     },
     scripting: {
       executeScript: vi.fn().mockResolvedValue([{ result: "" }]),
+    },
+    i18n: {
+      getMessage:     vi.fn(_i18nGetMessage),
+      getUILanguage:  vi.fn(() => "en"),
+      getAcceptLanguages: vi.fn(cb => cb(["en"])),
     },
   };
 }

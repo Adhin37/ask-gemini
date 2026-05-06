@@ -1,5 +1,5 @@
 // ── content.js ───────────────────────────────────────────────
-import { capitalize } from "../shared/stringUtils.js";
+import { t, localizeModelName } from "../shared/stringUtils.js";
 
 // ── Status overlay ────────────────────────────────────────────
 let _statusEl   = null;
@@ -91,7 +91,7 @@ function hideStatus() {
   const files     = data.pendingFiles  || [];
   await chrome.storage.local.remove(["pendingMessage", "pendingModel", "pendingFiles"]);
 
-  showStatus("Ask Gemini…");
+  showStatus(t("content_status_ask_gemini"));
 
   // ── 1. Wait for the model trigger button AND the textarea ─────
   // Both must be present before we interact with the model picker.
@@ -105,20 +105,20 @@ function hideStatus() {
   if (!ready) {
     console.warn("[Ask Gemini] Model trigger not found after 10 s — skipping model check");
     if (files.length > 0) {
-      showStatus(`Uploading image${files.length > 1 ? "s" : ""}…`);
+      showStatus(files.length > 1 ? t("content_status_uploading_other") : t("content_status_uploading_one"));
       await uploadFilesToGemini(files);
     }
-    showStatus("Sending…");
+    showStatus(t("content_status_sending"));
     await injectMessage(message);
     hideStatus();
     return;
   }
 
   // ── 2. Guarantee the correct model is active ───────────────────
-  if (readModelFromButton() !== modelPref) showStatus("Switching model…");
+  if (readModelFromButton() !== modelPref) showStatus(t("content_status_switching_model"));
   const modelResult = await ensureModel(modelPref);
   if (modelResult.fellBack === "flash") {
-    showStatus(`${capitalize(modelPref)} unavailable — using Fast`);
+    showStatus(t("content_status_model_unavailable", localizeModelName(modelPref)));
     await new Promise((r) => setTimeout(r, 2200));
   } else if (!modelResult.confirmed) {
     console.warn(
@@ -130,12 +130,12 @@ function hideStatus() {
 
   // ── 3. Upload any attached files and wait for processing ───────
   if (files.length > 0) {
-    showStatus(`Uploading image${files.length > 1 ? "s" : ""}…`);
+    showStatus(files.length > 1 ? t("content_status_uploading_other") : t("content_status_uploading_one"));
     await uploadFilesToGemini(files);
   }
 
   // ── 4. Inject the message and submit ───────────────────────────
-  showStatus("Sending…");
+  showStatus(t("content_status_sending"));
   await injectMessage(message);
   hideStatus();
 })();
@@ -247,11 +247,15 @@ function findModelTrigger() {
 
 /**
  * Reads the currently active model from the trigger button label.
+ * Tries icon classification first (locale-stable), then text.
  * @returns {"flash"|"thinking"|"pro"|null}
  */
 function readModelFromButton() {
   const btn = findModelTrigger();
   if (!btn) return null;
+
+  const iconResult = iconNameOf(btn);
+  if (iconResult && ICON_TO_MODEL[iconResult]) return ICON_TO_MODEL[iconResult];
 
   const container =
     btn.querySelector('[data-test-id="logo-pill-label-container"]') ||
@@ -265,7 +269,7 @@ function readModelFromButton() {
 
   const text = span ? span.textContent.trim() : btn.textContent.trim();
   console.debug("[Ask Gemini] readModelFromButton:", JSON.stringify(text));
-  return classifyModelText(text);
+  return classifyModelTextLegacy(text);
 }
 
 
@@ -273,44 +277,100 @@ function readModelFromButton() {
 // MODEL CLASSIFICATION
 // ══════════════════════════════════════════════════════════════════
 
+// ── Locale-stable icon → model map ───────────────────────────
+// Material icon glyph names observed in the Gemini model picker.
+// Add entries here as Gemini updates its icon set.
+const ICON_TO_MODEL = {
+  bolt: "flash", auto_awesome: "flash", lightning_bolt: "flash",
+  bulb: "thinking", lightbulb: "thinking", psychology: "thinking", neurology: "thinking",
+  star: "pro", workspace_premium: "pro", workspace_premium_filled: "pro",
+};
+
+/**
+ * Extracts the Material icon glyph name from within an element, trying
+ * the attribute and content conventions used by Gemini's Angular build.
+ * @param {Element} el
+ * @returns {string|null}
+ */
+function iconNameOf(el) {
+  const mi = el.querySelector("mat-icon");
+  if (!mi) return null;
+  return mi.getAttribute("data-mat-icon-name")
+      || mi.getAttribute("fonticon")
+      || (mi.querySelector("use")?.getAttribute("href") || "").split("#").pop()
+      || mi.textContent.trim()
+      || null;
+}
+
+/**
+ * Classifies a dropdown option using three layers in priority order:
+ * (a) Material icon glyph name — locale-stable.
+ * (b) DOM index within the option list (0=flash, 1=thinking, 2=pro).
+ *     Pass -1 to skip this layer (e.g. when reading the selected option).
+ * (c) English text substring match — legacy fallback.
+ * @param {Element} el
+ * @param {number}  indexInGroup
+ * @returns {"flash"|"thinking"|"pro"|null}
+ */
+function classifyOption(el, indexInGroup) {
+  const icon = iconNameOf(el);
+  if (icon && ICON_TO_MODEL[icon]) return ICON_TO_MODEL[icon];
+
+  if (indexInGroup === 0) return "flash";
+  if (indexInGroup === 1) return "thinking";
+  if (indexInGroup === 2) return "pro";
+
+  return classifyModelTextLegacy(el.textContent);
+}
+
+/**
+ * Maps a free-form model label string to a canonical model id.
+ * Kept as legacy fallback for non-icon, non-ordered detection paths.
+ * @param {string} text
+ * @returns {"flash"|"thinking"|"pro"|null}
+ */
+function classifyModelTextLegacy(text) {
+  const lower = text.toLowerCase();
+  if (lower.includes("think") || lower.includes("reason"))               return "thinking";
+  if (lower.includes("pro")   || lower.includes("advanced"))             return "pro";
+  if (lower.includes("flash") || lower.includes("fast") ||
+      lower.includes("quick") || lower.includes("gemini") ||
+      lower.includes("default") || lower.includes("2.") ||
+      lower.includes("1.5"))                                              return "flash";
+  return null;
+}
+
 /**
  * Maps a free-form model label string to a canonical model id.
  * @param {string} text
  * @returns {"flash"|"thinking"|"pro"|null}
  */
 function classifyModelText(text) {
-  const t = text.toLowerCase();
-  if (t.includes("think") || t.includes("reason"))               return "thinking";
-  if (t.includes("pro")   || t.includes("advanced"))             return "pro";
-  if (t.includes("flash") || t.includes("fast") ||
-      t.includes("quick") || t.includes("gemini") ||
-      t.includes("default") || t.includes("2.") ||
-      t.includes("1.5"))                                          return "flash";
-  return null;
+  return classifyModelTextLegacy(text);
 }
 
 /**
  * Returns true if the dropdown option text corresponds to the target model.
- * Matching is done on the first line of the option's inner text so that
- * description text (second line) does not cause false positives.
+ * Legacy text-only check retained for the __TEST__ export.
  * @param {string} optionText
  * @param {"flash"|"thinking"|"pro"} target
  * @returns {boolean}
  */
 function matchesTarget(optionText, target) {
-  // Use only the title line — the real Gemini picker uses multi-line innerText
-  // where line 0 is the model name and line 1+ are descriptions.
   const firstLine = optionText.trim().split("\n")[0].trim();
-  const t         = firstLine.toLowerCase();
+  const lower     = firstLine.toLowerCase();
 
   switch (target) {
     case "flash":
-      return t === "fast" || t.includes("flash") || t.includes("quick");
+      // Reject options that also contain thinking/pro markers — those take priority.
+      if (lower.includes("think") || lower.includes("reason")) return false;
+      if (lower.includes("pro") || lower.includes("advanced")) return false;
+      return lower.includes("flash") || lower.includes("fast") || lower.includes("quick");
     case "thinking":
-      return t.includes("think") || t.includes("reason");
+      return lower.includes("think") || lower.includes("reason");
     case "pro":
-      return (t === "pro" || (t.includes("pro") && !t.includes("think"))) &&
-             !t.includes("reason");
+      return (lower.includes("pro") || lower.includes("advanced")) &&
+             !lower.includes("think") && !lower.includes("reason");
     default:
       return false;
   }
@@ -337,8 +397,8 @@ const OPTION_SELECTORS = [
 
 /** Selectors tried in order to locate Gemini's send button. */
 const SEND_SELECTORS = [
+  "button.send-button",                           // locale-stable class, primary
   'button.send-button[aria-label="Send message"]',
-  "button.send-button",
   'button[aria-label="Send message"]',
   'button[aria-label*="Send" i].submit',
   'button.submit[aria-label*="Send" i]',
@@ -386,7 +446,9 @@ async function _detectCurrentModel() {
   for (const sel of OPTION_SELECTORS) {
     for (const opt of document.querySelectorAll(sel)) {
       if (isSelectedOption(opt)) {
-        detected = classifyModelText(opt.textContent);
+        // Skip DOM-order fallback (-1) — we are identifying the selected option,
+        // not scanning by position.
+        detected = classifyOption(opt, -1);
         break;
       }
     }
@@ -523,10 +585,9 @@ async function performModelSwitch(target) {
   const targetOption = await waitForElement(
     () => {
       for (const sel of OPTION_SELECTORS) {
-        for (const opt of document.querySelectorAll(sel)) {
-          // Use innerText so block-element newlines separate title from description,
-          // matching the first-line strategy in matchesTarget.
-          if (matchesTarget(opt.innerText || opt.textContent, target)) return opt;
+        const opts = [...document.querySelectorAll(sel)];
+        for (let i = 0; i < opts.length; i++) {
+          if (classifyOption(opts[i], i) === target) return opts[i];
         }
       }
       return null;
@@ -709,7 +770,11 @@ async function injectMessage(message) {
 
 /* istanbul ignore next — test hook, never runs inside the real extension */
 if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
-  Object.assign(globalThis.__TEST__, { classifyModelText, matchesTarget, waitForElement, waitForCondition });
+  Object.assign(globalThis.__TEST__, {
+    classifyModelText, classifyModelTextLegacy, matchesTarget,
+    classifyOption, iconNameOf, ICON_TO_MODEL,
+    waitForElement, waitForCondition,
+  });
 }
 
 /**

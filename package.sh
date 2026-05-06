@@ -24,6 +24,7 @@ REQUIRED=(
   "README.md"
   "POLICIES.md"
   "CONTRIBUTING.md"
+  "_locales/en/messages.json"
   "src/background/background.js"
   "src/background/background.min.js"
   "src/content/content.js"
@@ -44,6 +45,7 @@ REQUIRED=(
   "src/welcome/welcome.min.js"
   "src/welcome/welcome.min.css"
   "src/shared/constants.js"
+  "src/shared/stringUtils.js"
 )
 
 for f in "${REQUIRED[@]}"; do
@@ -73,6 +75,7 @@ mkdir -p "$DIST_DIR"
 rm -f "$RELEASE_ZIP"
 zip -r "$RELEASE_ZIP" \
   manifest.json LICENSE README.md POLICIES.md CONTRIBUTING.md CHANGELOG.md \
+  _locales/ \
   icons/ \
   src/
 echo "  $RELEASE_ZIP created ($(du -sh "$RELEASE_ZIP" | cut -f1))"

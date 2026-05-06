@@ -7,6 +7,8 @@ import {
   DEFAULT_TEMPLATES_BY_MODEL,
   INJECTION_PATTERNS,
 } from "../shared/constants.js";
+import { t, plural } from "../shared/stringUtils.js";
+import { applyI18n } from "../shared/i18nDom.js";
 
 const MAX_CHARS = 2000;
 
@@ -71,12 +73,12 @@ const phCycler       = document.getElementById("phCycler");
 // ══════════════════════════════════════════════════════════════════
 
 const PLACEHOLDERS = [
-  "Ask anything...",
-  "/ for templates",
-  "Shift+↵ for a new line",
-  "Drag & drop images",
-  "Summarize, translate, explain...",
-  "Ask about the page you're reading",
+  t("popup_placeholder_1"),
+  t("popup_placeholder_2"),
+  t("popup_placeholder_3"),
+  t("popup_placeholder_4"),
+  t("popup_placeholder_5"),
+  t("popup_placeholder_6"),
 ];
 
 let _phIdx    = 0;
@@ -533,21 +535,21 @@ let _defaultHintActive = true;
 /** Resets the hint bar to the default "↵ Send" / "Shift+↵ Newline" text. */
 function setDefaultHint() {
   _defaultHintActive = true;
-  hint.textContent   = _shiftHeld ? "Shift+↵ Newline" : "↵ Send";
+  hint.textContent   = _shiftHeld ? t("popup_hint_newline") : t("popup_hint_send");
   hint.style.color   = "";
 }
 
 document.addEventListener("keydown", (e) => {
   if (e.key === "Shift" && !_shiftHeld) {
     _shiftHeld = true;
-    if (_defaultHintActive) hint.textContent = "Shift+↵ Newline";
+    if (_defaultHintActive) hint.textContent = t("popup_hint_newline");
   }
 });
 
 document.addEventListener("keyup", (e) => {
   if (e.key === "Shift") {
     _shiftHeld = false;
-    if (_defaultHintActive) hint.textContent = "↵ Send";
+    if (_defaultHintActive) hint.textContent = t("popup_hint_send");
   }
 });
 
@@ -574,24 +576,24 @@ async function addFiles(fileList) {
   for (const file of candidates) {
     // Block SVG — can contain embedded text prompts and scripts
     if (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
-      showFileError(`"${file.name}" rejected: SVG files are not allowed`);
+      showFileError(t("popup_file_error_svg", file.name));
       console.warn(`[Ask Gemini] "${file.name}" rejected: SVG files are not allowed`);
       continue;
     }
     if (!file.type.startsWith("image/")) {
-      showFileError(`"${file.name}" is not an image`);
+      showFileError(t("popup_file_error_not_image", file.name));
       console.warn(`[Ask Gemini] "${file.name}" is not an image — skipped`);
       continue;
     }
     if (file.size > MAX_FILE_SIZE) {
-      showFileError(`"${file.name}" exceeds 4 MB`);
+      showFileError(t("popup_file_error_too_large", file.name));
       console.warn(`[Ask Gemini] "${file.name}" exceeds 4 MB — skipped`);
       continue;
     }
     // Validate magic bytes to ensure the file content matches its declared type
     const validBytes = await validateImageMagicBytes(file);
     if (!validBytes) {
-      showFileError(`"${file.name}" rejected: file content does not match image format`);
+      showFileError(t("popup_file_error_bad_format", file.name));
       console.warn(`[Ask Gemini] "${file.name}" rejected: magic bytes do not match an image format`);
       continue;
     }
@@ -600,7 +602,8 @@ async function addFiles(fileList) {
 
   const slots = MAX_FILES - attachedFiles.length;
   if (toAdd.length > slots) {
-    showFileError(`Max ${MAX_FILES} images — ${toAdd.length - slots} file${toAdd.length - slots > 1 ? "s" : ""} skipped`);
+    const skipped = toAdd.length - slots;
+    showFileError(plural(skipped, "popup_file_skipped_one", "popup_file_skipped_other", String(MAX_FILES)));
   }
   attachedFiles.push(...toAdd.slice(0, slots));
   renderFileChips();
@@ -660,7 +663,7 @@ input.addEventListener("input", () => {
   if (len > MAX_CHARS * 0.8) {
     const rem = MAX_CHARS - len;
     _defaultHintActive = false;
-    hint.textContent = rem >= 0 ? `${rem} chars left` : `${Math.abs(rem)} over limit`;
+    hint.textContent = rem >= 0 ? t("popup_chars_left", String(rem)) : t("popup_chars_over", String(Math.abs(rem)));
     hint.style.color = rem < 0 ? "#f05050" : rem < 200 ? "#f0a04b" : "";
   } else {
     setDefaultHint();
@@ -885,6 +888,9 @@ if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
 // ══════════════════════════════════════════════════════════════════
 
 sendBtn.disabled = true;
+
+// Apply i18n strings to all data-i18n / data-i18n-attr elements in the popup.
+applyI18n();
 
 (async () => {
   const data = await chrome.storage.sync.get(["askGeminiTheme", "askGeminiModel"]);
