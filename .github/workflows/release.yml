@@ -26,6 +26,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Validate tag
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
@@ -55,6 +58,7 @@ jobs:
           chmod +x generate-changelog.sh
           ./generate-changelog.sh
           test -s RELEASE_NOTES.md
+          grep -q "${{ github.ref_name }}" RELEASE_NOTES.md
 
       - name: Update Cumulative CHANGELOG.md
         run: |
@@ -69,7 +73,6 @@ jobs:
 
       - name: Commit and Push Version Bump
         run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add manifest.json package.json README.md CHANGELOG.md

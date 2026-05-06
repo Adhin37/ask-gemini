@@ -2,12 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
-## 🚀 Release  (2026-05-06)
+## 🚀 Release v1.7.0 (2026-05-06)
+
+### ✨ Features
+* feat: add i18n es + de (7b37bb2)
+* feat: i18n translate (53e4830)
+* feat: gemini quota reached for "thinking" and "pro" (2270e0c)
+* feat: add changelog.md (56d2fdb)
+
+### 🐛 Bug Fixes
+* fix: don't use i18n for manifest.json extension name (48fbd6e)
+* fix: capitalize (7f9ed29)
+* fix: popup window heigh in fullscreen mode (0f648d6)
+
+### ⚙️ Maintenance
+* chore: policies.md (30953ea)
+* chore: bump version to v1.6.3 [skip ci] (70f8b05)
 
 ---
 ### 📊 Release Stats
-* **Total Commits:** 
-* **Contributors:** 
+* **Total Commits:** 9
+* **Contributors:** Adhin,github-actions[bot]
+* **Full Changelog:** [View Changes](https://github.com/Adhin37/ask-gemini/compare/v1.6.3...v1.7.0)
 
 ## 🚀 Release v1.6.3 (2026-04-27)
 
