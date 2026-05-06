@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 🚀 Release  (2026-05-06)
+
+---
+### 📊 Release Stats
+* **Total Commits:** 
+* **Contributors:** 
+
 ## 🚀 Release v1.6.3 (2026-04-27)
 
 ### ✨ Features
@@ -370,4 +377,3 @@ All notable changes to this project will be documented in this file.
 ### 📊 Release Stats
 * **Total Commits:** 22
 * **Contributors:** Adhin
-
