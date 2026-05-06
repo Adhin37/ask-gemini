@@ -1,4 +1,5 @@
 // ── content.js ───────────────────────────────────────────────
+import { capitalize } from "../shared/stringUtils.js";
 
 // ── Status overlay ────────────────────────────────────────────
 let _statusEl   = null;
@@ -117,7 +118,7 @@ function hideStatus() {
   if (readModelFromButton() !== modelPref) showStatus("Switching model…");
   const modelResult = await ensureModel(modelPref);
   if (modelResult.fellBack === "flash") {
-    showStatus(`${prettyModelName(modelPref)} unavailable — using Fast`);
+    showStatus(`${capitalize(modelPref)} unavailable — using Fast`);
     await new Promise((r) => setTimeout(r, 2200));
   } else if (!modelResult.confirmed) {
     console.warn(
@@ -271,17 +272,6 @@ function readModelFromButton() {
 // ══════════════════════════════════════════════════════════════════
 // MODEL CLASSIFICATION
 // ══════════════════════════════════════════════════════════════════
-
-/**
- * Returns a human-readable display name for a canonical model id.
- * @param {"flash"|"thinking"|"pro"} modelId
- * @returns {string}
- */
-function prettyModelName(modelId) {
-  if (modelId === "thinking") return "Thinking";
-  if (modelId === "pro")      return "Pro";
-  return "Fast";
-}
 
 /**
  * Maps a free-form model label string to a canonical model id.
