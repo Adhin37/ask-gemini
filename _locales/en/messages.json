@@ -57,6 +57,7 @@
   "content_status_sending":          { "message": "Sending…",                                   "description": "Status overlay: submitting the message" },
   "content_status_switching_model":  { "message": "Switching model…",                           "description": "Status overlay: changing the active model" },
   "content_status_model_unavailable":{ "message": "$MODEL$ unavailable — using Fast",           "description": "Status overlay: requested model is locked, fell back to Flash", "placeholders": { "model": { "content": "$1" } } },
+  "content_upload_failed":           { "message": "Image upload failed — prompt not sent",       "description": "Error banner shown in Gemini when upload verification fails" },
 
   "bg_menu_open_gemini":             { "message": "Open Gemini",                                     "description": "Context menu item: open Gemini (action button right-click)" },
   "bg_menu_ask_gemini":              { "message": "Ask Gemini",                                      "description": "Context menu item: open Ask Gemini popup from page context" },

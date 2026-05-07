@@ -57,6 +57,7 @@
   "content_status_sending":          { "message": "Envoi…" },
   "content_status_switching_model":  { "message": "Changement de modèle…" },
   "content_status_model_unavailable":{ "message": "$MODEL$ indisponible — utilisation de Flash", "placeholders": { "model": { "content": "$1" } } },
+  "content_upload_failed":           { "message": "Échec du téléchargement — message non envoyé" },
 
   "bg_menu_open_gemini":             { "message": "Ouvrir Gemini" },
   "bg_menu_ask_gemini":              { "message": "Ask Gemini" },

@@ -82,6 +82,41 @@ function hideStatus() {
   setTimeout(() => el.remove(), 250);
 }
 
+/**
+ * Shows a red error banner fixed at the top of the Gemini page.
+ * Auto-dismisses after 6 s.
+ * @param {string} msg
+ */
+function showUploadError(msg) {
+  const banner = document.createElement("div");
+  Object.assign(banner.style, {
+    position:       "fixed",
+    top:            "20px",
+    left:           "50%",
+    transform:      "translateX(-50%)",
+    zIndex:         "2147483647",
+    background:     "rgba(80, 20, 20, 0.95)",
+    color:          "#ffd4d4",
+    padding:        "11px 20px",
+    borderRadius:   "999px",
+    fontSize:       "13px",
+    fontWeight:     "500",
+    fontFamily:     "'Google Sans', sans-serif",
+    border:         "1px solid rgba(250,100,100,0.5)",
+    boxShadow:      "0 4px 24px rgba(0,0,0,0.4)",
+    backdropFilter: "blur(8px)",
+    transition:     "opacity 0.3s ease",
+    whiteSpace:     "nowrap",
+    cursor:         "default",
+  });
+  banner.textContent = msg;
+  document.body.appendChild(banner);
+  setTimeout(() => {
+    banner.style.opacity = "0";
+    setTimeout(() => banner.remove(), 300);
+  }, 6_000);
+}
+
 (async () => {
   const data = await chrome.storage.local.get(["pendingMessage", "pendingModel", "pendingFiles"]);
   if (!data.pendingMessage) return;
@@ -106,7 +141,13 @@ function hideStatus() {
     console.warn("[Ask Gemini] Model trigger not found after 10 s — skipping model check");
     if (files.length > 0) {
       showStatus(files.length > 1 ? t("content_status_uploading_other") : t("content_status_uploading_one"));
-      await uploadFilesToGemini(files);
+      const uploadResult = await uploadFilesToGemini(files);
+      if (!uploadResult.success) {
+        hideStatus();
+        showUploadError(t("content_upload_failed"));
+        reportResult(false);
+        return;
+      }
     }
     showStatus(t("content_status_sending"));
     await injectMessage(message);
@@ -128,10 +169,16 @@ function hideStatus() {
     console.info(`[Ask Gemini] ✓ Model confirmed: "${modelPref}"`);
   }
 
-  // ── 3. Upload any attached files and wait for processing ───────
+  // ── 3. Upload any attached files and verify ───────────────────
   if (files.length > 0) {
     showStatus(files.length > 1 ? t("content_status_uploading_other") : t("content_status_uploading_one"));
-    await uploadFilesToGemini(files);
+    const uploadResult = await uploadFilesToGemini(files);
+    if (!uploadResult.success) {
+      hideStatus();
+      showUploadError(t("content_upload_failed"));
+      reportResult(false);
+      return;
+    }
   }
 
   // ── 4. Inject the message and submit ───────────────────────────
@@ -417,6 +464,55 @@ function findTextareaInput() {
   );
 }
 
+/** Selectors tried in order to locate Gemini's hidden file-upload input. */
+const FILE_INPUT_SELECTORS = [
+  'input[type="file"][accept*="image"]',
+  'input[type="file"]',
+];
+
+/**
+ * Returns Gemini's hidden file input element, or null.
+ * @returns {HTMLInputElement|null}
+ */
+function findGeminiFileInput() {
+  for (const sel of FILE_INPUT_SELECTORS) {
+    const el = document.querySelector(sel);
+    if (el) return el;
+  }
+  return null;
+}
+
+/**
+ * Selectors tried in order to detect upload-chip / thumbnail elements that
+ * Gemini renders after a file is successfully attached.
+ *
+ * `img[src^="blob:"]` is the most reliable cross-version signal: Gemini
+ * creates a local object URL (URL.createObjectURL) for the preview thumbnail
+ * as soon as a file is accepted, regardless of Angular component class names.
+ *
+ * To verify / extend for a future Gemini DOM change:
+ *   1. Open gemini.google.com, manually attach a file.
+ *   2. Run in DevTools console:
+ *        [...document.querySelectorAll('img[src^="blob:"]')]
+ *        // or inspect the element near the textarea for the chip class.
+ *   3. Add the matching selector here.
+ */
+const UPLOAD_CHIP_SELECTORS = [
+  'img[src^="blob:"]',           // object-URL preview thumbnail — version-stable
+  "input-media-card",            // Angular custom element used in older Gemini builds
+  "uploader-file-card",
+  '[data-test-id*="media"]',
+  '[data-test-id*="upload"]',
+  '[class*="upload-chip" i]',
+  '[class*="image-chip" i]',
+  '[class*="file-chip" i]',
+  '[class*="image-preview" i]',
+  '[class*="attachment-chip" i]',
+  '[class*="file-attachment" i]',
+  '[class*="attachment" i] img',
+  ".image-attachment",
+];
+
 // ══════════════════════════════════════════════════════════════════
 // MODEL DETECTION
 // ══════════════════════════════════════════════════════════════════
@@ -619,30 +715,42 @@ async function performModelSwitch(target) {
 // ══════════════════════════════════════════════════════════════════
 
 /**
- * Pastes all pending images into the Gemini input via ClipboardEvent,
- * then waits for Gemini to finish uploading them before returning.
+ * Uploads all pending images to Gemini and verifies that upload chips appear
+ * in the DOM before returning.
  *
- * Strategy: dispatch a synthetic `paste` ClipboardEvent whose
- * `clipboardData` DataTransfer contains the image File. React apps
- * typically do not check `event.isTrusted` on paste events, so this
- * is processed the same way as a real Ctrl+V paste.
- *
- * Wait time: 5 s base + 2 s per MB of total payload.
+ * Tries Gemini's native file input first (more reliable across MIME types),
+ * falls back to a synthetic ClipboardEvent paste. After all files are
+ * dispatched, polls `UPLOAD_CHIP_SELECTORS` for the expected number of chips.
  *
  * @param {{ name: string, type: string, size: number, data: string }[]} files
+ * @returns {Promise<{ success: boolean, failedCount: number }>}
  */
 async function uploadFilesToGemini(files) {
-  if (!files || files.length === 0) return;
+  if (!files || files.length === 0) return { success: true, failedCount: 0 };
 
-  // Find the Gemini contenteditable input to paste into
   const inputEl = await waitForElement(findTextareaInput, 10_000);
-
   if (!inputEl) {
     console.warn("[Ask Gemini] uploadFilesToGemini: input not found — skipping image paste");
-    return;
+    return { success: false, failedCount: files.length };
   }
 
-  const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+  // Scope chip detection to the nearest recognisable input-area ancestor.
+  // Fallback order: mock/data-attr → class-based → rich-textarea parent → body.
+  const container = inputEl.closest("[data-node-type=\"input-area\"]")
+    || inputEl.closest(".input-area")
+    || inputEl.closest("[class*='input-area' i]")
+    || inputEl.closest("[class*='chat-input' i]")
+    || inputEl.closest("rich-textarea")?.parentElement?.parentElement
+    || document.body;
+
+  console.debug(`[Ask Gemini] uploadFilesToGemini: container=${container.tagName}${container.id ? "#" + container.id : ""}${container.className ? "." + [...container.classList].join(".") : ""}`);
+  console.debug(`[Ask Gemini] uploadFilesToGemini: fileInput=${findGeminiFileInput() ? "found (" + (findGeminiFileInput().accept || "no accept attr") + ")" : "NOT FOUND — will use paste fallback"}`);
+
+  // Snapshot chip count before upload to detect additions
+  const baselineCount = new Set(
+    UPLOAD_CHIP_SELECTORS.flatMap((s) => [...container.querySelectorAll(s)])
+  ).size;
+  console.debug(`[Ask Gemini] uploadFilesToGemini: baselineCount=${baselineCount}`);
 
   for (const fileData of files) {
     await pasteImageToInput(fileData, inputEl);
@@ -650,37 +758,83 @@ async function uploadFilesToGemini(files) {
     await new Promise((r) => setTimeout(r, 400));
   }
 
-  // Wait for Gemini's upload pipeline to process the images
-  const waitMs = 5_000 + Math.ceil(totalBytes / (1024 * 1024)) * 2_000;
-  console.info(`[Ask Gemini] Waiting ${waitMs} ms for image upload(s) to complete…`);
-  await new Promise((r) => setTimeout(r, waitMs));
+  // Poll for chips — 8 s base + 3 s per file
+  const verifyMs = 8_000 + files.length * 3_000;
+  console.info(`[Ask Gemini] Verifying upload chips (timeout ${verifyMs} ms)…`);
+  const verified = await waitForUploadChips(container, baselineCount, files.length, verifyMs);
+
+  if (!verified) {
+    // Log what IS in the container to diagnose selector mismatches
+    const allChipEls = UPLOAD_CHIP_SELECTORS.flatMap((s) => {
+      const els = [...container.querySelectorAll(s)];
+      if (els.length) console.debug(`[Ask Gemini] selector "${s}" matched ${els.length} el(s)`);
+      return els;
+    });
+    console.warn(`[Ask Gemini] Upload verification failed — chips not detected in DOM (unique: ${new Set(allChipEls).size})`);
+    return { success: false, failedCount: files.length };
+  }
+
+  return { success: true, failedCount: 0 };
 }
 
 /**
- * Dispatches a synthetic paste event containing a single image File onto
- * the Gemini input element.
+ * Dispatches a single image File into the Gemini input.
+ *
+ * Primary path: assigns the file to Gemini's native `<input type="file">`
+ * and fires a `change` event — goes through the browser's upload pipeline
+ * and avoids MIME filtering applied by Gemini's clipboard paste handler.
+ *
+ * Fallback: synthetic ClipboardEvent paste on the contenteditable, used
+ * when the file input cannot be located.
  *
  * @param {{ name: string, type: string, data: string }} fileData
- * @param {Element} inputEl
+ * @param {Element} inputEl  Gemini's contenteditable (used for paste fallback)
  */
 async function pasteImageToInput(fileData, inputEl) {
   const { name, type, data } = fileData;
-
-  const response = await fetch(data);
-  const blob     = await response.blob();
-  const file     = new File([blob], name, { type });
-
-  const dt = new DataTransfer();
+  const blob = await (await fetch(data)).blob();
+  const file = new File([blob], name, { type });
+  const dt   = new DataTransfer();
   dt.items.add(file);
 
+  const fileInput = findGeminiFileInput();
+  if (fileInput) {
+    fileInput.files = dt.files;
+    fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    console.debug(`[Ask Gemini] pasteImageToInput: dispatched via file input for "${name}"`);
+    return;
+  }
+
+  // Fallback: synthetic ClipboardEvent paste
   inputEl.focus();
   inputEl.dispatchEvent(new ClipboardEvent("paste", {
     bubbles:       true,
     cancelable:    true,
     clipboardData: dt,
   }));
+  console.debug(`[Ask Gemini] pasteImageToInput: dispatched paste (fallback) for "${name}"`);
+}
 
-  console.debug(`[Ask Gemini] pasteImageToInput: dispatched paste for "${name}"`);
+/**
+ * Polls until `expectedCount` new upload-chip elements have appeared under
+ * `root` compared to `baselineCount`, or until `timeoutMs` elapses.
+ *
+ * @param {Element} root
+ * @param {number}  baselineCount  chip count before upload
+ * @param {number}  expectedCount  how many new chips to wait for
+ * @param {number}  timeoutMs
+ * @returns {Promise<boolean>}
+ */
+async function waitForUploadChips(root, baselineCount, expectedCount, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const unique = new Set(
+      UPLOAD_CHIP_SELECTORS.flatMap((s) => [...root.querySelectorAll(s)])
+    );
+    if (unique.size >= baselineCount + expectedCount) return true;
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  return false;
 }
 
 

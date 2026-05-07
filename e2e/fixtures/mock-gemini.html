@@ -262,7 +262,17 @@
 <body>
 <div class="shell">
 
-  <!-- ── Narrow sidebar ── -->
+  <!--
+  Hidden file input for upload simulation.
+  content.js pasteImageToInput() dispatches a `change` event here via
+  findGeminiFileInput(). The inline script below listens and creates
+  input-media-card chips inside the input area so waitForUploadChips() works.
+  Set sessionStorage.__testBlockUpload = "true" to suppress chip creation
+  (simulates a failed upload — used by the failure-path e2e test).
+-->
+<input type="file" accept="image/*" id="geminiFileInput" style="display:none" />
+
+<!-- ── Narrow sidebar ── -->
   <aside class="sidebar">
     <button class="sidebar-btn" title="Menu">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -660,6 +670,40 @@
 
   // ── Signal ready ──────────────────────────────────────────────────
   window.__mockReady = true;
+
+  // ── File upload chip simulation ────────────────────────────────────
+  // content.js pasteImageToInput() assigns to geminiFileInput.files and fires
+  // "change". We respond by appending input-media-card chips into the input
+  // area — this satisfies waitForUploadChips() in UPLOAD_CHIP_SELECTORS.
+  //
+  // Set sessionStorage.__testBlockUpload = "true" (via addInitScript) to
+  // suppress chip creation and simulate a failed upload for e2e tests.
+  const geminiFileInput  = document.getElementById("geminiFileInput");
+  const inputAreaForChip = document.querySelector("[data-node-type='input-area']");
+
+  geminiFileInput.addEventListener("change", () => {
+    if (sessionStorage.getItem("__testBlockUpload") === "true") return;
+    [...geminiFileInput.files].forEach(f => {
+      // Mirrors real Gemini: create an img with a blob: src (object URL) so that
+      // the `img[src^="blob:"]` selector in UPLOAD_CHIP_SELECTORS fires first.
+      const chip = document.createElement("input-media-card");
+      chip.textContent = f.name;
+      Object.assign(chip.style, {
+        display:      "inline-block",
+        padding:      "4px 8px",
+        background:   "rgba(255,255,255,0.1)",
+        borderRadius: "8px",
+        fontSize:     "12px",
+        margin:       "4px",
+      });
+      const thumb = document.createElement("img");
+      thumb.src = URL.createObjectURL(f);
+      thumb.alt = f.name;
+      thumb.style.cssText = "width:40px;height:40px;object-fit:cover;border-radius:4px;display:block;";
+      chip.prepend(thumb);
+      inputAreaForChip.appendChild(chip);
+    });
+  });
 </script>
 </body>
 </html>
