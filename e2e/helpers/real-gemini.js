@@ -1,9 +1,8 @@
 /**
  * Helpers for tests that exercise the live gemini.google.com UI.
  *
- * Exports selectors, page-open/consent/sign-in utilities, model-picker
- * interaction, and the full popup → Gemini send pipelines used by real-
- * Gemini scenario files.
+ * Exports selectors, sign-in guard utilities, model-picker interaction, and
+ * the full popup → Gemini send pipelines used by real-Gemini scenario files.
  *
  * Uses the default e2e/.chrome-profile (free Google account; only Fast model available).
  * Tests skip gracefully when not signed in. Point CHROME_PROFILE to a premium
@@ -13,9 +12,6 @@
 import { test, expect } from "@playwright/test";
 import { openPopupWindow } from "./open-popup.js";
 import { buildImageDataTransfer, dropImageOnPopup } from "./images.js";
-
-/** URL of the Gemini app. */
-export const GEMINI_URL = "https://gemini.google.com/app";
 
 /**
  * Primary model button selector.
@@ -45,33 +41,6 @@ export const PROBE_MODELS = [
   { label: "Pro",      pattern: /\bpro\b/i },
   { label: "Thinking", pattern: /think/i },
 ];
-
-/**
- * Opens https://gemini.google.com/app, handling the Google cookie-consent
- * redirect transparently. Returns the settled page.
- *
- * @param {import("@playwright/test").BrowserContext} context
- * @returns {Promise<import("@playwright/test").Page>}
- */
-export async function openRealGeminiPage(context) {
-  const page = await context.newPage();
-  await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto(GEMINI_URL, { waitUntil: "domcontentloaded" });
-
-  // Handle consent overlay: give the user 3 s to act, then fall back to
-  // "Accept all" only if still on the consent page.
-  const acceptBtn = page.getByRole("button", { name: /accept all/i });
-  try {
-    await acceptBtn.waitFor({ state: "visible", timeout: 6_000 });
-    await page.waitForTimeout(3_000);
-    if (page.url().includes("consent.google.com")) {
-      await acceptBtn.click();
-      await page.waitForURL(/gemini\.google\.com/, { timeout: 15_000 });
-    }
-  } catch { /* consent page not shown or already past it */ }
-
-  return page;
-}
 
 /**
  * Skips the current test if the page did not land on gemini.google.com, or
@@ -162,12 +131,13 @@ export async function closeGeminiTabs(context) {
 
 /**
  * Clicks the send button in an already-configured popup, waits for the new
- * Gemini tab to appear, attaches a console listener for [Ask Gemini] log
- * lines, and waits for the URL to settle.
+ * Gemini tab to appear, handles the Google cookie-consent overlay if shown,
+ * attaches a console listener for [Ask Gemini] log lines, and waits for the
+ * URL to settle.
  *
  * Precondition: the popup's message input is filled and the send button is
  * enabled. Caller must ensure no Gemini tabs are open before calling
- * (openRealGeminiPage + close, or closeGeminiTabs).
+ * (closeGeminiTabs).
  *
  * @param {import("@playwright/test").BrowserContext} context
  * @param {import("@playwright/test").Page} popup
@@ -193,6 +163,18 @@ export async function sendViaPopup(context, popup) {
   await geminiPage
     .waitForURL(/gemini\.google\.com|accounts\.google\.com|consent\.google\.com/, { timeout: 25_000 })
     .catch(() => {});
+
+  // Handle Google cookie-consent overlay: give the user 3 s to act, then
+  // fall back to "Accept all" only if still on the consent page.
+  const acceptAllBtn = geminiPage.getByRole("button", { name: /accept all/i });
+  try {
+    await acceptAllBtn.waitFor({ state: "visible", timeout: 6_000 });
+    await geminiPage.waitForTimeout(3_000);
+    if (geminiPage.url().includes("consent.google.com")) {
+      await acceptAllBtn.click();
+      await geminiPage.waitForURL(/gemini\.google\.com/, { timeout: 15_000 }).catch(() => {});
+    }
+  } catch { /* consent overlay not present or already past it */ }
 
   // Fire-and-forget: accept the "Create content from images and files" consent
   // dialog that Gemini shows on fresh/unlogged profiles before the first upload.

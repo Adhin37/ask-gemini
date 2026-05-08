@@ -1,24 +1,19 @@
 /**
  * Scenario 01 — Model switcher (real Gemini)
  *
- * Exercises the live gemini.google.com UI to verify that selectors and model-
- * switching logic in content.js work against the real DOM.
+ * Exercises the live gemini.google.com UI via the full extension pipeline
+ * (popup → storage → content.js → Gemini). Every test enters Gemini through
+ * the extension popup — no direct page.goto(GEMINI_URL).
  *
  * Uses the default e2e/.chrome-profile (free Google account, only Fast available).
  * Tests skip gracefully when not signed in via skipIfNotReady().
- * Point CHROME_PROFILE to a premium profile to exercise Pro/Thinking against real Gemini.
- *
- * Free-account behaviour:
- *   - Tests 1–3 verify the picker UI and Fast-model switching (always available).
- *   - Test 4 verifies the full popup → real-Gemini send pipeline using Fast.
- *   - Pro/Thinking switching and locked-model fallback live in
- *     01-model-switch-mock.spec.js (require premium or sessionStorage hooks).
+ * Pro/Thinking switching and locked-model fallback live in
+ * 01-model-switch-mock.spec.js (require premium or sessionStorage hooks).
  *
  * Tests covered:
- *   1. Model-picker trigger is reachable after consent
- *   2. Picker opens and shows at least one model option
+ *   1. Popup sends Fast message → arrives in real Gemini chat, picker is reachable
+ *   2. Picker opens and shows at least one model option (Fast always present)
  *   3. Model switches update the trigger label (Fast hard-asserted; Pro/Thinking soft-warned)
- *   4. Popup with Fast model — message arrives in real Gemini chat
  */
 
 import { test, expect } from "@playwright/test";
@@ -28,49 +23,73 @@ import {
   MODEL_BTN,
   OPTION_SEL,
   PROBE_MODELS,
-  openRealGeminiPage,
   skipIfNotReady,
   tryModelSwitch,
   sendViaPopup,
+  closeGeminiTabs,
   assertMessageOnGemini,
 } from "../helpers/real-gemini.js";
 
+const PROBE_MESSAGE = "Explain what HTTP status codes are.";
+
 let context;
 let extensionId;
+let geminiPage;
 
 test.beforeAll(async ({ playwright }) => {
   ({ context, extensionId } = await launchExtension(playwright.chromium, { slowMo: 400 }));
+});
+
+/**
+ * Full popup → Gemini pipeline executed before each test.
+ * Closes any existing Gemini tab, opens the popup, picks Flash, fills the
+ * probe message, clicks Send, and captures the new Gemini page.
+ * Skips the test gracefully if the resulting page is not on gemini.google.com.
+ */
+test.beforeEach(async () => {
+  await closeGeminiTabs(context);
+
+  const popup = await openPopupWindow(context, extensionId);
+  await popup.waitForTimeout(600);
+
+  await popup.locator(".model-opt[data-model='flash']").click();
+  await popup.waitForTimeout(400);
+
+  await popup.locator("#questionInput").fill(PROBE_MESSAGE);
+  await expect(popup.locator("#sendBtn")).not.toBeDisabled({ timeout: 3_000 });
+
+  ({ geminiPage } = await sendViaPopup(context, popup));
+  await skipIfNotReady(geminiPage);
+});
+
+test.afterEach(async () => {
+  await geminiPage?.close().catch(() => {});
+  geminiPage = undefined;
 });
 
 test.afterAll(async () => {
   await context.close();
 });
 
-// ── Test 1: smoke ──────────────────────────────────────────────────────────
+// ── Test 1: full pipeline — message arrives, picker reachable ─────────────
 
-test("real Gemini — model-picker trigger is reachable after consent", async () => {
-  const page = await openRealGeminiPage(context);
-
-  if (!page.url().includes("gemini.google.com")) {
-    test.skip(true, "Not signed in to Google.");
+test("real Gemini — popup sends Fast message and picker is reachable", async () => {
+  try {
+    await assertMessageOnGemini(geminiPage, PROBE_MESSAGE);
+    await expect(geminiPage.locator(MODEL_BTN)).toBeVisible({ timeout: 20_000 });
+  } finally {
+    console.info("[01] Fast send — picker reachable");
   }
-
-  await expect(page.locator(MODEL_BTN)).toBeVisible({ timeout: 20_000 });
-  await page.close();
 });
 
 // ── Test 2: option discovery ───────────────────────────────────────────────
 
 test("real Gemini — picker opens and shows at least one model option", async () => {
-  const page = await openRealGeminiPage(context);
-  await skipIfNotReady(page);
-
-  const modelBtn = page.locator(MODEL_BTN);
+  const modelBtn = geminiPage.locator(MODEL_BTN);
   await expect(modelBtn).toBeVisible({ timeout: 20_000 });
-
   await modelBtn.click();
 
-  const options = page.locator(OPTION_SEL);
+  const options = geminiPage.locator(OPTION_SEL);
   await expect(options.first()).toBeVisible({ timeout: 6_000 });
 
   // "Fast" must always be present — it is the baseline free-tier model.
@@ -84,22 +103,18 @@ test("real Gemini — picker opens and shows at least one model option", async (
   }
   console.info("[01] picker options found:", labels);
 
-  await page.keyboard.press("Escape");
-  await page.close();
+  await geminiPage.keyboard.press("Escape");
 });
 
 // ── Test 3: adaptive label round-trip ─────────────────────────────────────
 
 test("real Gemini — model switches update the trigger label (skips locked models)", async () => {
-  const page = await openRealGeminiPage(context);
-  await skipIfNotReady(page);
-
-  await expect(page.locator(MODEL_BTN)).toBeVisible({ timeout: 20_000 });
+  await expect(geminiPage.locator(MODEL_BTN)).toBeVisible({ timeout: 20_000 });
 
   const results = {};
 
   for (const { label, pattern } of PROBE_MODELS) {
-    const ok = await tryModelSwitch(page, pattern);
+    const ok = await tryModelSwitch(geminiPage, pattern);
     results[label] = ok;
     console.info(`[01] model switch "${label}": ${ok ? "✓ success" : "✗ skipped (locked or unavailable)"}`);
   }
@@ -121,34 +136,5 @@ test("real Gemini — model switches update the trigger label (skips locked mode
       "Expected on free-tier accounts. " +
       "Run with a Google AI Premium profile to verify premium model switching."
     );
-  }
-
-  await page.close();
-});
-
-// ── Test 4: popup with Fast model → message arrives in real Gemini ─────────
-
-test("real Gemini — popup with Fast model sends message to chat", async () => {
-  // Tests 1–3 already confirmed Gemini is reachable in this context; no probe needed.
-  const popup = await openPopupWindow(context, extensionId);
-  await popup.waitForTimeout(800);
-
-  // Ensure Flash is the active model
-  await popup.locator(".model-opt[data-model='flash']").click();
-  await popup.waitForTimeout(400);
-
-  const message = "Explain what HTTP status codes are.";
-  await popup.locator("#questionInput").fill(message);
-  await expect(popup.locator("#sendBtn")).not.toBeDisabled({ timeout: 3_000 });
-
-  // probe.close() already closed the Gemini tab; no existing tabs to clear
-  const { geminiPage, logs } = await sendViaPopup(context, popup);
-  await skipIfNotReady(geminiPage);
-
-  try {
-    await assertMessageOnGemini(geminiPage, message);
-  } finally {
-    console.info("[01] Fast send — content.js logs:", logs.length ? logs : "(none captured)");
-    await geminiPage.close().catch(() => {});
   }
 });
