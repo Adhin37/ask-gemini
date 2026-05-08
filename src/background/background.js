@@ -8,6 +8,7 @@ import {
   INJECTION_PATTERNS,
 } from "../shared/constants.js";
 import { buildPrompt } from "../shared/promptEngine.js";
+import { t } from "../shared/stringUtils.js";
 
 // ══════════════════════════════════════════════════════════════════
 // PROMPT INJECTION DETECTION
@@ -199,17 +200,17 @@ chrome.runtime.onMessage.addListener((msg) => {
 const MENU_ITEMS = [
   {
     id:       "open-gemini-direct",
-    title:    chrome.i18n.getMessage("bg_menu_open_gemini"),
+    title:    t("bg_menu_open_gemini"),
     contexts: ["action"],
   },
   {
     id:       "open-gemini-page",
-    title:    chrome.i18n.getMessage("bg_menu_ask_gemini"),
+    title:    t("bg_menu_ask_gemini"),
     contexts: ["page"],
   },
   {
     id:       "ask-gemini-selection",
-    title:    chrome.i18n.getMessage("bg_menu_ask_selection"),
+    title:    t("bg_menu_ask_selection"),
     contexts: ["selection"],
   },
 ];

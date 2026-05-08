@@ -802,7 +802,7 @@ function _buildRuleCard(rule) {
 
   const labelEl = document.createElement("span");
   labelEl.className = "pe-rule-label";
-  labelEl.textContent = rule.label;
+  labelEl.textContent = t(rule.labelKey);
 
   const hintWrap = document.createElement("span");
   hintWrap.className = "pe-rule-hint-wrap";
@@ -813,7 +813,7 @@ function _buildRuleCard(rule) {
 
   const hintTooltip = document.createElement("span");
   hintTooltip.className = "pe-rule-hint-tooltip";
-  hintTooltip.textContent = rule.hint;
+  hintTooltip.textContent = t(rule.hintKey);
 
   hintWrap.appendChild(hintIcon);
   hintWrap.appendChild(hintTooltip);
@@ -987,7 +987,7 @@ function _buildSampleCard() {
         _peSettings.rules,
       );
       const winRule = _peSettings.rules.find(r => r.id === winnerId);
-      badge.textContent = winRule ? winRule.label : winnerId;
+      badge.textContent = winRule ? t(winRule.labelKey) : winnerId;
       badge.classList.add("is-active");
       // Highlight the winning rule card
       const winCard = promptEngRulesWrap.querySelector(`[data-rule-id="${winnerId}"]`);
