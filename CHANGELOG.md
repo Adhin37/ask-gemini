@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## 🚀 Release v1.7.1 (2026-05-08)
+
+### ✨ Features
+* feat: enable/disable history (172bd3b)
+
+### 🐛 Bug Fixes
+* fix: e2e tests - no bypass (bae47dc)
+* fix: rework e2e (5b67706)
+* fix: image upload (217dad9)
+* fix: empty release note (07d03af)
+
+### ⚙️ Maintenance
+* chore: bump version to v1.7.0 [skip ci] (1a860e0)
+
+---
+### 📊 Release Stats
+* **Total Commits:** 6
+* **Contributors:** Adhin,github-actions[bot]
+* **Full Changelog:** [View Changes](https://github.com/Adhin37/ask-gemini/compare/v1.7.0...v1.7.1)
+
 ## 🚀 Release v1.7.0 (2026-05-06)
 
 ### ✨ Features
