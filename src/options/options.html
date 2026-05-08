@@ -321,6 +321,39 @@
           </div>
         </div>
 
+        <!-- Role prefix card — visible when PE is enabled -->
+        <div id="peRoleCard" class="card pe-role-card" style="display:none">
+          <div class="pref-row">
+            <div class="pref-info">
+              <span class="pref-label" data-i18n="options_pe_role_label">System role (optional)</span>
+              <span class="pref-sub" data-i18n="options_pe_role_sub">Prepended before every rule template</span>
+            </div>
+            <label class="toggle-switch"
+              data-i18n-attr="title:options_pe_role_toggle_title">
+              <input type="checkbox" id="peRoleToggle" />
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <div id="peRoleSection" style="display:none">
+            <textarea
+              id="peRoleTextarea"
+              class="tmpl-textarea"
+              rows="2"
+              maxlength="240"
+              data-i18n-attr="placeholder:options_pe_role_placeholder"
+            ></textarea>
+            <div class="tmpl-char-row" style="margin-top:4px;margin-bottom:10px;">
+              <span class="tmpl-char-count" id="peRoleCharCount">0 / 240</span>
+            </div>
+            <div class="tmpl-form-actions">
+              <button class="btn-ghost btn-xs" id="peRoleResetBtn" data-i18n="options_pe_role_reset_btn">Reset role</button>
+            </div>
+          </div>
+          <div class="card-hint" data-i18n="options_pe_role_hint">
+            Keep it short. Sent in front of the matched rule template.
+          </div>
+        </div>
+
         <!-- Rule cards — rendered by options.js, visible when PE is enabled -->
         <div id="promptEngRules" class="pe-rules-wrap" style="display:none"></div>
 

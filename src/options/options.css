@@ -1456,3 +1456,104 @@ kbd {
   padding: 3px 9px;
   font-size: 11px;
 }
+
+/* ── PE role card ────────────────────────────────────────────────── */
+.pe-role-card {
+  margin-bottom: 6px;
+}
+
+/* ── PE sample / "Try it" card ───────────────────────────────────── */
+.pe-sample-wrap {
+  margin-bottom: 8px;
+  background: var(--card-bg);
+}
+
+.pe-sample-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+}
+
+.pe-sample-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.pe-detected-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--chip-bg, rgba(124, 106, 247, 0.12));
+  color: var(--text-dim);
+  transition: background 0.15s, color 0.15s;
+}
+
+.pe-detected-badge.is-active {
+  background: var(--accent, #7c6af7);
+  color: #fff;
+}
+
+/* Winner highlight on a rule card */
+.pe-rule-card.is-winner {
+  border-left: 3px solid var(--accent, #7c6af7);
+  padding-left: calc(var(--card-pad, 14px) - 3px);
+}
+
+/* ── Variable chips panel ────────────────────────────────────────── */
+.pe-vars-details {
+  margin-top: 6px;
+}
+
+.pe-vars-toggle {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.pe-vars-toggle::-webkit-details-marker { display: none; }
+
+.pe-vars-toggle::before {
+  content: "▶";
+  font-size: 9px;
+  transition: transform 0.15s;
+}
+
+details[open] > .pe-vars-toggle::before {
+  transform: rotate(90deg);
+}
+
+.pe-vars-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+  padding-bottom: 2px;
+}
+
+.pe-vars-chip {
+  padding: 2px 9px;
+  border-radius: 99px;
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  background: var(--chip-bg, rgba(124, 106, 247, 0.08));
+  color: var(--text-dim);
+  font-size: 11px;
+  font-family: monospace;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.pe-vars-chip:hover {
+  background: var(--accent, #7c6af7);
+  color: #fff;
+  border-color: transparent;
+}

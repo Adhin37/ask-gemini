@@ -27,6 +27,7 @@ export function setupOptionsDom() {
     </div>
     <input type="text" id="historySearch" />
     <button id="clearHistoryBtn"></button>
+    <input id="historyEnabledToggle" type="checkbox" />
 
     <div id="confirmOverlay">
       <button id="confirmCancel"></button>
@@ -77,6 +78,14 @@ export function setupOptionsDom() {
     </div>
 
     <input  id="promptEngToggle" type="checkbox" />
+    <div    id="peRoleCard" style="display:none">
+      <input id="peRoleToggle" type="checkbox" />
+      <div   id="peRoleSection" style="display:none">
+        <textarea id="peRoleTextarea"></textarea>
+        <span id="peRoleCharCount">0 / 240</span>
+        <button id="peRoleResetBtn"></button>
+      </div>
+    </div>
     <div    id="promptEngRules"></div>
     <div    id="summarizePrefixSection"></div>
 

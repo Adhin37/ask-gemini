@@ -5,9 +5,9 @@ import {
   GEMINI_URL,
   MAX_HISTORY,
   DEFAULT_SUMMARIZE_PREFIX,
-  DEFAULT_PROMPT_ENG_RULES,
   INJECTION_PATTERNS,
 } from "../shared/constants.js";
+import { buildPrompt } from "../shared/promptEngine.js";
 
 // ══════════════════════════════════════════════════════════════════
 // PROMPT INJECTION DETECTION
@@ -27,79 +27,6 @@ function _hasPromptInjection(text) {
   return INJECTION_PATTERNS.some(re => re.test(text));
 }
 
-// ══════════════════════════════════════════════════════════════════
-// PROMPT ENGINEERING — detection
-// ══════════════════════════════════════════════════════════════════
-
-// Known code-hosting / developer pages — boost "code" context detection
-const _CODE_PAGE_RE = [
-  /github\.com/, /gitlab\.com/, /bitbucket\.org/,
-  /stackoverflow\.com/, /stackexchange\.com/,
-  /codepen\.io/, /jsfiddle\.net/, /replit\.com/,
-  /codesandbox\.io/, /npmjs\.com/, /pkg\.go\.dev/,
-  /developer\.mozilla\.org/,
-];
-
-// Patterns that suggest the text is source code
-const _CODE_TEXT_RE = [
-  /^\s*(function[\s(]|class\s|def\s|import\s|const\s|let\s|var\s|if\s*\(|for\s*\(|while\s*\(|#include\s|public\s|private\s|<\?php|\bfn\b)/,
-  /=>[\s{(]/,
-  /[{};]\s*\n.*[{};]/s,
-  /\b(return|typeof|instanceof|async|await|yield)\b/,
-];
-
-// Patterns that suggest an error or stack trace
-const _ERROR_RE = [
-  /\b\w*(Error|Exception|Fault|Panic)\b.*:/,
-  /^\s+at\s+[\w.$<>[\]]+\s*\(/m,
-  /\bTraceback\b/i,
-  /line\s+\d+.*col(umn)?\s+\d+/i,
-  /\b(segfault|fatal error|uncaught exception|unhandled rejection)\b/i,
-];
-
-/**
- * Returns the context id that best describes the selected text.
- * @param {string} text
- * @param {string} pageUrl
- * @returns {"url"|"error"|"code"|"question"|"data"|"term"|"article"}
- */
-function detectContext(text, pageUrl) {
-  const t   = text.trim();
-  const url = pageUrl || "";
-
-  if (/^https?:\/\/\S+$/.test(t))              return "url";
-  if (_ERROR_RE.some(re => re.test(t)))          return "error";
-
-  const isCodePage    = _CODE_PAGE_RE.some(re => re.test(url));
-  const looksLikeCode = _CODE_TEXT_RE.some(re => re.test(t));
-  if (isCodePage || looksLikeCode)               return "code";
-
-  if (t.endsWith("?"))                           return "question";
-
-  const words = t.split(/\s+/).filter(Boolean).length;
-  if (words >= 2 && /^[\d\s.,;:\-+%$€£¥|/\n]+$/.test(t)) return "data";
-  if (words <= 4)                                return "term";
-
-  return "article";
-}
-
-/**
- * Applies the matching prompt-engineering rule to the selection.
- * @param {string} selection
- * @param {string} pageUrl
- * @param {{ rules: Array }} settings  — value of askGeminiPromptEng
- * @returns {string}
- */
-function buildPromptEngMessage(selection, pageUrl, settings) {
-  const rules     = (settings && settings.rules) ? settings.rules : DEFAULT_PROMPT_ENG_RULES;
-  const contextId = detectContext(selection, pageUrl);
-
-  const rule = rules.find(r => r.id === contextId && r.enabled !== false)
-            || rules.find(r => r.id === "default"  && r.enabled !== false);
-
-  if (!rule) return selection;
-  return rule.template.replace(/\{selection\}/g, selection);
-}
 
 // ══════════════════════════════════════════════════════════════════
 // 1. BADGE HELPERS
@@ -334,7 +261,7 @@ async function dispatchToGemini(message, model) {
   chrome.tabs.create({ url: GEMINI_URL });
 }
 
-chrome.contextMenus.onClicked.addListener(async (info) => {
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   // ── Open Gemini directly (no message) ─────────────────────────
   if (info.menuItemId === "open-gemini-direct" || info.menuItemId === "open-gemini-page") {
     chrome.tabs.create({ url: GEMINI_URL });
@@ -351,19 +278,40 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
       "askGeminiModel", "askGeminiSummarizePrefix", "askGeminiPromptEng",
     ]);
 
-    const selection = info.selectionText.trim();
+    // Trim selection to 16 KB before any processing
+    const selection = info.selectionText.trim().slice(0, 16384);
     let message;
 
     if (askGeminiPromptEng?.enabled) {
-      message = buildPromptEngMessage(selection, info.pageUrl || "", askGeminiPromptEng);
+      // Resolve language detection for the translate rule
+      let detectedLangs = [];
+      try {
+        const result = await chrome.i18n.detectLanguage(selection);
+        if (result && Array.isArray(result.languages)) {
+          detectedLangs = result.languages;
+        }
+      } catch (_e) { /* detectLanguage unavailable in some contexts */ }
+
+      message = buildPrompt(
+        {
+          selection,
+          pageUrl:       info.pageUrl || "",
+          pageTitle:     tab?.title   || "",
+          uiLang:        chrome.i18n.getUILanguage(),
+          detectedLangs,
+        },
+        askGeminiPromptEng,
+      );
     } else {
       const prefix = askGeminiSummarizePrefix.trimEnd();
       message = prefix + "\n\n" + selection;
     }
 
-    // Wrap content that looks like a prompt injection attempt
-    if (_hasPromptInjection(selection)) {
-      console.warn("[Ask Gemini] Potential prompt injection detected in selection — wrapping as untrusted.");
+    // Wrap content that looks like a prompt injection attempt.
+    // Scan the generated message (not just the selection) so injected
+    // content that arrives via {title} or {url} is also caught.
+    if (_hasPromptInjection(message)) {
+      console.warn("[Ask Gemini] Potential prompt injection detected — wrapping as untrusted.");
       message = _UNTRUSTED_WRAPPER + message;
     }
 

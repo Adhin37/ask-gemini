@@ -130,6 +130,30 @@
   "options_pe_preview_label":        { "message": "Preview",                                         "description": "Label above the PE rule preview" },
   "options_pe_preview_placeholder":  { "message": "…your selected text…",                 "description": "Placeholder shown in the PE preview where {selection} would appear" },
   "options_pe_reset_all_btn":        { "message": "Reset all rules to defaults",                     "description": "Button at the bottom of the PE rules list" },
+
+  "options_pe_role_label":           { "message": "System role (optional)",                           "description": "Label for the PE global role prefix card" },
+  "options_pe_role_sub":             { "message": "Prepended before every rule template",              "description": "Subtitle for the PE role card" },
+  "options_pe_role_toggle_title":    { "message": "Toggle the global role prefix",                    "description": "Tooltip on the PE role toggle" },
+  "options_pe_role_placeholder":     { "message": "e.g. You are a senior software engineer. Be concise and concrete.", "description": "Placeholder in the PE role textarea" },
+  "options_pe_role_reset_btn":       { "message": "Reset role",                                       "description": "Button to reset the PE role to default" },
+  "options_pe_role_hint":            { "message": "Keep it short. Sent in front of the matched rule template.", "description": "Hint below the PE role editor" },
+
+  "options_pe_sample_label":         { "message": "Try it",                                           "description": "Label above the PE sample/detection textarea" },
+  "options_pe_sample_placeholder":   { "message": "Paste or type a sample selection here…",           "description": "Placeholder in the PE sample textarea" },
+  "options_pe_sample_detected_label": { "message": "Detected",                                        "description": "Label before the detected-context pill in the sample card" },
+  "options_pe_sample_none":          { "message": "—",                                                "description": "Pill text when no sample has been typed yet" },
+
+  "options_pe_vars_toggle":          { "message": "Variables",                                        "description": "Label for the collapsible variables help panel under each rule textarea" },
+  "options_pe_var_selection_desc":   { "message": "The selected text",                                "description": "Description of the {selection} variable" },
+  "options_pe_var_url_desc":         { "message": "Full page URL",                                    "description": "Description of the {url} variable" },
+  "options_pe_var_domain_desc":      { "message": "Page domain (e.g. github.com)",                    "description": "Description of the {domain} variable" },
+  "options_pe_var_title_desc":       { "message": "Page title",                                       "description": "Description of the {title} variable" },
+  "options_pe_var_lang_desc":        { "message": "Browser UI language (e.g. en)",                    "description": "Description of the {lang} variable" },
+  "options_pe_var_length_desc":      { "message": "short | medium | long",                            "description": "Description of the {length} variable" },
+
+  "options_toast_role_saved":        { "message": "Role prefix saved",                                "description": "Toast shown after the PE role is saved" },
+  "options_toast_role_reset":        { "message": "Role prefix reset",                                "description": "Toast shown after the PE role is reset" },
+
   "options_summarize_label":         { "message": "Summarize prefix",                                "description": "Label for the summarize prefix textarea section" },
   "options_summarize_desc":          { "message": "This text is automatically prepended to your highlighted text when you choose Summarize with Gemini from the right-click menu. Write a full instruction — Gemini will receive prefix + selection.", "description": "Description paragraph for the summarize prefix" },
   "options_summarize_placeholder":   { "message": "e.g. Summarize the following in 3 bullet points:", "description": "Placeholder in the summarize prefix textarea" },

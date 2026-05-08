@@ -7,11 +7,14 @@ import {
   DEFAULT_SUMMARIZE_PREFIX,
   DEFAULT_TEMPLATES_BY_MODEL,
   DEFAULT_PROMPT_ENG_RULES,
+  PE_TEMPLATE_MAX,
+  PE_ROLE_MAX,
+  PE_VARIABLES,
+  DEFAULT_PE_ROLE,
 } from "../shared/constants.js";
 import { t, localizeModelName } from "../shared/stringUtils.js";
 import { applyI18n } from "../shared/i18nDom.js";
-
-const PE_TEMPLATE_MAX = 400;
+import { detectContext, expandVariables } from "../shared/promptEngine.js";
 
 const SUMMARIZE_PREFIX_MAX = 300;
 
@@ -689,34 +692,86 @@ async function loadContextMenuSettings() {
 // 9. PROMPT ENGINEERING
 // ══════════════════════════════════════════════════════════════════
 
-const promptEngToggle       = document.getElementById("promptEngToggle");
-const promptEngRulesWrap    = document.getElementById("promptEngRules");
+const promptEngToggle        = document.getElementById("promptEngToggle");
+const promptEngRulesWrap     = document.getElementById("promptEngRules");
 const summarizePrefixSection = document.getElementById("summarizePrefixSection");
+const peRoleCard             = document.getElementById("peRoleCard");
 
 // Current in-memory copy of the full PE settings object
-let _peSettings = { enabled: false, rules: [] };
+let _peSettings = { enabled: false, role: { enabled: false, text: "" }, rules: [] };
 
 // Per-rule save debounce timers keyed by rule id
 const _peDebounce = {};
 
+// Demo vars used for the live preview inside each rule card
+const _PREVIEW_VARS = {
+  selection: "…your selected text…",
+  url:       "https://example.com/article",
+  domain:    "example.com",
+  title:     "Example Article — Demo Site",
+  lang:      "en",
+  length:    "medium",
+};
+
 /**
- * Shows or hides the PE rules panel and the summarize-prefix section.
+ * Shows or hides the PE rules panel, the role card, and the summarize-prefix section.
  * @param {boolean} enabled
  */
 function _peSetVisibility(enabled) {
-  promptEngRulesWrap.style.display    = enabled ? "block" : "none";
-  summarizePrefixSection.style.display = enabled ? "none"  : "block";
+  promptEngRulesWrap.style.display     = enabled ? "block" : "none";
+  if (peRoleCard) peRoleCard.style.display = enabled ? "block" : "none";
+  summarizePrefixSection.style.display  = enabled ? "none"  : "block";
 }
 
 /**
  * Merges saved rules with defaults so newly added default rules are
  * always present even on older saved settings.
+ * @param {Array} saved
+ * @returns {Array}
  */
 function _mergeRules(saved) {
   return DEFAULT_PROMPT_ENG_RULES.map(def => {
     const found = saved.find(r => r.id === def.id);
     return found ? { ...def, ...found } : { ...def };
   });
+}
+
+/**
+ * Builds and inserts the variable-chip `<details>` element inside a rule card.
+ * @param {HTMLElement} card
+ * @param {HTMLTextAreaElement} textarea
+ */
+function _buildVarsPanel(card, textarea) {
+  const details = document.createElement("details");
+  details.className = "pe-vars-details";
+
+  const summary = document.createElement("summary");
+  summary.className = "pe-vars-toggle";
+  summary.textContent = t("options_pe_vars_toggle");
+  details.appendChild(summary);
+
+  const list = document.createElement("div");
+  list.className = "pe-vars-list";
+
+  for (const v of PE_VARIABLES) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "pe-vars-chip";
+    chip.textContent = `{${v.name}}`;
+    chip.title = t(v.descKey);
+    chip.addEventListener("click", () => {
+      const start = textarea.selectionStart;
+      const end   = textarea.selectionEnd;
+      const token = `{${v.name}}`;
+      textarea.value = textarea.value.slice(0, start) + token + textarea.value.slice(end);
+      textarea.selectionStart = textarea.selectionEnd = start + token.length;
+      textarea.focus();
+      textarea.dispatchEvent(new Event("input"));
+    });
+    list.appendChild(chip);
+  }
+  details.appendChild(list);
+  card.appendChild(details);
 }
 
 /**
@@ -800,7 +855,7 @@ function _buildRuleCard(rule) {
   previewBox.className = "ctx-preview-box";
   const previewText = document.createElement("span");
   previewText.className = "ctx-preview-text";
-  _updatePePreview(previewText, textarea.value);
+  _updatePeFullPreview(previewText, textarea.value);
   previewBox.appendChild(previewText);
   previewWrap.appendChild(previewLabel);
   previewWrap.appendChild(previewBox);
@@ -808,6 +863,9 @@ function _buildRuleCard(rule) {
   metaRow.appendChild(charCount);
   metaRow.appendChild(previewWrap);
   card.appendChild(metaRow);
+
+  // ── Variables help panel ──────────────────────────────────────
+  _buildVarsPanel(card, textarea);
 
   // ── Wire up events ────────────────────────────────────────────
   toggleInput.addEventListener("change", () => {
@@ -821,7 +879,7 @@ function _buildRuleCard(rule) {
     const len = textarea.value.length;
     autoResizeTextarea(textarea);
     _updatePeCharCount(charCount, len);
-    _updatePePreview(previewText, textarea.value);
+    _updatePeFullPreview(previewText, textarea.value);
     const r = _peSettings.rules.find(x => x.id === rule.id);
     if (r) r.template = textarea.value;
     _peScheduleSave(rule.id);
@@ -835,7 +893,7 @@ function _buildRuleCard(rule) {
     const r = _peSettings.rules.find(x => x.id === rule.id);
     if (r) r.template = def.template;
     _updatePeCharCount(charCount, def.template.length);
-    _updatePePreview(previewText, def.template);
+    _updatePeFullPreview(previewText, def.template);
     _peScheduleSave(rule.id);
     showToast(t("options_toast_rule_reset"));
   });
@@ -855,12 +913,12 @@ function _updatePeCharCount(el, len) {
 }
 
 /**
- * Renders a PE rule template preview, replacing {selection} with placeholder text.
+ * Renders a PE rule template preview with all demo variables substituted.
  * @param {HTMLElement} el
  * @param {string}      template
  */
-function _updatePePreview(el, template) {
-  el.textContent = template.replace(/\{selection\}/g, t("options_pe_preview_placeholder"));
+function _updatePeFullPreview(el, template) {
+  el.textContent = expandVariables(template, _PREVIEW_VARS);
 }
 
 /**
@@ -875,12 +933,84 @@ function _peScheduleSave(ruleId) {
   }, 400);
 }
 
+// ── "Try it" sample detection ─────────────────────────────────────
+
+let _sampleDebounce = null;
+
+/**
+ * Builds and prepends the "Try it" sample card to the rules wrap.
+ * @returns {HTMLElement}  the detected-context badge span
+ */
+function _buildSampleCard() {
+  const card = document.createElement("div");
+  card.className = "card pe-sample-wrap";
+
+  const labelEl = document.createElement("div");
+  labelEl.className = "tmpl-form-label";
+  labelEl.textContent = t("options_pe_sample_label");
+  card.appendChild(labelEl);
+
+  const textarea = document.createElement("textarea");
+  textarea.className = "tmpl-textarea pe-sample-textarea";
+  textarea.rows = 2;
+  textarea.placeholder = t("options_pe_sample_placeholder");
+  card.appendChild(textarea);
+
+  const foot = document.createElement("div");
+  foot.className = "pe-sample-foot";
+
+  const detectedLabel = document.createElement("span");
+  detectedLabel.className = "ctx-preview-label";
+  detectedLabel.textContent = t("options_pe_sample_detected_label") + ": ";
+
+  const badge = document.createElement("span");
+  badge.className = "pe-detected-badge";
+  badge.textContent = t("options_pe_sample_none");
+
+  foot.appendChild(detectedLabel);
+  foot.appendChild(badge);
+  card.appendChild(foot);
+
+  textarea.addEventListener("input", () => {
+    clearTimeout(_sampleDebounce);
+    _sampleDebounce = setTimeout(() => {
+      const text = textarea.value;
+      // Remove winner highlight from all cards
+      promptEngRulesWrap.querySelectorAll(".pe-rule-card").forEach(c => c.classList.remove("is-winner"));
+      if (!text.trim()) {
+        badge.textContent = t("options_pe_sample_none");
+        badge.classList.remove("is-active");
+        return;
+      }
+      const winnerId = detectContext(
+        { selection: text, pageUrl: _PREVIEW_VARS.url, pageTitle: _PREVIEW_VARS.title, uiLang: "en" },
+        _peSettings.rules,
+      );
+      const winRule = _peSettings.rules.find(r => r.id === winnerId);
+      badge.textContent = winRule ? winRule.label : winnerId;
+      badge.classList.add("is-active");
+      // Highlight the winning rule card
+      const winCard = promptEngRulesWrap.querySelector(`[data-rule-id="${winnerId}"]`);
+      if (winCard) {
+        winCard.classList.add("is-winner");
+        winCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }, 150);
+  });
+
+  return card;
+}
+
 /**
  * Re-renders all PE rule cards plus the reset-all footer button.
  * @param {{ id: string, label: string, hint: string, enabled: boolean, template: string }[]} rules
  */
 function renderPromptEngRules(rules) {
   promptEngRulesWrap.replaceChildren();
+
+  // "Try it" sample card at the top
+  promptEngRulesWrap.appendChild(_buildSampleCard());
+
   rules.forEach(rule => {
     promptEngRulesWrap.appendChild(_buildRuleCard(rule));
   });
@@ -899,6 +1029,69 @@ function renderPromptEngRules(rules) {
   promptEngRulesWrap.appendChild(footer);
 }
 
+// ── Role prefix card ──────────────────────────────────────────────
+
+/**
+ * Wires the role prefix card (toggle + textarea + char counter + reset).
+ * The card DOM is already in options.html; this just attaches event listeners.
+ */
+function _initRoleCard() {
+  const roleToggle   = document.getElementById("peRoleToggle");
+  const roleTextarea = document.getElementById("peRoleTextarea");
+  const roleCount    = document.getElementById("peRoleCharCount");
+  const roleReset    = document.getElementById("peRoleResetBtn");
+  const roleSection  = document.getElementById("peRoleSection");
+
+  if (!roleToggle || !roleTextarea || !roleCount || !roleReset) return;
+
+  const _syncRoleCount = () => {
+    const len = roleTextarea.value.length;
+    roleCount.textContent = `${len} / ${PE_ROLE_MAX}`;
+    roleCount.classList.toggle("warn", len > PE_ROLE_MAX * 0.8 && len <= PE_ROLE_MAX);
+    roleCount.classList.toggle("over", len > PE_ROLE_MAX);
+  };
+
+  const _syncRoleSection = (enabled) => {
+    if (roleSection) roleSection.style.display = enabled ? "block" : "none";
+  };
+
+  const _saveRole = async () => {
+    if (!_peSettings.role) _peSettings.role = { enabled: false, text: "" };
+    _peSettings.role.enabled = roleToggle.checked;
+    _peSettings.role.text    = roleTextarea.value.slice(0, PE_ROLE_MAX);
+    await chrome.storage.sync.set({ askGeminiPromptEng: _peSettings });
+  };
+
+  roleToggle.addEventListener("change", async () => {
+    _syncRoleSection(roleToggle.checked);
+    await _saveRole();
+    showToast(t("options_toast_role_saved"));
+  });
+
+  roleTextarea.addEventListener("input", () => {
+    _syncRoleCount();
+    clearTimeout(_peDebounce["__role__"]);
+    _peDebounce["__role__"] = setTimeout(async () => {
+      await _saveRole();
+      showToast(t("options_toast_role_saved"));
+    }, 400);
+  });
+
+  roleReset.addEventListener("click", async () => {
+    roleTextarea.value = DEFAULT_PE_ROLE;
+    _syncRoleCount();
+    await _saveRole();
+    showToast(t("options_toast_role_reset"));
+  });
+
+  // Populate from _peSettings (called after load)
+  const role = _peSettings.role || { enabled: false, text: "" };
+  roleToggle.checked   = role.enabled;
+  roleTextarea.value   = role.text || "";
+  _syncRoleCount();
+  _syncRoleSection(role.enabled);
+}
+
 promptEngToggle.addEventListener("change", async () => {
   _peSettings.enabled = promptEngToggle.checked;
   _peSetVisibility(_peSettings.enabled);
@@ -911,11 +1104,13 @@ async function loadPromptEngSettings() {
   const { askGeminiPromptEng } = await chrome.storage.sync.get("askGeminiPromptEng");
   _peSettings = {
     enabled: askGeminiPromptEng?.enabled ?? false,
+    role:    askGeminiPromptEng?.role    ?? { enabled: false, text: "" },
     rules:   _mergeRules(askGeminiPromptEng?.rules ?? []),
   };
   promptEngToggle.checked = _peSettings.enabled;
   _peSetVisibility(_peSettings.enabled);
   renderPromptEngRules(_peSettings.rules);
+  _initRoleCard();
 }
 
 const peResetAllOverlay  = document.getElementById("peResetAllOverlay");
