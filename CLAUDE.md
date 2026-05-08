@@ -119,6 +119,33 @@ Install dev deps once: `npm install`
 - `background.js`, `options.js`, `content.js` → **double quotes**
 - `popup.js` → currently single quotes (will show warnings; migrate gradually)
 
+## E2E Testing
+
+Tests live in `e2e/scenarios/`. Run with `npm run e2e`. Videos land in `e2e/videos/`.
+
+### The full-pipeline rule
+
+Every e2e test must exercise the complete extension pipeline from end to end. The purpose of e2e is to verify that the whole system works together — popup UI, extension logic, and Gemini — not individual pieces in isolation (that is what unit tests are for).
+
+**What a full-pipeline test looks like:**
+1. User opens the extension popup → interacts with the popup UI (fills text, drops files, selects a model, clicks Send)
+2. `popup.js` validates the input, writes to `chrome.storage.local`, and opens/focuses the Gemini tab
+3. `content.js` injects on `gemini.google.com`, reads storage, uploads files if present, injects the message
+
+**What is forbidden:**
+- Writing `pendingMessage`, `pendingFiles`, or `pendingModel` directly into `chrome.storage.local` via `context.serviceWorkers()[0].evaluate(...)` to simulate what the popup would do — this bypasses popup validation and the popup UI entirely
+- Opening Gemini tabs directly via `chrome.tabs.create` without going through the popup (see the one accepted exception below)
+- Importing or re-using mock Gemini fixtures (`mock-gemini.js`) for any test that could instead run against real Gemini
+
+If a scenario cannot be tested through the full popup pipeline on real Gemini, it should be left untested at the e2e level rather than converted into a bypass. Implicit coverage (e.g. asserting that an error banner is *not* visible on every successful test) is acceptable.
+
+**The one accepted exception — context menu (04-contextmenu.spec.js):**
+Playwright cannot drive native OS context menus, so `context.serviceWorkers()[0].evaluate(...)` is used to trigger the background.js action that clicking the "Ask Gemini" menu item would produce. This is acceptable because the full user-facing interaction (navigate to a real page, select text, right-click to surface the menu in the recording) still happens through the real UI. The service worker call only substitutes for the one step that Playwright has no API for.
+
+### Real Gemini is the default
+
+All scenario files without a `-mock` suffix run against the live `gemini.google.com`. The `-mock` suffix is reserved for the small set of scenarios that genuinely cannot run on a free account: premium model switching (Pro, Thinking) and locked-model fallback simulation. Do not add mock Gemini routes to non-mock spec files.
+
 ## Common Patterns
 
 ### Sending data from popup → content script via storage

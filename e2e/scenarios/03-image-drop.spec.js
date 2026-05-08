@@ -1,223 +1,182 @@
 /**
- * Scenario 03 — Drag & drop image + send
+ * Scenario 03 — Drag & drop image + send (real Gemini)
+ *
+ * Uses the default e2e/.chrome-profile. Tests 1–2 are popup-only and always run.
+ * Tests 3–6 skip gracefully via skipIfNotReady() when not signed in.
+ *
+ * Tests covered:
+ *   1. popup — too-large image rejected with error, not added to chip list
+ *   2. popup — non-image file rejected with error, not added to chip list
+ *   3. real Gemini — PNG upload via popup: image chip detected, prompt sent
+ *   4. real Gemini — WebP upload via popup: image chip detected, prompt sent
+ *   5. real Gemini — JPEG upload via popup: image chip detected, prompt sent
+ *   6. real Gemini — multi-file upload (PNG + WebP) via popup: both chips detected
+ *
+ * Key assertion strategy:
+ *   • page.getByText(message) — the message text appears in Gemini's user
+ *     bubble after submission, regardless of DOM class names.
+ *   • page.getByText("Image upload failed") must NOT be visible — this is
+ *     the error banner injected by content.js when waitForUploadChips times out.
+ *
+ * If a test fails with "Image upload failed" visible:
+ *   → UPLOAD_CHIP_SELECTORS in content.js doesn't match Gemini's current DOM.
+ *   → Open Gemini, attach a file manually, run in DevTools:
+ *       [...document.querySelectorAll('img[src^="blob:"]')]
+ *     Confirm which selector from UPLOAD_CHIP_SELECTORS matches, or add a new one.
+ *
+ * The upload-failure path (chip timeout → error banner → no submit) is covered
+ * by 03-image-drop-mock.spec.js, which uses the mock Gemini fixture.
  */
 
 import { test, expect } from "@playwright/test";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import { launchExtension } from "../helpers/extension.js";
 import { openPopupWindow } from "../helpers/open-popup.js";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const MOCK_HTML  = fs.readFileSync(path.join(__dirname, "../fixtures/mock-gemini.html"), "utf8");
-
-const PNG_B64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk" +
-  "+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+import {
+  skipIfNotReady,
+  closeGeminiTabs,
+  sendViaPopup,
+  sendImageViaPopup,
+  assertMessageOnGemini,
+} from "../helpers/real-gemini.js";
+import { buildAndDropImage } from "../helpers/images.js";
 
 let context;
 let extensionId;
 
 test.beforeAll(async ({ playwright }) => {
-  ({ context, extensionId } = await launchExtension(playwright.chromium, { slowMo: 650 }));
-  await context.route("https://gemini.google.com/**", route =>
-    route.fulfill({ status: 200, contentType: "text/html", body: MOCK_HTML })
-  );
+  ({ context, extensionId } = await launchExtension(playwright.chromium, { slowMo: 400 }));
 });
 
 test.afterAll(async () => {
   await context.close();
 });
 
-test("popup — drag & drop image then send", async () => {
+// ── Test 1: too-large file rejected (popup-only, no Gemini) ───────────────
+
+test("popup — too-large image rejected with error, not added to chip list", async () => {
   const popup = await openPopupWindow(context, extensionId);
-  await popup.waitForTimeout(1000);
-
-  // ── Build DataTransfer in the browser context ─────────────────────
-  const dataTransfer = await popup.evaluateHandle((b64) => {
-    const dt  = new DataTransfer();
-    const raw = atob(b64);
-    const bytes = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-    const blob = new Blob([bytes], { type: "image/png" });
-    dt.items.add(new File([blob], "screenshot.png", { type: "image/png" }));
-    return dt;
-  }, PNG_B64);
-
-  // ── dragenter → visual highlight ──────────────────────────────────
-  await popup.dispatchEvent("#inputWrapper", "dragenter", { dataTransfer });
-  await popup.waitForTimeout(1000);
-  await popup.dispatchEvent("#inputWrapper", "dragover",  { dataTransfer });
-  await popup.waitForTimeout(400);
-
-  // ── drop → file chip ──────────────────────────────────────────────
-  await popup.dispatchEvent("#inputWrapper", "drop", { dataTransfer });
-  await dataTransfer.dispose();
-
-  // Assert chip appeared before continuing
-  await expect(popup.locator(".file-chip")).toBeVisible({ timeout: 5_000 });
-  await popup.waitForTimeout(1000);
-
-  // ── Type question ─────────────────────────────────────────────────
-  await popup.locator("#questionInput").click();
-  await popup.locator("#questionInput").type(
-    "Describe what you see in this image",
-    { delay: 18 }
-  );
   await popup.waitForTimeout(600);
 
-  // ── Read before send ──────────────────────────────────────────────
-  const message = await popup.locator("#questionInput").inputValue();
-  const model   = await popup.evaluate(() =>
-    document.querySelector(".model-opt.active")?.dataset.model ?? "flash"
-  );
+  // 5 MB buffer with valid PNG magic bytes — passes MIME check, fails size check
+  const dt = await popup.evaluateHandle(() => {
+    const bytes = new Uint8Array(5 * 1024 * 1024);
+    bytes.set([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+    const blob = new Blob([bytes], { type: "image/png" });
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([blob], "huge.png", { type: "image/png" }));
+    return transfer;
+  });
 
-  // ── Send ──────────────────────────────────────────────────────────
-  const [initialPage] = await Promise.all([
-    context.waitForEvent("page"),
-    popup.locator("#sendBtn").click(),
-  ]);
+  await popup.dispatchEvent("#inputWrapper", "drop", { dataTransfer: dt });
+  await dt.dispose();
 
-  await initialPage.close();
-  await context.serviceWorkers()[0].evaluate(
-    ({ msg, mdl }) => chrome.storage.local.set({ pendingMessage: msg, pendingModel: mdl }),
-    { msg: message, mdl: model }
-  );
+  await expect(popup.locator("#hint")).toContainText("exceeds 4 MB", { timeout: 3_000 });
+  await expect(popup.locator(".file-chip")).not.toBeVisible();
+  await expect(popup.locator("#sendBtn")).toBeDisabled({ timeout: 2_000 });
 
-  const geminiPage = await context.newPage();
-  await geminiPage.setViewportSize({ width: 1280, height: 720 });
-  await geminiPage.bringToFront();
-  await geminiPage.goto("https://gemini.google.com/app");
-  await geminiPage.waitForLoadState("domcontentloaded");
-
-  // ── Assert ────────────────────────────────────────────────────────
-  await expect(geminiPage.locator(".msg.user")).toBeVisible({ timeout: 10_000 });
-  await expect(geminiPage.locator(".msg.user .msg-body"))
-    .toContainText("Describe", { timeout: 5_000 });
-
-  await expect(geminiPage.locator(".msg.gemini .msg-body:not(:has(.typing-dots))"))
-    .toBeVisible({ timeout: 8_000 });
-
-  await geminiPage.waitForTimeout(1500);
+  await popup.close();
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Content-script upload scenarios (storage injection — no popup required)
-// ══════════════════════════════════════════════════════════════════════════════
+// ── Test 2: non-image file rejected (popup-only, no Gemini) ───────────────
 
-// Reuse the same 1×1 PNG from the popup test (PNG bytes labelled as webp for the
-// webp test — content.js only uses the MIME type, not the actual pixel data).
-const PNG_FILE  = { name: "test.png",      type: "image/png",  size: 67, data: `data:image/png;base64,${PNG_B64}`  };
-const WEBP_FILE = { name: "shopping.webp", type: "image/webp", size: 67, data: `data:image/webp;base64,${PNG_B64}` };
-const JPEG_FILE = { name: "photo.jpg",     type: "image/jpeg", size: 67, data: `data:image/jpeg;base64,${PNG_B64}` };
+test("popup — non-image file rejected with error, not added to chip list", async () => {
+  const popup = await openPopupWindow(context, extensionId);
+  await popup.waitForTimeout(600);
 
-/**
- * Injects pendingMessage + pendingFiles into extension storage via the SW,
- * optionally blocks upload chips (failure-path simulation), then opens and
- * returns a fresh mock Gemini page.
- *
- * @param {import("@playwright/test").BrowserContext} ctx
- * @param {{ message: string, files?: object[], blockUpload?: boolean }} opts
- * @returns {Promise<import("@playwright/test").Page>}
- */
-async function injectFilesAndLoadGemini(ctx, { message, files = [], blockUpload = false }) {
-  await ctx.serviceWorkers()[0].evaluate(
-    ({ msg, fls }) =>
-      chrome.storage.local.set({ pendingMessage: msg, pendingModel: "flash", pendingFiles: fls }),
-    { msg: message, fls: files }
+  const dt = await popup.evaluateHandle(() => {
+    const blob = new Blob(["hello world"], { type: "text/plain" });
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([blob], "notes.txt", { type: "text/plain" }));
+    return transfer;
+  });
+
+  await popup.dispatchEvent("#inputWrapper", "drop", { dataTransfer: dt });
+  await dt.dispose();
+
+  await expect(popup.locator("#hint")).toContainText("is not an image", { timeout: 3_000 });
+  await expect(popup.locator(".file-chip")).not.toBeVisible();
+  await expect(popup.locator("#sendBtn")).toBeDisabled({ timeout: 2_000 });
+
+  await popup.close();
+});
+
+// ── Tests 3–5: single-file uploads via popup ──────────────────────────────
+
+test("real Gemini — PNG upload via popup: image chip detected, prompt sent", async () => {
+  const MSG = "e2e PNG upload test — what do you see in this image?";
+  const { geminiPage, logs } = await sendImageViaPopup(
+    context, extensionId, { mimeType: "image/png", filename: "test.png", message: MSG }
   );
 
-  const page = await ctx.newPage();
-  await page.setViewportSize({ width: 1280, height: 720 });
+  await skipIfNotReady(geminiPage);
 
-  if (blockUpload) {
-    // Runs before page script — mock reads this flag in its "change" listener
-    await page.addInitScript(() => sessionStorage.setItem("__testBlockUpload", "true"));
+  try {
+    await assertMessageOnGemini(geminiPage, MSG);
+  } finally {
+    console.info("[03] PNG upload — content.js logs:", logs.length ? logs : "(none captured)");
+    await geminiPage.close().catch(() => {});
   }
-
-  await page.goto("https://gemini.google.com/app");
-  await page.waitForLoadState("domcontentloaded");
-  return page;
-}
-
-test("content — PNG upload: chip detected, prompt submitted to mock Gemini", async () => {
-  const page = await injectFilesAndLoadGemini(context, {
-    message: "Describe what you see in this image",
-    files:   [PNG_FILE],
-  });
-
-  // Prompt should reach the chat area
-  await expect(page.locator(".msg.user")).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator(".msg.user .msg-body"))
-    .toContainText("Describe", { timeout: 5_000 });
-
-  // No error banner
-  await expect(page.getByText("Image upload failed")).not.toBeVisible();
-
-  await page.close();
 });
 
-test("content — upload failure: error banner shown, prompt NOT submitted", async () => {
-  // __testBlockUpload prevents the mock from creating input-media-card chips,
-  // so waitForUploadChips() times out and content.js shows the error banner.
-  const page = await injectFilesAndLoadGemini(context, {
-    message:     "This should not be sent",
-    files:       [PNG_FILE],
-    blockUpload: true,
-  });
+test("real Gemini — WebP upload via popup: image chip detected, prompt sent", async () => {
+  const MSG = "e2e WebP upload test — describe this image";
+  const { geminiPage, logs } = await sendImageViaPopup(
+    context, extensionId, { mimeType: "image/webp", filename: "photo.webp", message: MSG }
+  );
 
-  // Error banner must appear (waitForUploadChips timeout = 8s + 3s per file = 11s)
-  await expect(page.getByText("Image upload failed"))
-    .toBeVisible({ timeout: 15_000 });
+  await skipIfNotReady(geminiPage);
 
-  // Prompt must NOT reach the chat area
-  await expect(page.locator(".msg.user")).not.toBeVisible();
-
-  await page.close();
+  try {
+    await assertMessageOnGemini(geminiPage, MSG);
+  } finally {
+    console.info("[03] WebP upload — content.js logs:", logs.length ? logs : "(none captured)");
+    await geminiPage.close().catch(() => {});
+  }
 });
 
-test("content — WebP upload: file-input path handles image/webp correctly", async () => {
-  // WebP was the originally reported failing format. The file-input primary path
-  // (added as the root-cause fix) bypasses Gemini's paste-handler MIME filter,
-  // so WebP should upload and submit exactly like PNG.
-  const page = await injectFilesAndLoadGemini(context, {
-    message: "What is in this image?",
-    files:   [WEBP_FILE],
-  });
+test("real Gemini — JPEG upload via popup: image chip detected, prompt sent", async () => {
+  const MSG = "e2e JPEG upload test — what colour is this image?";
+  const { geminiPage, logs } = await sendImageViaPopup(
+    context, extensionId, { mimeType: "image/jpeg", filename: "photo.jpg", message: MSG }
+  );
 
-  await expect(page.locator(".msg.user")).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator(".msg.user .msg-body"))
-    .toContainText("What is in this image", { timeout: 5_000 });
-  await expect(page.getByText("Image upload failed")).not.toBeVisible();
+  await skipIfNotReady(geminiPage);
 
-  await page.close();
+  try {
+    await assertMessageOnGemini(geminiPage, MSG);
+  } finally {
+    console.info("[03] JPEG upload — content.js logs:", logs.length ? logs : "(none captured)");
+    await geminiPage.close().catch(() => {});
+  }
 });
 
-test("content — JPEG upload: chip detected, prompt submitted to mock Gemini", async () => {
-  const page = await injectFilesAndLoadGemini(context, {
-    message: "Analyse this photo",
-    files:   [JPEG_FILE],
-  });
+// ── Test 6: multi-file upload (PNG + WebP) via popup ─────────────────────
 
-  await expect(page.locator(".msg.user")).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator(".msg.user .msg-body"))
-    .toContainText("Analyse", { timeout: 5_000 });
-  await expect(page.getByText("Image upload failed")).not.toBeVisible();
+test("real Gemini — multi-file upload (PNG + WebP) via popup: both chips detected", async () => {
+  await closeGeminiTabs(context);
 
-  await page.close();
+  const popup = await openPopupWindow(context, extensionId);
+
+  // Drop PNG — first chip
+  await buildAndDropImage(popup, "image/png", "photo.png");
+  await expect(popup.locator(".file-chip")).toBeVisible({ timeout: 6_000 });
+
+  // Drop WebP — second chip
+  await buildAndDropImage(popup, "image/webp", "photo.webp");
+  await expect(popup.locator(".file-chip")).toHaveCount(2, { timeout: 6_000 });
+
+  const MSG = "e2e multi-file upload test — describe both images";
+  await popup.locator("#questionInput").fill(MSG);
+  await expect(popup.locator("#sendBtn")).not.toBeDisabled({ timeout: 3_000 });
+
+  const { geminiPage, logs } = await sendViaPopup(context, popup);
+  await skipIfNotReady(geminiPage);
+
+  try {
+    await assertMessageOnGemini(geminiPage, MSG);
+  } finally {
+    console.info("[03] multi-file upload — content.js logs:", logs.length ? logs : "(none captured)");
+    await geminiPage.close().catch(() => {});
+  }
 });
 
-test("content — multi-file upload: 2 images, both chips detected, prompt submitted", async () => {
-  const page = await injectFilesAndLoadGemini(context, {
-    message: "Compare these two images",
-    files:   [PNG_FILE, WEBP_FILE],
-  });
-
-  await expect(page.locator(".msg.user")).toBeVisible({ timeout: 25_000 });
-  await expect(page.locator(".msg.user .msg-body"))
-    .toContainText("Compare", { timeout: 5_000 });
-  await expect(page.getByText("Image upload failed")).not.toBeVisible();
-
-  await page.close();
-});

@@ -1,35 +1,34 @@
 /**
- * Scenario 02 — Templates and autocomplete
+ * Scenario 02 — Templates and autocomplete (real Gemini)
+ *
+ * Uses the default e2e/.chrome-profile. Tests skip gracefully via skipIfNotReady()
+ * when not signed in.
  *
  * Tests covered:
- *   1. Template grid dropdown + "/" autocomplete
+ *   1. Template grid dropdown + "/" autocomplete + send to real Gemini
  */
 
 import { test, expect } from "@playwright/test";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import { launchExtension } from "../helpers/extension.js";
 import { openPopupWindow } from "../helpers/open-popup.js";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const MOCK_HTML  = fs.readFileSync(path.join(__dirname, "../fixtures/mock-gemini.html"), "utf8");
+import {
+  skipIfNotReady,
+  sendViaPopup,
+  assertMessageOnGemini,
+} from "../helpers/real-gemini.js";
 
 let context;
 let extensionId;
 
 test.beforeAll(async ({ playwright }) => {
   ({ context, extensionId } = await launchExtension(playwright.chromium, { slowMo: 650 }));
-  await context.route("https://gemini.google.com/**", route =>
-    route.fulfill({ status: 200, contentType: "text/html", body: MOCK_HTML })
-  );
 });
 
 test.afterAll(async () => {
   await context.close();
 });
 
-// ── Test 1: template dropdown + autocomplete ──────────────────────
+// ── Test 1: template dropdown + autocomplete + send ───────────────────────
 
 test("popup — template dropdown and autocomplete", async () => {
   const popup = await openPopupWindow(context, extensionId);
@@ -41,18 +40,15 @@ test("popup — template dropdown and autocomplete", async () => {
   await popup.locator(".model-opt[data-model='flash']").click();
   await popup.waitForTimeout(500);
 
-  // ── Template grid dropdown ────────────────────────────────────────
+  // ── Template grid dropdown ─────────────────────────────────────────
   await popup.locator("#tmplTriggerBtn").click();
   await popup.waitForTimeout(1200);
-  // Hover first so the recording clearly shows "Summarize:" highlighted
-  // before the click — without this, the cursor sits near the 3rd item
-  // (from the trigger button position) and that item shows hover instead.
+  // Hover first so the recording shows "Summarize:" highlighted before click.
   await popup.locator(".tmpl-item").first().hover();
   await popup.waitForTimeout(600);
   await popup.locator(".tmpl-item").first().click();
   await popup.waitForTimeout(800);
 
-  // After clicking the template, the input contains e.g. "Summarize: "
   const afterTemplate = await popup.locator("#questionInput").inputValue();
   expect(afterTemplate.length).toBeGreaterThan(0);
 
@@ -62,24 +58,22 @@ test("popup — template dropdown and autocomplete", async () => {
   );
   await popup.waitForTimeout(700);
 
-  // ── "/" inline autocomplete ───────────────────────────────────────
+  // ── "/" inline autocomplete ────────────────────────────────────────
   await popup.locator("#questionInput").fill("");
   await popup.locator("#questionInput").dispatchEvent("input");
   await popup.waitForTimeout(600);
 
   await popup.locator("#questionInput").type("/sum", { delay: 40 });
 
-  // Wait until the AC strip is actually visible before pressing Tab —
-  // avoids a race where Tab fires before the AC state machine activates.
+  // Wait until the AC strip is visible before pressing Tab.
   await popup.locator("#acStrip.visible").waitFor({ state: "attached", timeout: 8_000 });
   await popup.waitForTimeout(400);
 
-  // Use locator.press() — targets the element directly via CDP,
-  // unlike page.keyboard.press() which depends on OS window focus.
+  // locator.press() targets the element directly via CDP, unlike
+  // page.keyboard.press() which depends on OS window focus.
   await popup.locator("#questionInput").press("Tab");
   await popup.waitForTimeout(700);
 
-  // Verify Tab was accepted: input should no longer start with "/"
   const afterAC = await popup.locator("#questionInput").inputValue();
   expect(afterAC).not.toMatch(/^\//);
   expect(afterAC.length).toBeGreaterThan(0);
@@ -87,40 +81,20 @@ test("popup — template dropdown and autocomplete", async () => {
   await popup.locator("#questionInput").type("recent AI breakthroughs", { delay: 18 });
   await popup.waitForTimeout(600);
 
-  // ── Read before send ──────────────────────────────────────────────
   const message = await popup.locator("#questionInput").inputValue();
   expect(message.trim().length).toBeGreaterThan(0);
+  await expect(popup.locator("#sendBtn")).not.toBeDisabled({ timeout: 3_000 });
 
-  const model = await popup.evaluate(() =>
-    document.querySelector(".model-opt.active")?.dataset.model ?? "flash"
-  );
+  // ── Send to real Gemini ────────────────────────────────────────────
+  const { geminiPage, logs } = await sendViaPopup(context, popup);
+  await skipIfNotReady(geminiPage);
 
-  // ── Send ──────────────────────────────────────────────────────────
-  const [initialPage] = await Promise.all([
-    context.waitForEvent("page"),
-    popup.locator("#sendBtn").click(),
-  ]);
-
-  await initialPage.close();
-  await context.serviceWorkers()[0].evaluate(
-    ({ msg, mdl }) => chrome.storage.local.set({ pendingMessage: msg, pendingModel: mdl }),
-    { msg: message, mdl: model }
-  );
-
-  const geminiPage = await context.newPage();
-  await geminiPage.setViewportSize({ width: 1280, height: 720 });
-  await geminiPage.bringToFront();
-  await geminiPage.goto("https://gemini.google.com/app");
-  await geminiPage.waitForLoadState("domcontentloaded");
-
-  // ── Assert ────────────────────────────────────────────────────────
-  await expect(geminiPage.locator(".msg.user")).toBeVisible({ timeout: 10_000 });
-  await expect(geminiPage.locator(".msg.user .msg-body"))
-    .toContainText("Summarize", { timeout: 5_000 });
-
-  await expect(geminiPage.locator(".msg.gemini .msg-body:not(:has(.typing-dots))"))
-    .toBeVisible({ timeout: 8_000 });
-
-  await geminiPage.waitForTimeout(1500);
-  await geminiPage.close();
+  try {
+    // The template inserts "Summarize: " as the prefix — check that keyword
+    // rather than the full dynamic message to avoid newline-matching issues.
+    await assertMessageOnGemini(geminiPage, "Summarize");
+  } finally {
+    console.info("[02] templates — content.js logs:", logs.length ? logs : "(none captured)");
+    await geminiPage.close().catch(() => {});
+  }
 });
