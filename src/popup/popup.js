@@ -759,9 +759,12 @@ selClear.addEventListener("click", () => {
 
 /**
  * Prepends `message` to the local history, deduplicating and capping at MAX_HISTORY.
+ * Does nothing when the user has disabled history saving.
  * @param {string} message
  */
 async function saveToHistory(message) {
+  const { askGeminiHistoryEnabled = false } = await chrome.storage.sync.get("askGeminiHistoryEnabled");
+  if (!askGeminiHistoryEnabled) return;
   const { askGeminiHistory = [] } = await chrome.storage.local.get("askGeminiHistory");
   const deduped = askGeminiHistory.filter(h => h.text !== message);
   deduped.unshift({ text: message, ts: Date.now() });

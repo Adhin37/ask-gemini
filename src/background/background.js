@@ -321,15 +321,15 @@ async function dispatchToGemini(message, model) {
   setBadgeQueued();
   _fromContextMenu = true;
 
-  const { askGeminiHistory = [] } = await chrome.storage.local.get("askGeminiHistory");
-  const deduped = askGeminiHistory.filter(h => h.text !== message);
-  deduped.unshift({ text: message, ts: Date.now() });
+  await chrome.storage.local.set({ pendingMessage: message, pendingModel: model });
 
-  await chrome.storage.local.set({
-    pendingMessage:   message,
-    pendingModel:     model,
-    askGeminiHistory: deduped.slice(0, MAX_HISTORY),
-  });
+  const { askGeminiHistoryEnabled = false } = await chrome.storage.sync.get("askGeminiHistoryEnabled");
+  if (askGeminiHistoryEnabled) {
+    const { askGeminiHistory = [] } = await chrome.storage.local.get("askGeminiHistory");
+    const deduped = askGeminiHistory.filter(h => h.text !== message);
+    deduped.unshift({ text: message, ts: Date.now() });
+    await chrome.storage.local.set({ askGeminiHistory: deduped.slice(0, MAX_HISTORY) });
+  }
 
   chrome.tabs.create({ url: GEMINI_URL });
 }

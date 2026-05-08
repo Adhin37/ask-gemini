@@ -337,6 +337,42 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 // ══════════════════════════════════════════════════════════════════
+// 6b. HISTORY ENABLE / DISABLE
+// ══════════════════════════════════════════════════════════════════
+
+const historyEnabledToggle  = document.getElementById("historyEnabledToggle");
+const historySectionEl      = document.getElementById("section-history");
+
+/**
+ * Applies visual state to the history section based on whether saving is enabled.
+ * @param {boolean} enabled
+ */
+function applyHistoryEnabledUI(enabled) {
+  historySectionEl.classList.toggle("history-disabled", !enabled);
+  if (!enabled && allHistory.length === 0) {
+    emptyState.style.display = "flex";
+    emptyState.querySelector("p").textContent    = t("options_history_off_title");
+    emptyState.querySelector("span").textContent = t("options_history_off_sub");
+  } else {
+    renderHistory(allHistory, searchInput.value.trim());
+  }
+}
+
+/** Loads the history-enabled flag from sync storage and applies the UI state. */
+async function loadHistoryEnabled() {
+  const { askGeminiHistoryEnabled = false } = await chrome.storage.sync.get("askGeminiHistoryEnabled");
+  historyEnabledToggle.checked = askGeminiHistoryEnabled;
+  applyHistoryEnabledUI(askGeminiHistoryEnabled);
+}
+
+historyEnabledToggle.addEventListener("change", async () => {
+  const enabled = historyEnabledToggle.checked;
+  await chrome.storage.sync.set({ askGeminiHistoryEnabled: enabled });
+  applyHistoryEnabledUI(enabled);
+  showToast(enabled ? t("options_toast_history_enabled") : t("options_toast_history_disabled"));
+});
+
+// ══════════════════════════════════════════════════════════════════
 // 7. TEMPLATES  (per-model)
 // ══════════════════════════════════════════════════════════════════
 
@@ -984,6 +1020,7 @@ function showToast(msg) {
   applyModel(data.askGeminiModel || "flash");
   await loadShortcut();
   await loadHistory();
+  await loadHistoryEnabled();
   await loadTemplates();
   await loadContextMenuSettings();
   await loadPromptEngSettings();
