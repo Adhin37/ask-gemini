@@ -1320,13 +1320,13 @@ kbd {
   flex-shrink: 0;
 }
 
-.pe-rule-hint-wrap {
+.hint-wrap {
   position: relative;
   display: inline-flex;
   align-items: center;
 }
 
-.pe-rule-hint-icon {
+.hint-icon {
   width: 16px;
   height: 16px;
   border-radius: 50%;
@@ -1344,12 +1344,12 @@ kbd {
   transition: background 0.15s, color 0.15s;
 }
 
-.pe-rule-hint-wrap:hover .pe-rule-hint-icon {
+.hint-wrap:hover .hint-icon {
   background: var(--accent);
   color: #fff;
 }
 
-.pe-rule-hint-tooltip {
+.hint-tooltip {
   visibility: hidden;
   opacity: 0;
   position: absolute;
@@ -1377,7 +1377,7 @@ kbd {
   transition: opacity 0.18s ease, visibility 0.18s ease, transform 0.18s ease;
 }
 
-.pe-rule-hint-tooltip::after {
+.hint-tooltip::after {
   content: "";
   position: absolute;
   top: 100%;
@@ -1387,7 +1387,7 @@ kbd {
   border-top-color: var(--border);
 }
 
-.pe-rule-hint-wrap:hover .pe-rule-hint-tooltip {
+.hint-wrap:hover .hint-tooltip {
   visibility: visible;
   opacity: 1;
   transform: translateX(-50%) translateY(0);

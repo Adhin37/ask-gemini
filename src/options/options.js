@@ -813,14 +813,14 @@ function _buildRuleCard(rule) {
   labelEl.textContent = t(rule.labelKey);
 
   const hintWrap = document.createElement("span");
-  hintWrap.className = "pe-rule-hint-wrap";
+  hintWrap.className = "hint-wrap";
 
   const hintIcon = document.createElement("span");
-  hintIcon.className = "pe-rule-hint-icon";
+  hintIcon.className = "hint-icon";
   hintIcon.textContent = "?";
 
   const hintTooltip = document.createElement("span");
-  hintTooltip.className = "pe-rule-hint-tooltip";
+  hintTooltip.className = "hint-tooltip";
   hintTooltip.textContent = t(rule.hintKey);
 
   hintWrap.appendChild(hintIcon);
