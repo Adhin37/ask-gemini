@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
+import { t } from "../../src/shared/stringUtils.js";
 
 let scoreContext, detectContext, expandVariables, buildPrompt;
 
@@ -11,14 +12,14 @@ beforeAll(async () => {
 });
 
 // ── Helpers ──────────────────────────────────────────────────────
-import { DEFAULT_PROMPT_ENG_RULES } from "../../src/shared/constants.js";
+import { DEFAULT_PROMPT_RULES } from "../../src/shared/constants.js";
 
 function ctx(selection, opts = {}) {
   return { selection, pageUrl: opts.url || "", pageTitle: opts.title || "", uiLang: opts.lang || "en", detectedLangs: opts.detectedLangs };
 }
 
 function detect(selection, opts = {}) {
-  return detectContext(ctx(selection, opts), DEFAULT_PROMPT_ENG_RULES);
+  return detectContext(ctx(selection, opts), DEFAULT_PROMPT_RULES);
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -131,7 +132,7 @@ describe("detectContext — translate", () => {
         detectedLangs: [{ language: "fr", percentage: 92 }],
         lang: "en",
       }),
-      DEFAULT_PROMPT_ENG_RULES,
+      DEFAULT_PROMPT_RULES,
     );
     expect(id).toBe("translate");
   });
@@ -141,7 +142,7 @@ describe("detectContext — translate", () => {
         detectedLangs: [{ language: "en", percentage: 99 }],
         lang: "en",
       }),
-      DEFAULT_PROMPT_ENG_RULES,
+      DEFAULT_PROMPT_RULES,
     );
     expect(id).not.toBe("translate");
   });
@@ -151,7 +152,7 @@ describe("detectContext — translate", () => {
         detectedLangs: [{ language: "de", percentage: 50 }],
         lang: "en",
       }),
-      DEFAULT_PROMPT_ENG_RULES,
+      DEFAULT_PROMPT_RULES,
     );
     expect(id).not.toBe("translate");
   });
@@ -262,7 +263,7 @@ describe("buildPrompt", () => {
   const settings = {
     enabled: true,
     role: { enabled: false, text: "" },
-    rules: DEFAULT_PROMPT_ENG_RULES,
+    rules: DEFAULT_PROMPT_RULES.map(def => ({ ...def, template: t(def.templateKey) })),
   };
 
   it("returns a non-empty string", () => {
@@ -345,12 +346,12 @@ describe("buildPrompt", () => {
 
 describe("scoreContext", () => {
   it("returns an array for every rule", () => {
-    const scores = scoreContext(ctx("hello world"), DEFAULT_PROMPT_ENG_RULES);
-    expect(scores.length).toBe(DEFAULT_PROMPT_ENG_RULES.length);
+    const scores = scoreContext(ctx("hello world"), DEFAULT_PROMPT_RULES);
+    expect(scores.length).toBe(DEFAULT_PROMPT_RULES.length);
   });
 
   it("is sorted descending by score", () => {
-    const scores = scoreContext(ctx("SELECT * FROM orders;"), DEFAULT_PROMPT_ENG_RULES);
+    const scores = scoreContext(ctx("SELECT * FROM orders;"), DEFAULT_PROMPT_RULES);
     for (let i = 1; i < scores.length; i++) {
       expect(scores[i - 1].score).toBeGreaterThanOrEqual(scores[i].score);
     }

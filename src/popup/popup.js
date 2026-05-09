@@ -4,7 +4,7 @@
 import {
   GEMINI_URL,
   MAX_HISTORY,
-  DEFAULT_TEMPLATES_BY_MODEL,
+  DEFAULT_TEMPLATE_KEYS_BY_MODEL,
   INJECTION_PATTERNS,
 } from "../shared/constants.js";
 import { t, plural } from "../shared/stringUtils.js";
@@ -170,7 +170,8 @@ let templates = [];
  */
 async function loadTemplatesForModel(model) {
   const { askGeminiTemplates } = await chrome.storage.sync.get("askGeminiTemplates");
-  const defaults = DEFAULT_TEMPLATES_BY_MODEL[model] || DEFAULT_TEMPLATES_BY_MODEL.flash;
+  const defaultKeys = DEFAULT_TEMPLATE_KEYS_BY_MODEL[model] || DEFAULT_TEMPLATE_KEYS_BY_MODEL.flash;
+  const defaults = defaultKeys.map(k => t(k));
   if (!askGeminiTemplates) {
     templates = [...defaults];
   } else if (Array.isArray(askGeminiTemplates)) {
@@ -489,7 +490,7 @@ function renderFileChips() {
     const removeBtn = document.createElement("button");
     removeBtn.className = "file-chip-remove";
     removeBtn.textContent = "×";
-    removeBtn.title = "Remove";
+    removeBtn.title = t("popup_file_remove_title");
     removeBtn.addEventListener("click", () => {
       attachedFiles.splice(i, 1);
       renderFileChips();

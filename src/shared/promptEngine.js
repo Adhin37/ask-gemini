@@ -213,8 +213,9 @@ function _matchScore(patterns, text, cap) {
  *
  * @typedef {Object} PERule
  * @property {string} id
- * @property {string} label
- * @property {string} hint
+ * @property {string} labelKey
+ * @property {string} hintKey
+ * @property {string} templateKey
  * @property {boolean} enabled
  * @property {string} template
  * @property {number} [priority]

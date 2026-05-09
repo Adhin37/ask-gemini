@@ -4,7 +4,7 @@
 import {
   GEMINI_URL,
   MAX_HISTORY,
-  DEFAULT_SUMMARIZE_PREFIX,
+  DEFAULT_SUMMARIZE_PREFIX_KEY,
   INJECTION_PATTERNS,
 } from "../shared/constants.js";
 import { buildPrompt } from "../shared/promptEngine.js";
@@ -273,7 +273,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "ask-gemini-selection" && info.selectionText) {
     const {
       askGeminiModel           = "flash",
-      askGeminiSummarizePrefix = DEFAULT_SUMMARIZE_PREFIX,
+      askGeminiSummarizePrefix = t(DEFAULT_SUMMARIZE_PREFIX_KEY),
       askGeminiPromptEng,
     } = await chrome.storage.sync.get([
       "askGeminiModel", "askGeminiSummarizePrefix", "askGeminiPromptEng",

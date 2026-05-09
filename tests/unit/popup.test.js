@@ -102,6 +102,10 @@ describe("filterTemplates", () => {
 // ════════════════════════════════════════════════════════════════════
 
 describe("saveToHistory", () => {
+  beforeEach(() => {
+    chrome.storage.sync.get.mockResolvedValue({ askGeminiHistoryEnabled: true });
+  });
+
   it("saves a new message to storage", async () => {
     chrome.storage.local.get.mockResolvedValue({ askGeminiHistory: [] });
 

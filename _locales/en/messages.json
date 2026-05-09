@@ -182,6 +182,41 @@
   "options_pe_var_lang_desc":        { "message": "Browser UI language (e.g. en)",                    "description": "Description of the {lang} variable" },
   "options_pe_var_length_desc":      { "message": "short | medium | long",                            "description": "Description of the {length} variable" },
 
+  "options_pe_preview_var_title":    { "message": "Example Article — Demo Site",                       "description": "Demo page title shown in the PE rule live preview" },
+
+  "default_summarize_prefix":        { "message": "Summarize the following:\n\n",                      "description": "Default text prepended to selections when using Summarize with Gemini (right-click menu). Keep \\n\\n verbatim — they produce the blank line before the selection." },
+  "default_pe_role":                 { "message": "You are a knowledgeable assistant. Be concise and concrete.", "description": "Default system role prefix used in Prompt Engineering mode" },
+
+  "default_template_flash_summarize":  { "message": "Summarize: ",          "description": "Default Flash model template 1" },
+  "default_template_flash_translate":  { "message": "Translate to English: ","description": "Default Flash model template 2" },
+  "default_template_flash_explain":    { "message": "Explain simply: ",      "description": "Default Flash model template 3" },
+  "default_template_flash_proscons":   { "message": "Pros and cons of: ",    "description": "Default Flash model template 4" },
+  "default_template_thinking_step":    { "message": "Think through this step-by-step: ", "description": "Default Thinking model template 1" },
+  "default_template_thinking_edges":   { "message": "What are the edge cases for: ",     "description": "Default Thinking model template 2" },
+  "default_template_thinking_analyze": { "message": "Analyze deeply: ",                  "description": "Default Thinking model template 3" },
+  "default_template_pro_deep":         { "message": "Deep analysis of: ",                "description": "Default Pro model template 1" },
+  "default_template_pro_fix":          { "message": "Fix this code:\n",                  "description": "Default Pro model template 2. Keep \\n verbatim." },
+  "default_template_pro_compare":      { "message": "Compare and contrast: ",            "description": "Default Pro model template 3" },
+  "default_template_pro_report":       { "message": "Write a comprehensive report on: ","description": "Default Pro model template 4" },
+
+  "default_pe_rule_url_template":      { "message": "Visit and summarise this URL ({domain}):\n- **Topic** — one sentence\n- **Key points** — 3 bullets\n- **Audience** — who is it for?\n\n{selection}", "description": "Default template for the URL PE rule. Keep variable tokens ({domain}, {selection}) and Markdown (**…**) verbatim." },
+  "default_pe_rule_error_template":    { "message": "Debug this error from {domain}:\n1. **Root cause** — what failed and why\n2. **Fix** — corrected code or command\n3. **Prevention** — how to avoid it next time\n\n{selection}", "description": "Default template for the Error/Stack trace PE rule." },
+  "default_pe_rule_diff_template":     { "message": "Review this diff:\n- **Intent** — what is the change trying to do?\n- **Risks** — bugs, regressions, side effects\n- **Suggestions** — concrete improvements\n\n{selection}", "description": "Default template for the Diff/Patch PE rule." },
+  "default_pe_rule_log_template":      { "message": "Analyse this {length} log:\n1. **Timeline** — what happened, in order\n2. **Anomalies** — warnings, errors, unusual patterns\n3. **Likely cause** — most probable trigger\n\n{selection}", "description": "Default template for the Log output PE rule." },
+  "default_pe_rule_json_template":     { "message": "Analyse this JSON:\n- **Shape** — top-level fields and types\n- **Notable values** — anything unusual or noteworthy\n- **Schema sketch** — a TypeScript-style type for it\n\n{selection}", "description": "Default template for the JSON PE rule." },
+  "default_pe_rule_sql_template":      { "message": "Explain this SQL:\n1. **What it does** — plain-English query summary\n2. **Performance** — indexes used, hot spots\n3. **Safer rewrite** — same result, cleaner or faster\n\n{selection}", "description": "Default template for the SQL PE rule." },
+  "default_pe_rule_regex_template":    { "message": "Break down this regex:\n- **Matches** — describe what it accepts in plain English\n- **Examples** — 3 strings that match, 3 that don't\n- **Pitfalls** — backtracking, unicode, edge cases\n\n{selection}", "description": "Default template for the Regex PE rule." },
+  "default_pe_rule_code_template":     { "message": "Review this code from {domain}:\n1. **Purpose** — what does it do?\n2. **Logic** — step-by-step\n3. **Issues** — bugs, edge cases, improvements\n\n{selection}", "description": "Default template for the Code PE rule." },
+  "default_pe_rule_markdown_template": { "message": "Summarise this {length} markdown document from {domain}:\n- **Structure** — outline of the headings\n- **Main points** — the actual content, distilled\n- **Action items** — anything actionable\n\n{selection}", "description": "Default template for the Markdown PE rule." },
+  "default_pe_rule_translate_template":{ "message": "Translate this to {lang} (preserve formatting and tone):\n- Provide the translation\n- Note any words that don't translate cleanly\n- Flag idioms with a literal + idiomatic equivalent\n\n{selection}", "description": "Default template for the Translate PE rule." },
+  "default_pe_rule_question_template": { "message": "Answer this {length} question:\n1. **Direct answer** — clear and concise\n2. **Why** — brief reasoning\n3. **Example** — one concrete illustration if useful\n\n{selection}", "description": "Default template for the Question PE rule." },
+  "default_pe_rule_data_template":     { "message": "Analyse this data:\n1. **What it shows** — key values and units\n2. **Patterns** — trends, outliers, correlations\n3. **Insight** — the most useful takeaway\n\n{selection}", "description": "Default template for the Data/Numbers PE rule." },
+  "default_pe_rule_term_template":     { "message": "Explain \"{selection}\" (context: {title}):\n- **Definition** — simple, jargon-free\n- **Practical use** — when and why it matters\n- **Common misconception** — what people get wrong", "description": "Default template for the Term/Keyword PE rule." },
+  "default_pe_rule_article_template":  { "message": "Summarise this {length} text from {domain}:\n**TL;DR:** one sentence\n**Key points:**\n- main argument\n- 2-3 supporting points\n**Takeaway:** most actionable insight\n\n{selection}", "description": "Default template for the Article/Long text PE rule." },
+  "default_pe_rule_default_template":  { "message": "{selection}", "description": "Default template for the fallback PE rule — just passes the selection through unchanged." },
+
+  "popup_file_remove_title":           { "message": "Remove",                                          "description": "Tooltip on the × button that removes a file chip in the popup" },
+
   "options_toast_role_saved":        { "message": "Role prefix saved",                                "description": "Toast shown after the PE role is saved" },
   "options_toast_role_reset":        { "message": "Role prefix reset",                                "description": "Toast shown after the PE role is reset" },
 

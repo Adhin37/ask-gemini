@@ -4,13 +4,13 @@
 
 import {
   GEMINI_URL,
-  DEFAULT_SUMMARIZE_PREFIX,
-  DEFAULT_TEMPLATES_BY_MODEL,
-  DEFAULT_PROMPT_ENG_RULES,
+  DEFAULT_SUMMARIZE_PREFIX_KEY,
+  DEFAULT_TEMPLATE_KEYS_BY_MODEL,
+  DEFAULT_PROMPT_RULES,
   PE_TEMPLATE_MAX,
   PE_ROLE_MAX,
   PE_VARIABLES,
-  DEFAULT_PE_ROLE,
+  DEFAULT_PE_ROLE_KEY,
 } from "../shared/constants.js";
 import { t, localizeModelName } from "../shared/stringUtils.js";
 import { applyI18n } from "../shared/i18nDom.js";
@@ -421,28 +421,32 @@ async function loadTemplates() {
     activeTemplateModel = askGeminiModel;
   }
 
+  const _defaultTplFlash    = DEFAULT_TEMPLATE_KEYS_BY_MODEL.flash.map(k => t(k));
+  const _defaultTplThinking = DEFAULT_TEMPLATE_KEYS_BY_MODEL.thinking.map(k => t(k));
+  const _defaultTplPro      = DEFAULT_TEMPLATE_KEYS_BY_MODEL.pro.map(k => t(k));
+
   if (!askGeminiTemplates) {
     // First run — seed all models with defaults
     allTemplatesByModel = {
-      flash:    [...DEFAULT_TEMPLATES_BY_MODEL.flash],
-      thinking: [...DEFAULT_TEMPLATES_BY_MODEL.thinking],
-      pro:      [...DEFAULT_TEMPLATES_BY_MODEL.pro],
+      flash:    [..._defaultTplFlash],
+      thinking: [..._defaultTplThinking],
+      pro:      [..._defaultTplPro],
     };
     await saveTemplates();
   } else if (Array.isArray(askGeminiTemplates)) {
     // Migration: old flat array → assign to flash, seed others
     allTemplatesByModel = {
       flash:    askGeminiTemplates,
-      thinking: [...DEFAULT_TEMPLATES_BY_MODEL.thinking],
-      pro:      [...DEFAULT_TEMPLATES_BY_MODEL.pro],
+      thinking: [..._defaultTplThinking],
+      pro:      [..._defaultTplPro],
     };
     await saveTemplates();
   } else {
     // Normal load — ensure all model keys exist
     allTemplatesByModel = {
-      flash:    askGeminiTemplates.flash    ?? [...DEFAULT_TEMPLATES_BY_MODEL.flash],
-      thinking: askGeminiTemplates.thinking ?? [...DEFAULT_TEMPLATES_BY_MODEL.thinking],
-      pro:      askGeminiTemplates.pro      ?? [...DEFAULT_TEMPLATES_BY_MODEL.pro],
+      flash:    askGeminiTemplates.flash    ?? [..._defaultTplFlash],
+      thinking: askGeminiTemplates.thinking ?? [..._defaultTplThinking],
+      pro:      askGeminiTemplates.pro      ?? [..._defaultTplPro],
     };
   }
 
@@ -673,15 +677,16 @@ summarizePrefixSaveBtn.addEventListener("click", async () => {
 });
 
 summarizePrefixResetBtn.addEventListener("click", async () => {
-  summarizePrefixTextarea.value = DEFAULT_SUMMARIZE_PREFIX;
+  const defaultPrefix = t(DEFAULT_SUMMARIZE_PREFIX_KEY);
+  summarizePrefixTextarea.value = defaultPrefix;
   updateSummarizePrefixCharCount();
-  await chrome.storage.sync.set({ askGeminiSummarizePrefix: DEFAULT_SUMMARIZE_PREFIX });
+  await chrome.storage.sync.set({ askGeminiSummarizePrefix: defaultPrefix });
   showToast(t("options_toast_reset_default"));
 });
 
 /** Loads the summarize prefix from sync storage and populates the textarea. */
 async function loadContextMenuSettings() {
-  const { askGeminiSummarizePrefix = DEFAULT_SUMMARIZE_PREFIX } =
+  const { askGeminiSummarizePrefix = t(DEFAULT_SUMMARIZE_PREFIX_KEY) } =
     await chrome.storage.sync.get("askGeminiSummarizePrefix");
   summarizePrefixTextarea.value = askGeminiSummarizePrefix;
   updateSummarizePrefixCharCount();
@@ -703,15 +708,17 @@ let _peSettings = { enabled: false, role: { enabled: false, text: "" }, rules: [
 // Per-rule save debounce timers keyed by rule id
 const _peDebounce = {};
 
-// Demo vars used for the live preview inside each rule card
-const _PREVIEW_VARS = {
-  selection: "…your selected text…",
-  url:       "https://example.com/article",
-  domain:    "example.com",
-  title:     "Example Article — Demo Site",
-  lang:      "en",
-  length:    "medium",
-};
+/** Returns demo variable map for the live preview inside each rule card. */
+function _makePreviewVars() {
+  return {
+    selection: t("options_pe_preview_placeholder"),
+    url:       "https://example.com/article",
+    domain:    "example.com",
+    title:     t("options_pe_preview_var_title"),
+    lang:      "en",
+    length:    "medium", // i18n-skip: LLM token, not UI label
+  };
+}
 
 /**
  * Shows or hides the PE rules panel, the role card, and the summarize-prefix section.
@@ -730,9 +737,10 @@ function _peSetVisibility(enabled) {
  * @returns {Array}
  */
 function _mergeRules(saved) {
-  return DEFAULT_PROMPT_ENG_RULES.map(def => {
+  return DEFAULT_PROMPT_RULES.map(def => {
+    const defaultRule = { ...def, template: t(def.templateKey) };
     const found = saved.find(r => r.id === def.id);
-    return found ? { ...def, ...found } : { ...def };
+    return found ? { ...defaultRule, ...found } : defaultRule;
   });
 }
 
@@ -886,14 +894,15 @@ function _buildRuleCard(rule) {
   });
 
   resetBtn.addEventListener("click", () => {
-    const def = DEFAULT_PROMPT_ENG_RULES.find(x => x.id === rule.id);
+    const def = DEFAULT_PROMPT_RULES.find(x => x.id === rule.id);
     if (!def) return;
-    textarea.value = def.template;
+    const defaultTemplate = t(def.templateKey);
+    textarea.value = defaultTemplate;
     autoResizeTextarea(textarea);
     const r = _peSettings.rules.find(x => x.id === rule.id);
-    if (r) r.template = def.template;
-    _updatePeCharCount(charCount, def.template.length);
-    _updatePeFullPreview(previewText, def.template);
+    if (r) r.template = defaultTemplate;
+    _updatePeCharCount(charCount, defaultTemplate.length);
+    _updatePeFullPreview(previewText, defaultTemplate);
     _peScheduleSave(rule.id);
     showToast(t("options_toast_rule_reset"));
   });
@@ -918,7 +927,7 @@ function _updatePeCharCount(el, len) {
  * @param {string}      template
  */
 function _updatePeFullPreview(el, template) {
-  el.textContent = expandVariables(template, _PREVIEW_VARS);
+  el.textContent = expandVariables(template, _makePreviewVars());
 }
 
 /**
@@ -983,7 +992,7 @@ function _buildSampleCard() {
         return;
       }
       const winnerId = detectContext(
-        { selection: text, pageUrl: _PREVIEW_VARS.url, pageTitle: _PREVIEW_VARS.title, uiLang: "en" },
+        { selection: text, pageUrl: "https://example.com/article", pageTitle: t("options_pe_preview_var_title"), uiLang: "en" },
         _peSettings.rules,
       );
       const winRule = _peSettings.rules.find(r => r.id === winnerId);
@@ -1078,7 +1087,7 @@ function _initRoleCard() {
   });
 
   roleReset.addEventListener("click", async () => {
-    roleTextarea.value = DEFAULT_PE_ROLE;
+    roleTextarea.value = t(DEFAULT_PE_ROLE_KEY);
     _syncRoleCount();
     await _saveRole();
     showToast(t("options_toast_role_reset"));
