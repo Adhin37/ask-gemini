@@ -228,7 +228,13 @@
         <div class="card">
           <div class="pref-row">
             <div class="pref-info">
-              <span class="pref-label" data-i18n="options_theme_label">Theme</span>
+              <span class="pref-label">
+                <span data-i18n="options_theme_label">Theme</span>
+                <span class="pe-rule-hint-wrap">
+                  <span class="pe-rule-hint-icon">?</span>
+                  <span class="pe-rule-hint-tooltip" data-i18n="options_theme_hint"></span>
+                </span>
+              </span>
               <span class="pref-sub" data-i18n="options_theme_sub">Choose dark, light, or follow your system setting</span>
             </div>
             <div class="seg-control" id="themeControl">
@@ -259,15 +265,18 @@
               </button>
             </div>
           </div>
-          <div class="card-hint" data-i18n="options_theme_hint">
-            Auto follows your OS setting. Changes take effect in both the popup and this page immediately.
-          </div>
         </div>
 
         <div class="card">
           <div class="pref-row">
             <div class="pref-info">
-              <span class="pref-label" data-i18n="options_model_label">Default Gemini model</span>
+              <span class="pref-label">
+                <span data-i18n="options_model_label">Default Gemini model</span>
+                <span class="pe-rule-hint-wrap">
+                  <span class="pe-rule-hint-icon">?</span>
+                  <span class="pe-rule-hint-tooltip" data-i18n="options_model_hint"></span>
+                </span>
+              </span>
               <span class="pref-sub" data-i18n="options_model_sub">Which model to target when sending a prompt from the popup</span>
             </div>
             <div class="seg-control" id="modelControl">
@@ -275,9 +284,6 @@
               <button class="seg-btn" data-value="thinking" data-i18n="model_label_thinking">Think</button>
               <button class="seg-btn" data-value="pro" data-i18n="model_label_pro">Pro</button>
             </div>
-          </div>
-          <div class="card-hint" data-i18n="options_model_hint">
-            Fast is Gemini's quick default — great for most tasks. Think uses Gemini's reasoning model for complex problems. Pro ✨ uses the advanced model — requires Gemini Advanced.
           </div>
         </div>
       </section>
@@ -314,7 +320,13 @@
         <div class="card">
           <div class="pref-row">
             <div class="pref-info">
-              <span class="pref-label" data-i18n="options_pe_label">Prompt Engineering</span>
+              <span class="pref-label">
+                <span data-i18n="options_pe_label">Prompt Engineering</span>
+                <span class="pe-rule-hint-wrap">
+                  <span class="pe-rule-hint-icon">?</span>
+                  <span class="pe-rule-hint-tooltip" data-i18n="options_pe_hint"></span>
+                </span>
+              </span>
               <span class="pref-sub" data-i18n="options_pe_sub">Auto-detect context and apply a smart prompt template</span>
             </div>
             <label class="toggle-switch"
@@ -323,16 +335,19 @@
               <span class="toggle-track"></span>
             </label>
           </div>
-          <div class="card-hint" data-i18n="options_pe_hint">
-            When on, Ask Gemini detects whether your selection is code, an error, a question, etc., and wraps it in a matching prompt. Each rule is editable. The Summarize prefix below is bypassed while this is active.
-          </div>
         </div>
 
         <!-- Role prefix card — visible when PE is enabled -->
         <div id="peRoleCard" class="card pe-role-card" style="display:none">
           <div class="pref-row">
             <div class="pref-info">
-              <span class="pref-label" data-i18n="options_pe_role_label">System role (optional)</span>
+              <span class="pref-label">
+                <span data-i18n="options_pe_role_label">System role (optional)</span>
+                <span class="pe-rule-hint-wrap">
+                  <span class="pe-rule-hint-icon">?</span>
+                  <span class="pe-rule-hint-tooltip" data-i18n="options_pe_role_hint"></span>
+                </span>
+              </span>
               <span class="pref-sub" data-i18n="options_pe_role_sub">Prepended before every rule template</span>
             </div>
             <label class="toggle-switch"
@@ -356,9 +371,6 @@
               <button class="btn-ghost btn-xs" id="peRoleResetBtn" data-i18n="options_pe_role_reset_btn">Reset role</button>
             </div>
           </div>
-          <div class="card-hint" data-i18n="options_pe_role_hint">
-            Keep it short. Sent in front of the matched rule template.
-          </div>
         </div>
 
         <!-- Rule cards — rendered by options.js, visible when PE is enabled -->
@@ -366,8 +378,12 @@
 
         <!-- Summarize prefix editor -->
         <div class="card" id="summarizePrefixSection">
-          <div class="tmpl-form-label" style="margin-bottom:10px;" data-i18n="options_summarize_label">
-            Summarize prefix
+          <div class="tmpl-form-label" style="margin-bottom:10px;">
+            <span data-i18n="options_summarize_label">Summarize prefix</span>
+            <span class="pe-rule-hint-wrap">
+              <span class="pe-rule-hint-icon">?</span>
+              <span class="pe-rule-hint-tooltip" data-i18n="options_summarize_hint"></span>
+            </span>
           </div>
           <p class="section-desc" style="font-size:12.5px;color:var(--text-dim);font-weight:300;line-height:1.6;margin-bottom:14px;"
             data-i18n="options_summarize_desc">
@@ -412,9 +428,6 @@
             </button>
           </div>
 
-          <div class="card-hint" data-i18n="options_summarize_hint">
-            The prefix can include line breaks — use <kbd class="inline-kbd">Shift+Enter</kbd> inside the box. Newlines are preserved when the prompt is sent to Gemini.
-          </div>
         </div>
       </section>
 
@@ -429,7 +442,13 @@
         <div class="card">
           <div class="shortcut-row">
             <div class="shortcut-info">
-              <span class="shortcut-label" data-i18n="options_shortcut_open_label">Open popup</span>
+              <span class="shortcut-label">
+                <span data-i18n="options_shortcut_open_label">Open popup</span>
+                <span class="pe-rule-hint-wrap">
+                  <span class="pe-rule-hint-icon">?</span>
+                  <span class="pe-rule-hint-tooltip" data-i18n="options_shortcut_hint"></span>
+                </span>
+              </span>
               <span class="shortcut-sub" data-i18n="options_shortcut_open_sub">Works on any page, even without the toolbar visible</span>
             </div>
             <div class="shortcut-editor">
@@ -442,9 +461,6 @@
                 <span data-i18n="options_shortcut_change_btn">Change</span>
               </button>
             </div>
-          </div>
-          <div class="card-hint" data-i18n="options_shortcut_hint">
-            To reassign the key combination, click Change or visit chrome://extensions/shortcuts and find Ask Gemini.
           </div>
         </div>
         <div class="card">
