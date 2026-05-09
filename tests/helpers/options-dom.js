@@ -93,6 +93,12 @@ export function setupOptionsDom() {
       <button id="peResetAllCancel"></button>
       <button id="peResetAllConfirm"></button>
     </div>
+
+    <button id="ctxResetAllBtn"></button>
+    <div    id="ctxResetAllOverlay">
+      <button id="ctxResetAllCancel"></button>
+      <button id="ctxResetAllConfirm"></button>
+    </div>
   `;
 }
 

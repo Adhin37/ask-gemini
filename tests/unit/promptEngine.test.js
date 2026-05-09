@@ -230,27 +230,27 @@ describe("detectContext — collisions", () => {
 
 describe("expandVariables", () => {
   it("substitutes known variables", () => {
-    const result = expandVariables("Hello {name}!", { name: "world" });
+    const result = expandVariables("Hello {{name}}!", { name: "world" });
     expect(result).toBe("Hello world!");
   });
 
   it("leaves unknown variables literal", () => {
-    const result = expandVariables("{selection} from {foo}", { selection: "text" });
-    expect(result).toBe("text from {foo}");
+    const result = expandVariables("{{selection}} from {{foo}}", { selection: "text" });
+    expect(result).toBe("text from {{foo}}");
   });
 
   it("substitutes empty string for known-but-missing variables", () => {
-    const result = expandVariables("domain: {domain}", { domain: "" });
+    const result = expandVariables("domain: {{domain}}", { domain: "" });
     expect(result).toBe("domain: ");
   });
 
   it("substitutes multiple variables", () => {
-    const result = expandVariables("{length} text from {domain}", { length: "medium", domain: "example.com" });
+    const result = expandVariables("{{length}} text from {{domain}}", { length: "medium", domain: "example.com" });
     expect(result).toBe("medium text from example.com");
   });
 
-  it("substitutes {selection} with the actual text", () => {
-    const result = expandVariables("Explain: {selection}", { selection: "Big O" });
+  it("substitutes {{selection}} with the actual text", () => {
+    const result = expandVariables("Explain: {{selection}}", { selection: "Big O" });
     expect(result).toBe("Explain: Big O");
   });
 });
@@ -306,7 +306,7 @@ describe("buildPrompt", () => {
   });
 
   it("falls back to default rule when no other rule matches", () => {
-    const minimalRules = [{ id: "default", enabled: true, template: "fallback:{selection}" }];
+    const minimalRules = [{ id: "default", enabled: true, template: "fallback:{{selection}}" }];
     const result = buildPrompt(ctx("x"), { ...settings, rules: minimalRules });
     expect(result).toBe("fallback:x");
   });
@@ -321,20 +321,20 @@ describe("buildPrompt", () => {
     expect(typeof result).toBe("string");
   });
 
-  it("expands {title} from pageTitle", () => {
+  it("expands {{title}} from pageTitle", () => {
     const termSettings = {
       ...settings,
-      rules: [{ id: "term", enabled: true, template: "Explain {selection} (context: {title})" }],
+      rules: [{ id: "term", enabled: true, template: "Explain {{selection}} (context: {{title}})" }],
     };
     const result = buildPrompt(ctx("closure", { title: "MDN Web Docs" }), termSettings);
     expect(result).toContain("MDN Web Docs");
   });
 
-  it("expands {length} based on selection length", () => {
+  it("expands {{length}} based on selection length", () => {
     const longSel = "word ".repeat(200);
     const result = buildPrompt(
       ctx(longSel, {}),
-      { ...settings, rules: [{ id: "article", enabled: true, template: "This is {length}" }] },
+      { ...settings, rules: [{ id: "article", enabled: true, template: "This is {{length}}" }] },
     );
     expect(result).toContain("long");
   });

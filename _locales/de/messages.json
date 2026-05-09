@@ -118,6 +118,7 @@
   "options_contextmenu_title":       { "message": "Kontextmenü" },
   "options_contextmenu_desc":        { "message": "Passe die Rechtsklick-Aktionen an, die beim Auswählen von Text auf einer Seite erscheinen." },
   "options_contextmenu_feature":     { "message": "Ask Gemini: \"…\" — klicke mit der rechten Maustaste auf ausgewählten Text, um ihn an Gemini zu senden, optional mit einer smarten Prompt-Vorlage." },
+  "options_ctx_reset_all_btn":       { "message": "Abschnitt zurücksetzen" },
   "options_pe_label":                { "message": "Prompt-Engineering" },
   "options_pe_sub":                  { "message": "Kontext automatisch erkennen und eine smarte Prompt-Vorlage anwenden" },
   "options_pe_toggle_title":         { "message": "Prompt-Engineering umschalten" },
@@ -265,6 +266,10 @@
   "options_dialog_pe_body":          { "message": "Alle Prompt-Engineering-Regeln werden auf ihre Standardwerte zurückgesetzt. Deine Änderungen gehen verloren." },
   "options_dialog_pe_cancel":        { "message": "Abbrechen" },
   "options_dialog_pe_confirm":       { "message": "Alle zurücksetzen" },
+  "options_dialog_ctx_title":        { "message": "Kontextmenü-Abschnitt zurücksetzen?" },
+  "options_dialog_ctx_body":         { "message": "Alle Kontextmenü-Einstellungen — Prompt-Engineering-Schalter, Rollenpräfix, Regelvorlagen und Zusammenfassungs-Präfix — werden auf die ursprünglichen Standardwerte zurückgesetzt. Deine Anpassungen gehen verloren." },
+  "options_dialog_ctx_cancel":       { "message": "Abbrechen" },
+  "options_dialog_ctx_confirm":      { "message": "Alle zurücksetzen" },
 
   "options_toast_model_set":         { "message": "Modell auf {{model}} gesetzt" },
   "options_toast_copied":            { "message": "In die Zwischenablage kopiert" },
@@ -283,6 +288,7 @@
   "options_toast_rule_reset":        { "message": "Regel auf Standard zurückgesetzt" },
   "options_toast_saved":             { "message": "Gespeichert" },
   "options_toast_rules_reset_all":   { "message": "Alle Regeln zurückgesetzt" },
+  "options_toast_ctx_reset_all":     { "message": "Kontextmenü-Abschnitt zurückgesetzt" },
   "options_toast_role_saved":        { "message": "Rollenpräfix gespeichert" },
   "options_toast_role_reset":        { "message": "Rollenpräfix zurückgesetzt" },
 

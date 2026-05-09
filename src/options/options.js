@@ -765,12 +765,12 @@ function _buildVarsPanel(card, textarea) {
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "pe-vars-chip";
-    chip.textContent = `{${v.name}}`;
+    chip.textContent = `{{${v.name}}}`;
     chip.title = t(v.descKey);
     chip.addEventListener("click", () => {
       const start = textarea.selectionStart;
       const end   = textarea.selectionEnd;
-      const token = `{${v.name}}`;
+      const token = `{{${v.name}}}`;
       textarea.value = textarea.value.slice(0, start) + token + textarea.value.slice(end);
       textarea.selectionStart = textarea.selectionEnd = start + token.length;
       textarea.focus();
@@ -944,7 +944,9 @@ function _peScheduleSave(ruleId) {
 
 // ── "Try it" sample detection ─────────────────────────────────────
 
-let _sampleDebounce = null;
+let _sampleDetectDebounce = null;
+let _sampleScrollDebounce = null;
+let _sampleWinnerId       = null;
 
 /**
  * Builds and prepends the "Try it" sample card to the rules wrap.
@@ -981,16 +983,35 @@ function _buildSampleCard() {
   card.appendChild(foot);
 
   textarea.addEventListener("input", () => {
-    clearTimeout(_sampleDebounce);
-    _sampleDebounce = setTimeout(() => {
+    clearTimeout(_sampleDetectDebounce);
+    clearTimeout(_sampleScrollDebounce);
+
+    // Detection: fast (150ms) — updates badge, highlight, and winner preview.
+    _sampleDetectDebounce = setTimeout(() => {
       const text = textarea.value;
-      // Remove winner highlight from all cards
+
+      // Revert the previous winner's preview to the placeholder before re-detecting.
+      if (_sampleWinnerId) {
+        const prevCard = promptEngRulesWrap.querySelector(`[data-rule-id="${_sampleWinnerId}"]`);
+        if (prevCard) {
+          const prevRule = _peSettings.rules.find(r => r.id === _sampleWinnerId);
+          if (prevRule) {
+            const prevPreview = prevCard.querySelector(".ctx-preview-text");
+            if (prevPreview) _updatePeFullPreview(prevPreview, prevRule.template);
+          }
+        }
+        _sampleWinnerId = null;
+      }
+
+      // Remove winner highlight from all cards.
       promptEngRulesWrap.querySelectorAll(".pe-rule-card").forEach(c => c.classList.remove("is-winner"));
+
       if (!text.trim()) {
         badge.textContent = t("options_pe_sample_none");
         badge.classList.remove("is-active");
         return;
       }
+
       const winnerId = detectContext(
         { selection: text, pageUrl: "https://example.com/article", pageTitle: t("options_pe_preview_var_title"), uiLang: "en" },
         _peSettings.rules,
@@ -998,14 +1019,27 @@ function _buildSampleCard() {
       const winRule = _peSettings.rules.find(r => r.id === winnerId);
       badge.textContent = winRule ? t(winRule.labelKey) : winnerId;
       badge.classList.add("is-active");
-      // Highlight the winning rule card
+
+      // Highlight winner card and update its preview with the actual sample text.
       const winCard = promptEngRulesWrap.querySelector(`[data-rule-id="${winnerId}"]`);
-      if (winCard) {
+      if (winCard && winRule) {
         winCard.classList.add("is-winner");
-        winCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        _sampleWinnerId = winnerId;
+        const winPreview = winCard.querySelector(".ctx-preview-text");
+        if (winPreview) {
+          const vars = { ..._makePreviewVars(), selection: text };
+          winPreview.textContent = expandVariables(winRule.template, vars);
+        }
       }
     }, 150);
-  });
+
+    // Scroll: slow (800ms) — only fires after the user pauses typing.
+    _sampleScrollDebounce = setTimeout(() => {
+      if (!_sampleWinnerId) return;
+      const winCard = promptEngRulesWrap.querySelector(`[data-rule-id="${_sampleWinnerId}"]`);
+      winCard?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 800);
+  }, 600);
 
   return card;
 }
@@ -1094,11 +1128,27 @@ function _initRoleCard() {
   });
 
   // Populate from _peSettings (called after load)
+  _populateRoleCard();
+}
+
+/**
+ * Syncs the role-card DOM inputs from `_peSettings.role` without re-attaching listeners.
+ * Safe to call any number of times.
+ */
+function _populateRoleCard() {
+  const roleToggle   = document.getElementById("peRoleToggle");
+  const roleTextarea = document.getElementById("peRoleTextarea");
+  const roleCount    = document.getElementById("peRoleCharCount");
+  const roleSection  = document.getElementById("peRoleSection");
+  if (!roleToggle || !roleTextarea || !roleCount) return;
   const role = _peSettings.role || { enabled: false, text: "" };
   roleToggle.checked   = role.enabled;
   roleTextarea.value   = role.text || "";
-  _syncRoleCount();
-  _syncRoleSection(role.enabled);
+  const len = roleTextarea.value.length;
+  roleCount.textContent = `${len} / ${PE_ROLE_MAX}`;
+  roleCount.classList.toggle("warn", len > PE_ROLE_MAX * 0.8 && len <= PE_ROLE_MAX);
+  roleCount.classList.toggle("over", len > PE_ROLE_MAX);
+  if (roleSection) roleSection.style.display = role.enabled ? "block" : "none";
 }
 
 promptEngToggle.addEventListener("change", async () => {
@@ -1145,6 +1195,45 @@ peResetAllConfirm.addEventListener("click", async () => {
   await chrome.storage.sync.set({ askGeminiPromptEng: _peSettings });
   renderPromptEngRules(_peSettings.rules);
   showToast(t("options_toast_rules_reset_all"));
+});
+
+// ── Context Menu section — reset all ─────────────────────────────
+
+const ctxResetAllOverlay  = document.getElementById("ctxResetAllOverlay");
+const ctxResetAllCancel   = document.getElementById("ctxResetAllCancel");
+const ctxResetAllConfirm  = document.getElementById("ctxResetAllConfirm");
+const ctxResetAllBtn      = document.getElementById("ctxResetAllBtn");
+
+ctxResetAllBtn.addEventListener("click", () => ctxResetAllOverlay.classList.add("visible"));
+ctxResetAllCancel.addEventListener("click", () => ctxResetAllOverlay.classList.remove("visible"));
+ctxResetAllOverlay.addEventListener("click", (e) => {
+  if (e.target === ctxResetAllOverlay) ctxResetAllOverlay.classList.remove("visible");
+});
+
+ctxResetAllConfirm.addEventListener("click", async () => {
+  // Reset PE settings to installation defaults
+  _peSettings = {
+    enabled: false,
+    role:    { enabled: false, text: t(DEFAULT_PE_ROLE_KEY) },
+    rules:   _mergeRules([]),
+  };
+  await chrome.storage.sync.set({ askGeminiPromptEng: _peSettings });
+
+  // Reset summarize prefix to default
+  const defaultPrefix = t(DEFAULT_SUMMARIZE_PREFIX_KEY);
+  await chrome.storage.sync.set({ askGeminiSummarizePrefix: defaultPrefix });
+  summarizePrefixTextarea.value = defaultPrefix;
+  updateSummarizePrefixCharCount();
+  syncSummarizePreview();
+
+  // Sync PE UI
+  promptEngToggle.checked = false;
+  _peSetVisibility(false);
+  renderPromptEngRules(_peSettings.rules);
+  _populateRoleCard();
+
+  ctxResetAllOverlay.classList.remove("visible");
+  showToast(t("options_toast_ctx_reset_all"));
 });
 
 // ══════════════════════════════════════════════════════════════════

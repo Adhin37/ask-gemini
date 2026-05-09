@@ -118,6 +118,7 @@
   "options_contextmenu_title":       { "message": "Menú contextual" },
   "options_contextmenu_desc":        { "message": "Personaliza las acciones del clic derecho que aparecen al seleccionar texto en cualquier página." },
   "options_contextmenu_feature":     { "message": "Ask Gemini: «…» — haz clic derecho en cualquier texto seleccionado para enviarlo a Gemini, opcionalmente con una plantilla de prompt inteligente." },
+  "options_ctx_reset_all_btn":       { "message": "Restablecer sección" },
   "options_pe_label":                { "message": "Ingeniería de prompts" },
   "options_pe_sub":                  { "message": "Detectar el contexto automáticamente y aplicar una plantilla de prompt inteligente" },
   "options_pe_toggle_title":         { "message": "Activar/desactivar la ingeniería de prompts" },
@@ -265,6 +266,10 @@
   "options_dialog_pe_body":          { "message": "Todas las reglas de ingeniería de prompts se restaurarán a sus valores predeterminados. Tus ediciones se perderán." },
   "options_dialog_pe_cancel":        { "message": "Cancelar" },
   "options_dialog_pe_confirm":       { "message": "Restablecer todo" },
+  "options_dialog_ctx_title":        { "message": "¿Restablecer la sección del menú contextual?" },
+  "options_dialog_ctx_body":         { "message": "Todos los ajustes del menú contextual — el interruptor de ingeniería de prompts, el prefijo de rol, las plantillas de reglas y el prefijo de resumen — se restaurarán a sus valores predeterminados. Tus personalizaciones se perderán." },
+  "options_dialog_ctx_cancel":       { "message": "Cancelar" },
+  "options_dialog_ctx_confirm":      { "message": "Restablecer todo" },
 
   "options_toast_model_set":         { "message": "Modelo establecido en {{model}}" },
   "options_toast_copied":            { "message": "Copiado al portapapeles" },
@@ -283,6 +288,7 @@
   "options_toast_rule_reset":        { "message": "Regla restablecida al predeterminado" },
   "options_toast_saved":             { "message": "Guardado" },
   "options_toast_rules_reset_all":   { "message": "Todas las reglas restablecidas" },
+  "options_toast_ctx_reset_all":     { "message": "Sección del menú contextual restablecida" },
   "options_toast_role_saved":        { "message": "Prefijo de rol guardado" },
   "options_toast_role_reset":        { "message": "Prefijo de rol restablecido" },
 

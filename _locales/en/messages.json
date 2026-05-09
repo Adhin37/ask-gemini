@@ -118,6 +118,7 @@
   "options_contextmenu_title":       { "message": "Context Menu",                                    "description": "Section heading" },
   "options_contextmenu_desc":        { "message": "Customise the right-click actions that appear when you select text on any page.", "description": "Section subtitle" },
   "options_contextmenu_feature":     { "message": "Ask Gemini: '...' — right-click any selected text to send it to Gemini, optionally wrapped by a smart prompt template.", "description": "Feature description in the context menu section" },
+  "options_ctx_reset_all_btn":       { "message": "Reset section",                                  "description": "Button to reset all Context Menu section settings to defaults" },
   "options_pe_label":                { "message": "Prompt Engineering",                              "description": "Preference label for the PE toggle" },
   "options_pe_sub":                  { "message": "Auto-detect context and apply a smart prompt template", "description": "Preference subtitle for the PE toggle" },
   "options_pe_toggle_title":         { "message": "Toggle prompt engineering",                       "description": "Tooltip on the PE master toggle" },
@@ -268,6 +269,10 @@
   "options_dialog_pe_body":          { "message": "All prompt engineering rules will be restored to their defaults. Your edits will be lost.", "description": "Dialog body for reset-all-PE-rules" },
   "options_dialog_pe_cancel":        { "message": "Cancel",                                          "description": "Cancel button in the PE reset dialog" },
   "options_dialog_pe_confirm":       { "message": "Reset all",                                       "description": "Confirm button in the PE reset dialog" },
+  "options_dialog_ctx_title":        { "message": "Reset Context Menu section?",                     "description": "Dialog title for reset-all-context-menu confirmation" },
+  "options_dialog_ctx_body":         { "message": "All Context Menu settings — Prompt Engineering toggle, role prefix, rule templates, and summarize prefix — will be restored to their installation defaults. Your customizations will be lost.", "description": "Dialog body for reset-all-context-menu" },
+  "options_dialog_ctx_cancel":       { "message": "Cancel",                                          "description": "Cancel button in the context menu reset dialog" },
+  "options_dialog_ctx_confirm":      { "message": "Reset all",                                       "description": "Confirm button in the context menu reset dialog" },
 
   "options_toast_model_set":         { "message": "Model set to {{model}}",                          "description": "Toast shown after changing the default model" },
   "options_toast_copied":            { "message": "Copied to clipboard",                             "description": "Toast shown after copying a history entry" },
@@ -286,6 +291,7 @@
   "options_toast_rule_reset":        { "message": "Rule reset to default",                           "description": "Toast shown after resetting a single PE rule" },
   "options_toast_saved":             { "message": "Saved",                                           "description": "Toast shown after debounced PE rule save" },
   "options_toast_rules_reset_all":   { "message": "All rules reset to defaults",                     "description": "Toast shown after resetting all PE rules" },
+  "options_toast_ctx_reset_all":     { "message": "Context Menu section reset to defaults",          "description": "Toast shown after resetting all Context Menu section settings" },
 
   "options_time_just_now":           { "message": "just now",                                        "description": "Relative time: less than 1 minute ago" },
   "options_time_minutes_ago":        { "message": "{{count}}m ago",                                  "description": "Relative time: N minutes ago" },

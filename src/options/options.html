@@ -289,6 +289,7 @@
             <h1 class="section-title" data-i18n="options_contextmenu_title">Context Menu</h1>
             <p class="section-desc" data-i18n="options_contextmenu_desc">Customise the right-click actions that appear when you select text on any page.</p>
           </div>
+          <button class="btn-ghost btn-xs" id="ctxResetAllBtn" data-i18n="options_ctx_reset_all_btn">Reset templates</button>
         </div>
 
         <!-- Info card: what menus exist -->
@@ -552,6 +553,18 @@
       <div class="dialog-actions">
         <button class="btn-ghost" id="tmplDeleteCancel" data-i18n="options_dialog_tmpl_cancel">Cancel</button>
         <button class="btn-danger" id="tmplDeleteConfirm" data-i18n="options_dialog_tmpl_confirm">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm dialog (reset entire context menu section) -->
+  <div class="dialog-overlay" id="ctxResetAllOverlay">
+    <div class="dialog">
+      <h3 class="dialog-title" data-i18n="options_dialog_ctx_title">Reset Context Menu section?</h3>
+      <p class="dialog-body" data-i18n="options_dialog_ctx_body">All Context Menu settings — Prompt Engineering toggle, role prefix, rule templates, and summarize prefix — will be restored to their installation defaults. Your customizations will be lost.</p>
+      <div class="dialog-actions">
+        <button class="btn-ghost" id="ctxResetAllCancel" data-i18n="options_dialog_ctx_cancel">Cancel</button>
+        <button class="btn-danger" id="ctxResetAllConfirm" data-i18n="options_dialog_ctx_confirm">Reset all</button>
       </div>
     </div>
   </div>

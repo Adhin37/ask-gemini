@@ -118,6 +118,7 @@
   "options_contextmenu_title":       { "message": "Menu contextuel" },
   "options_contextmenu_desc":        { "message": "Personnalisez les actions du clic droit qui apparaissent lorsque vous sélectionnez du texte sur n'importe quelle page." },
   "options_contextmenu_feature":     { "message": "Ask Gemini : « … » — cliquez droit sur du texte sélectionné pour l'envoyer à Gemini, éventuellement encapsulé dans un modèle d'invite intelligent." },
+  "options_ctx_reset_all_btn":       { "message": "Réinitialiser la section" },
   "options_pe_label":                { "message": "Ingénierie d'invite" },
   "options_pe_sub":                  { "message": "Détecter le contexte automatiquement et appliquer un modèle d'invite intelligent" },
   "options_pe_toggle_title":         { "message": "Activer/désactiver l'ingénierie d'invite" },
@@ -265,6 +266,10 @@
   "options_dialog_pe_body":          { "message": "Toutes les règles d'ingénierie d'invite seront restaurées à leurs valeurs par défaut. Vos modifications seront perdues." },
   "options_dialog_pe_cancel":        { "message": "Annuler" },
   "options_dialog_pe_confirm":       { "message": "Tout réinitialiser" },
+  "options_dialog_ctx_title":        { "message": "Réinitialiser la section Menu contextuel ?" },
+  "options_dialog_ctx_body":         { "message": "Tous les paramètres du menu contextuel — le bouton d'ingénierie d'invite, le préfixe de rôle, les modèles de règles et le préfixe de résumé — seront restaurés à leurs valeurs par défaut. Vos personnalisations seront perdues." },
+  "options_dialog_ctx_cancel":       { "message": "Annuler" },
+  "options_dialog_ctx_confirm":      { "message": "Tout réinitialiser" },
 
   "options_toast_model_set":         { "message": "Modèle défini sur {{model}}" },
   "options_toast_copied":            { "message": "Copié dans le presse-papiers" },
@@ -283,6 +288,7 @@
   "options_toast_rule_reset":        { "message": "Règle réinitialisée par défaut" },
   "options_toast_saved":             { "message": "Enregistré" },
   "options_toast_rules_reset_all":   { "message": "Toutes les règles réinitialisées" },
+  "options_toast_ctx_reset_all":     { "message": "Section du menu contextuel réinitialisée" },
   "options_toast_role_saved":        { "message": "Préfixe de rôle enregistré" },
   "options_toast_role_reset":        { "message": "Préfixe de rôle réinitialisé" },
 
