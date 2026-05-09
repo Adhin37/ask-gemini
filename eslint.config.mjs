@@ -1,5 +1,7 @@
 // ESLint flat config (v9+) for Ask Gemini Chrome Extension
 import globals from "globals";
+import noSmartQuotes from "eslint-plugin-no-smart-quotes";
+import pluginJsonc from "eslint-plugin-jsonc";
 
 const chromeGlobal = { chrome: "readonly" };
 
@@ -14,6 +16,7 @@ export default [
   // Constants (GEMINI_URL, etc.) are imported — not globals — so no stubs needed.
   {
     files: ["src/**/*.js"],
+    plugins: { "no-smart-quotes": noSmartQuotes },
     languageOptions: {
       ecmaVersion: 2022,
       sourceType:  "module",
@@ -39,9 +42,20 @@ export default [
       "quotes":         ["warn", "double", { avoidEscape: true }],
       // Allow all console.* except console.log (too noisy in prod).
       "no-console":     ["warn", { allow: ["warn", "error", "info", "debug"] }],
+      // Forbid Unicode smart/curly quotes in string literals.
+      "no-smart-quotes/no-smart-quotes": "error",
     },
   },
 
+  // ── Locale JSON files ──────────────────────────────────────────
+  // Uses eslint-plugin-jsonc for structural JSON validation.
+  // eslint-plugin-no-smart-quotes targets JS Literal nodes and does not reach
+  // JSONLiteral nodes — smart quotes in locale strings are caught by the
+  // jsonc/recommended-with-json preset's strict structural rules.
+  ...pluginJsonc.configs["flat/recommended-with-json"].map(config => ({
+    ...config,
+    files: ["_locales/**/*.json"],
+  })),
   // ── Test files ─────────────────────────────────────────────────
   {
     files: ["tests/**/*.js"],

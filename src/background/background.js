@@ -7,7 +7,7 @@ import {
   DEFAULT_SUMMARIZE_PREFIX_KEY,
   INJECTION_PATTERNS,
 } from "../shared/constants.js";
-import { buildPrompt } from "../shared/promptEngine.js";
+import { buildPrompt, migrateTemplateSyntax } from "../shared/promptEngine.js";
 import { t } from "../shared/stringUtils.js";
 
 // ══════════════════════════════════════════════════════════════════
@@ -282,6 +282,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     // Trim selection to 16 KB before any processing
     const selection = info.selectionText.trim().slice(0, 16384);
     let message;
+
+    // Migrate stored {name} → {{name}} on the fly (durable write handled by options.js).
+    if (askGeminiPromptEng?.rules) {
+      for (const r of askGeminiPromptEng.rules) r.template = migrateTemplateSyntax(r.template);
+    }
 
     if (askGeminiPromptEng?.enabled) {
       // Resolve language detection for the translate rule

@@ -304,16 +304,27 @@ export function detectContext(input, rules) {
 }
 
 /**
- * Substitutes `{name}` placeholders in a template.
+ * Substitutes `{{name}}` placeholders in a template.
  * Unknown variable names are left as-is (so users notice typos).
  * @param {string}              template
  * @param {Record<string,string>} vars
  * @returns {string}
  */
 export function expandVariables(template, vars) {
-  return template.replace(/\{(\w+)\}/g, (match, name) => {
+  return template.replace(/\{\{(\w+)\}\}/g, (match, name) => {
     return Object.prototype.hasOwnProperty.call(vars, name) ? (vars[name] ?? "") : match;
   });
+}
+
+/**
+ * One-shot migration: rewrites bare `{name}` tokens to `{{name}}` in a stored
+ * PE template string. Idempotent — already-doubled braces are left untouched.
+ * @param {string} template
+ * @returns {string}
+ */
+export function migrateTemplateSyntax(template) {
+  // Match {name} that is NOT already surrounded by extra braces.
+  return template.replace(/(?<!\{)\{(\w+)\}(?!\})/g, "{{$1}}");
 }
 
 /**
@@ -332,7 +343,7 @@ export function buildPrompt(input, settings) {
   const contextId = detectContext(input, rules);
   const rule = rules.find(r => r.id === contextId) || rules.find(r => r.id === "default");
 
-  const template = rule ? rule.template : "{selection}";
+  const template = rule ? rule.template : "{{selection}}";
 
   // Build the variable map
   let domain = "";

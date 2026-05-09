@@ -14,7 +14,7 @@ import {
 } from "../shared/constants.js";
 import { t, localizeModelName } from "../shared/stringUtils.js";
 import { applyI18n } from "../shared/i18nDom.js";
-import { detectContext, expandVariables } from "../shared/promptEngine.js";
+import { detectContext, expandVariables, migrateTemplateSyntax } from "../shared/promptEngine.js";
 
 const SUMMARIZE_PREFIX_MAX = 300;
 
@@ -58,7 +58,7 @@ document.querySelectorAll(".nav-item").forEach(link => {
 const manifest = chrome.runtime.getManifest();
 const ver = `v${manifest.version}`;
 document.getElementById("extVersion").textContent   = ver;
-document.getElementById("aboutVersion").textContent = t("options_about_version", manifest.version);
+document.getElementById("aboutVersion").textContent = t("options_about_version", { ver: manifest.version });
 
 document.getElementById("brandLogoBtn").addEventListener("click", () => chrome.tabs.create({ url: GEMINI_URL }));
 document.getElementById("aboutLogoBtn").addEventListener("click", () => chrome.tabs.create({ url: GEMINI_URL }));
@@ -169,7 +169,7 @@ document.getElementById("modelControl")?.addEventListener("click", async (e) => 
   if (val === currentModel) return;
   await chrome.storage.sync.set({ askGeminiModel: val });
   applyModel(val);
-  showToast(t("options_toast_model_set", localizeModelName(val)));
+  showToast(t("options_toast_model_set", { model: localizeModelName(val) }));
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -208,7 +208,7 @@ function renderHistory(items, query = "") {
     emptyState.style.display = "flex";
     emptyState.querySelector("p").textContent    = query ? t("options_history_no_matches_title") : t("options_history_empty_title");
     emptyState.querySelector("span").textContent = query
-      ? t("options_history_no_matches_sub", query)
+      ? t("options_history_no_matches_sub", { query })
       : t("options_history_empty_sub");
     return;
   }
@@ -534,7 +534,7 @@ tmplModelTabs.addEventListener("click", (e) => {
 
 addTemplateBtn.addEventListener("click", () => {
   editingIndex = -1;
-  tmplFormLabel.textContent = t("options_tmpl_form_new", localizeModelName(activeTemplateModel));
+  tmplFormLabel.textContent = t("options_tmpl_form_new", { model: localizeModelName(activeTemplateModel) });
   tmplTextarea.value = "";
   tmplSaveBtn.disabled = true;
   updateCharCount();
@@ -549,7 +549,7 @@ addTemplateBtn.addEventListener("click", () => {
  */
 function openEditForm(idx) {
   editingIndex = idx;
-  tmplFormLabel.textContent = t("options_tmpl_form_edit", String(idx + 1), localizeModelName(activeTemplateModel));
+  tmplFormLabel.textContent = t("options_tmpl_form_edit", { n: idx + 1, model: localizeModelName(activeTemplateModel) });
   tmplTextarea.value = getActiveTemplates()[idx];
   updateCharCount();
   tmplSaveBtn.disabled = tmplTextarea.value.trim().length === 0;
@@ -607,7 +607,7 @@ tmplSaveBtn.addEventListener("click", async () => {
 function confirmDeleteTemplate(idx) {
   pendingDeleteIndex = idx;
   const preview = getActiveTemplates()[idx].replace(/\n/g, "↵").slice(0, 60);
-  tmplDeleteBody.textContent = t("options_tmpl_delete_body", preview);
+  tmplDeleteBody.textContent = t("options_tmpl_delete_body", { preview });
   tmplDeleteOverlay.classList.add("visible");
 }
 
@@ -1116,6 +1116,15 @@ async function loadPromptEngSettings() {
     role:    askGeminiPromptEng?.role    ?? { enabled: false, text: "" },
     rules:   _mergeRules(askGeminiPromptEng?.rules ?? []),
   };
+
+  // One-shot migration: upgrade stored {name} tokens to {{name}} if needed.
+  let migrated = false;
+  for (const rule of _peSettings.rules) {
+    const upgraded = migrateTemplateSyntax(rule.template);
+    if (upgraded !== rule.template) { rule.template = upgraded; migrated = true; }
+  }
+  if (migrated) await chrome.storage.sync.set({ askGeminiPromptEng: _peSettings });
+
   promptEngToggle.checked = _peSettings.enabled;
   _peSetVisibility(_peSettings.enabled);
   renderPromptEngRules(_peSettings.rules);
@@ -1189,9 +1198,9 @@ function formatTime(ts) {
   const d    = new Date(ts);
   const diff = Date.now() - d;
   if (diff < 60_000)      return t("options_time_just_now");
-  if (diff < 3_600_000)   return t("options_time_minutes_ago", String(Math.floor(diff / 60_000)));
-  if (diff < 86_400_000)  return t("options_time_hours_ago",   String(Math.floor(diff / 3_600_000)));
-  if (diff < 604_800_000) return t("options_time_days_ago",    String(Math.floor(diff / 86_400_000)));
+  if (diff < 3_600_000)   return t("options_time_minutes_ago", { count: Math.floor(diff / 60_000) });
+  if (diff < 86_400_000)  return t("options_time_hours_ago",   { count: Math.floor(diff / 3_600_000) });
+  if (diff < 604_800_000) return t("options_time_days_ago",    { count: Math.floor(diff / 86_400_000) });
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 

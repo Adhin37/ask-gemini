@@ -65,7 +65,8 @@ All user-visible strings must go through the Chrome i18n system — no hardcoded
 - `_locales/en/messages.json` is the source-of-truth. Add new keys here first.
 - Mirror every new key in `_locales/de/messages.json`, `_locales/es/messages.json`, and `_locales/fr/messages.json`.
 - Key naming convention: `<scope>_<element>_<detail>` (e.g. `popup_send_title`, `options_history_label`).
-- Keys with dynamic values use Chrome placeholder syntax (`$VARNAME$`) and a `"placeholders"` block.
+- Keys with dynamic values use **`{{name}}` named placeholders** directly in the `"message"` string. No `"placeholders"` block needed.
+- **No Unicode smart/curly quotes** in any `messages.json` file. Use straight ASCII `'` (U+0027) and `"` (U+0022) only. Curly variants (`'` U+2018, `'` U+2019, `"` U+201C, `"` U+201D) corrupt JSON structure or cause invisible encoding bugs.
 
 ### JS — use `t()` from `src/shared/stringUtils.js`
 ```js
@@ -74,14 +75,23 @@ import { t, plural } from "../shared/stringUtils.js";
 // static string
 const label = t("popup_send_label");
 
-// with substitution ($1 → first arg)
-const msg = t("popup_chars_left", remaining);
+// with named substitution — vars object keys match {{name}} tokens in the message
+const msg = t("popup_chars_left", { chars: remaining });
 
-// plural (n === 1 → oneKey, otherwise otherKey; n becomes $1)
+// plural (n === 1 → oneKey, otherwise otherKey; n is always available as {{count}})
 const text = plural(count, "options_history_one", "options_history_many");
+
+// plural with extra named vars
+const skip = plural(skipped, "popup_file_skipped_one", "popup_file_skipped_other", { max: MAX_FILES });
 ```
 - Never call `chrome.i18n.getMessage()` directly — always go through `t()`.
+- `t()` resolves `{{name}}` tokens via JS-side replacement after `chrome.i18n.getMessage()`. Chrome's native positional substitution is not used.
 - `t()` falls back to the raw key when `chrome.i18n` is unavailable (unit tests, Node), so tests stay green without mocking.
+
+### PE rule templates use the same `{{name}}` syntax
+Prompt Engineering rule templates (stored in `askGeminiPromptEng`) use the same `{{name}}` tokens. Available vars: `{{selection}}`, `{{url}}`, `{{domain}}`, `{{title}}`, `{{lang}}`, `{{length}}`. Expansion is handled by `expandVariables()` in `src/shared/promptEngine.js`.
+
+**Exception — Chrome contextMenus API:** `bg_menu_ask_selection` uses `%s`, which Chrome replaces with the selected text. This is Chrome-controlled and cannot be migrated to `{{name}}` syntax. Keep `%s` verbatim in that key and do not apply `t()` substitution to it.
 
 ### HTML — use `data-i18n` / `data-i18n-attr`
 ```html
@@ -154,9 +164,11 @@ Three tools, one command: `npm run lint`
 
 | Tool | Config file | Scope | Run alone |
 | --- | --- | --- | --- |
-| ESLint v9 | `eslint.config.mjs` | `src/**/*.js` | `npm run lint:js` |
+| ESLint v9 + `eslint-plugin-no-smart-quotes` + `eslint-plugin-jsonc` | `eslint.config.mjs` | `src/**/*.js`, `_locales/**/*.json` | `npm run lint:js` |
 | Stylelint | `.stylelintrc.json` | `src/**/*.css` | `npm run lint:css` |
 | HTMLHint | `.htmlhintrc` | `src/**/*.html` | `npm run lint:html` |
+
+Prettier (`.prettierrc.json`) provides editor formatting integration for JS/JSON — it is not run as part of `npm run lint` because it reformats rather than just checks. Run `npx prettier --write src/` manually if needed.
 
 Install dev deps once: `npm install`
 

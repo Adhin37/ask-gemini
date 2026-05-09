@@ -577,24 +577,24 @@ async function addFiles(fileList) {
   for (const file of candidates) {
     // Block SVG — can contain embedded text prompts and scripts
     if (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
-      showFileError(t("popup_file_error_svg", file.name));
+      showFileError(t("popup_file_error_svg", { filename: file.name }));
       console.warn(`[Ask Gemini] "${file.name}" rejected: SVG files are not allowed`);
       continue;
     }
     if (!file.type.startsWith("image/")) {
-      showFileError(t("popup_file_error_not_image", file.name));
+      showFileError(t("popup_file_error_not_image", { filename: file.name }));
       console.warn(`[Ask Gemini] "${file.name}" is not an image — skipped`);
       continue;
     }
     if (file.size > MAX_FILE_SIZE) {
-      showFileError(t("popup_file_error_too_large", file.name));
+      showFileError(t("popup_file_error_too_large", { filename: file.name }));
       console.warn(`[Ask Gemini] "${file.name}" exceeds 4 MB — skipped`);
       continue;
     }
     // Validate magic bytes to ensure the file content matches its declared type
     const validBytes = await validateImageMagicBytes(file);
     if (!validBytes) {
-      showFileError(t("popup_file_error_bad_format", file.name));
+      showFileError(t("popup_file_error_bad_format", { filename: file.name }));
       console.warn(`[Ask Gemini] "${file.name}" rejected: magic bytes do not match an image format`);
       continue;
     }
@@ -604,7 +604,7 @@ async function addFiles(fileList) {
   const slots = MAX_FILES - attachedFiles.length;
   if (toAdd.length > slots) {
     const skipped = toAdd.length - slots;
-    showFileError(plural(skipped, "popup_file_skipped_one", "popup_file_skipped_other", String(MAX_FILES)));
+    showFileError(plural(skipped, "popup_file_skipped_one", "popup_file_skipped_other", { max: MAX_FILES }));
   }
   attachedFiles.push(...toAdd.slice(0, slots));
   renderFileChips();
@@ -664,7 +664,7 @@ input.addEventListener("input", () => {
   if (len > MAX_CHARS * 0.8) {
     const rem = MAX_CHARS - len;
     _defaultHintActive = false;
-    hint.textContent = rem >= 0 ? t("popup_chars_left", String(rem)) : t("popup_chars_over", String(Math.abs(rem)));
+    hint.textContent = rem >= 0 ? t("popup_chars_left", { chars: rem }) : t("popup_chars_over", { chars: Math.abs(rem) });
     hint.style.color = rem < 0 ? "#f05050" : rem < 200 ? "#f0a04b" : "";
   } else {
     setDefaultHint();

@@ -159,7 +159,7 @@ function showUploadError(msg) {
   if (readModelFromButton() !== modelPref) showStatus(t("content_status_switching_model"));
   const modelResult = await ensureModel(modelPref);
   if (modelResult.fellBack === "flash") {
-    showStatus(t("content_status_model_unavailable", localizeModelName(modelPref)));
+    showStatus(t("content_status_model_unavailable", { model: localizeModelName(modelPref) }));
     await new Promise((r) => setTimeout(r, 2200));
   } else if (!modelResult.confirmed) {
     console.warn(

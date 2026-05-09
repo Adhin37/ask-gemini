@@ -12,30 +12,34 @@ export function capitalize(s) {
 }
 
 /**
- * Retrieves a localized string from chrome.i18n.
+ * Retrieves a localized string from chrome.i18n and substitutes {{name}} placeholders.
  * Falls back to the raw key if chrome.i18n is unavailable (e.g. in tests).
- * @param {string}    key  Message key from _locales/<lang>/messages.json.
- * @param {...string} args Positional substitutions mapped to $1, $2, … placeholders.
+ * @param {string}                    key  Message key from _locales/<lang>/messages.json.
+ * @param {Record<string,string|number>} [vars] Named substitutions for {{name}} tokens.
  * @returns {string}
  */
-export function t(key, ...args) {
+export function t(key, vars) {
   if (typeof chrome === "undefined" || !chrome.i18n) return key;
-  const msg = chrome.i18n.getMessage(key, args.length ? args.map(String) : undefined);
-  return msg || key;
+  const msg = chrome.i18n.getMessage(key);
+  if (!msg) return key;
+  if (!vars) return msg;
+  return msg.replace(/\{\{(\w+)\}\}/g, (m, name) =>
+    Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name] ?? "") : m
+  );
 }
 
 /**
  * Returns a localized plural form by picking between two message keys based on `n`.
  * chrome.i18n has no plural API, so callers supply separate singular/plural keys.
- * The count `n` becomes the first substitution ($1) in whichever key is chosen.
- * @param {number}    n        The count that determines singular vs plural.
- * @param {string}    oneKey   Message key for n === 1.
- * @param {string}    otherKey Message key for n !== 1.
- * @param {...string} args     Additional substitutions ($2, $3, …).
+ * The count `n` is always available as {{count}} in the chosen message.
+ * @param {number}                       n        The count that determines singular vs plural.
+ * @param {string}                       oneKey   Message key for n === 1.
+ * @param {string}                       otherKey Message key for n !== 1.
+ * @param {Record<string,string|number>} [vars]   Additional named substitutions.
  * @returns {string}
  */
-export function plural(n, oneKey, otherKey, ...args) {
-  return t(n === 1 ? oneKey : otherKey, String(n), ...args);
+export function plural(n, oneKey, otherKey, vars) {
+  return t(n === 1 ? oneKey : otherKey, { count: n, ...vars });
 }
 
 /**
