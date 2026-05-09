@@ -12,14 +12,14 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: alpine:latest
+    container: node:22.2.2-alpine
     permissions:
       contents: write
 
     steps:
       - name: Install dependencies (Alpine)
         run: |
-          apk add --no-cache git zip jq bash sed nodejs npm
+          apk add --no-cache git zip jq bash sed
 
       - name: Checkout Code
         uses: actions/checkout@v4
