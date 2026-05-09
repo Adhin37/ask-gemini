@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## 🚀 Release v1.8.0 (2026-05-09)
+
+### ✨ Features
+* feat: add lint json + text substitution (0ab6929)
+* feat: advanced prompt engineering (255d78e)
+
+### 🐛 Bug Fixes
+* fix: btn templates reset (96687b0)
+* fix: unit tests (56a4b30)
+* fix: i18n variables (6d7669e)
+* fix: i18n for labels (0d05e72)
+* fix: i18n not applied for prompt engineering (991cfc7)
+
+### ⚙️ Maintenance
+* chore: bump version to v1.7.1 [skip ci] (6c5183c)
+
+---
+### 📊 Release Stats
+* **Total Commits:** 8
+* **Contributors:** Adhin,github-actions[bot]
+* **Full Changelog:** [View Changes](https://github.com/Adhin37/ask-gemini/compare/v1.7.1...v1.8.0)
+
 ## 🚀 Release v1.7.1 (2026-05-08)
 
 ### ✨ Features
