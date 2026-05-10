@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## 🚀 Release v1.8.1 (2026-05-10)
+
+### ✨ Features
+* feat: hint design lantern (11e94fd)
+
+### 🐛 Bug Fixes
+* fix: alpine image (8290655)
+* fix: breakline for hint (ec23875)
+* fix: hint hidden by navbar (cfe40b0)
+* fix: pipeline node warning (6eb12b1)
+
+### ⚙️ Maintenance
+* chore: rename hint class (1b69d11)
+* chore: bump version to v1.8.0 [skip ci] (8701be0)
+
+---
+### 📊 Release Stats
+* **Total Commits:** 7
+* **Contributors:** Adhin,github-actions[bot]
+* **Full Changelog:** [View Changes](https://github.com/Adhin37/ask-gemini/compare/v1.8.0...v1.8.1)
+
 ## 🚀 Release v1.8.0 (2026-05-09)
 
 ### ✨ Features
