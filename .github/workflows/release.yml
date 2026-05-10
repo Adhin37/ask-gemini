@@ -12,7 +12,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: node:22.2.2-alpine
+    container: node:22.22.2-alpine
     permissions:
       contents: write
 
