@@ -1317,6 +1317,9 @@ function showToast(msg) {
 
 (async () => {
   applyI18n();
+  document.querySelectorAll(".hint-tooltip").forEach((el) => {
+    el.textContent = el.textContent.replace(/([.!?]) /g, "$1\n");
+  });
   const data = await chrome.storage.sync.get(["askGeminiTheme", "askGeminiModel"]);
   applyTheme(data.askGeminiTheme || "auto");
   applyModel(data.askGeminiModel || "flash");
