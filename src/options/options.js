@@ -1328,6 +1328,24 @@ function showToast(msg) {
   await loadPromptEngSettings();
 })();
 
+/**
+ * Toggle .is-open on the clicked .hint-wrap for pin-to-click, and clear all
+ * pinned hints when the user clicks anywhere outside a hint wrap.
+ */
+document.addEventListener("click", (e) => {
+  const wrap = e.target.closest(".hint-wrap");
+  if (wrap) {
+    document.querySelectorAll(".hint-wrap.is-open").forEach((w) => {
+      if (w !== wrap) w.classList.remove("is-open");
+    });
+    wrap.classList.toggle("is-open");
+    return;
+  }
+  document.querySelectorAll(".hint-wrap.is-open").forEach((w) =>
+    w.classList.remove("is-open")
+  );
+});
+
 /* istanbul ignore next — test hook, never runs inside the real extension */
 if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
   Object.assign(globalThis.__TEST__, {
