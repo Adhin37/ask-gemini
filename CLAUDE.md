@@ -63,7 +63,7 @@ All user-visible strings must go through the Chrome i18n system — no hardcoded
 
 ### Locale files
 - `_locales/en/messages.json` is the source-of-truth. Add new keys here first.
-- Mirror every new key in `_locales/de/messages.json`, `_locales/es/messages.json`, and `_locales/fr/messages.json`.
+- Mirror every new key in `_locales/de/messages.json`, `_locales/es/messages.json`, `_locales/fr/messages.json`, and `_locales/zh_CN/messages.json`.
 - Key naming convention: `<scope>_<element>_<detail>` (e.g. `popup_send_title`, `options_history_label`).
 - Keys with dynamic values use **`{{name}}` named placeholders** directly in the `"message"` string. No `"placeholders"` block needed.
 - **No Unicode smart/curly quotes** in any `messages.json` file. Use straight ASCII `'` (U+0027) and `"` (U+0022) only. Curly variants (`'` U+2018, `'` U+2019, `"` U+201C, `"` U+201D) corrupt JSON structure or cause invisible encoding bugs.
