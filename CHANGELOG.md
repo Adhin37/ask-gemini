@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## 🚀 Release v1.9.0 (2026-05-20)
+
+### ✨ Features
+* feat: add CN i18n support (3ac4a10)
+
+### 🐛 Bug Fixes
+* fix: use gemini new ui + support chinese i18n (cfa798f)
+* fix: update node locally (79c254d)
+* fix: update release for node 24 (c2409f2)
+
+### ⚙️ Maintenance
+* chore: bump version to v1.8.1 [skip ci] (bcfa916)
+
+---
+### 📊 Release Stats
+* **Total Commits:** 5
+* **Contributors:** Adhin,github-actions[bot]
+* **Full Changelog:** [View Changes](https://github.com/Adhin37/ask-gemini/compare/v1.8.1...v1.9.0)
+
 ## 🚀 Release v1.8.1 (2026-05-10)
 
 ### ✨ Features
