@@ -242,14 +242,21 @@ chrome.runtime.onStartup.addListener(registerMenus);
 let _fromContextMenu = false;
 
 /**
- * Shared helper: write the pending message + model to storage,
+ * Shared helper: write the pending message, model, and thinking level to storage,
  * set the queued badge, and open (or focus) a Gemini tab.
+ * @param {string} message
+ * @param {string} model  canonical model id
+ * @param {string} [thinkingLevel="standard"]  "standard" or "extended"
  */
-async function dispatchToGemini(message, model) {
+async function dispatchToGemini(message, model, thinkingLevel = "standard") {
   setBadgeQueued();
   _fromContextMenu = true;
 
-  await chrome.storage.local.set({ pendingMessage: message, pendingModel: model });
+  await chrome.storage.local.set({
+    pendingMessage:       message,
+    pendingModel:         model,
+    pendingThinkingLevel: thinkingLevel,
+  });
 
   const { askGeminiHistoryEnabled = false } = await chrome.storage.sync.get("askGeminiHistoryEnabled");
   if (askGeminiHistoryEnabled) {
@@ -273,10 +280,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "ask-gemini-selection" && info.selectionText) {
     const {
       askGeminiModel           = "flash",
+      askGeminiThinkingLevel   = "standard",
       askGeminiSummarizePrefix = t(DEFAULT_SUMMARIZE_PREFIX_KEY),
       askGeminiPromptEng,
     } = await chrome.storage.sync.get([
-      "askGeminiModel", "askGeminiSummarizePrefix", "askGeminiPromptEng",
+      "askGeminiModel", "askGeminiThinkingLevel", "askGeminiSummarizePrefix", "askGeminiPromptEng",
     ]);
 
     // Trim selection to 16 KB before any processing
@@ -321,7 +329,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       message = _UNTRUSTED_WRAPPER + message;
     }
 
-    await dispatchToGemini(message, askGeminiModel);
+    await dispatchToGemini(message, askGeminiModel, askGeminiThinkingLevel);
     return;
   }
 });
@@ -373,7 +381,30 @@ chrome.commands.onCommand.addListener((command) => {
   openPopup();
 });
 
-chrome.runtime.onInstalled.addListener((details) => {
+chrome.runtime.onInstalled.addListener(async (details) => {
+  // ── Storage migration: "thinking" model → "pro" + extended thinking ──
+  // Runs on every install/update so orphaned values from before v2.0 are cleaned up.
+  const { askGeminiModel, askGeminiThinkingLevel, askGeminiTemplates } =
+    await chrome.storage.sync.get(["askGeminiModel", "askGeminiThinkingLevel", "askGeminiTemplates"]);
+
+  if (askGeminiModel === "thinking") {
+    await chrome.storage.sync.set({ askGeminiModel: "pro", askGeminiThinkingLevel: "extended" });
+  } else if (!askGeminiThinkingLevel) {
+    await chrome.storage.sync.set({ askGeminiThinkingLevel: "standard" });
+  }
+
+  // Remove the orphaned "thinking" template group so the options page doesn't
+  // show a ghost tab. Preserve any user-customised templates inside it by
+  // migrating them to the flash-lite group if flash-lite has none yet.
+  if (askGeminiTemplates?.thinking) {
+    const migrated = { ...askGeminiTemplates };
+    if (!migrated["flash-lite"] || migrated["flash-lite"].length === 0) {
+      migrated["flash-lite"] = migrated.thinking;
+    }
+    delete migrated.thinking;
+    await chrome.storage.sync.set({ askGeminiTemplates: migrated });
+  }
+
   if (details.reason === "install") {
     chrome.tabs.create({
       url: chrome.runtime.getURL("src/welcome/welcome.html"),

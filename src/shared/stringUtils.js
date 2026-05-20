@@ -44,16 +44,27 @@ export function plural(n, oneKey, otherKey, vars) {
 
 /**
  * Returns the localized display name for a canonical model id.
- * Single source of truth — replaces the five duplicate label maps that existed
- * across popup.html, options.html (×2), options.js (×2), and content.js.
- * @param {"flash"|"thinking"|"pro"|string} canonicalId
+ * @param {"flash-lite"|"flash"|"pro"|string} canonicalId
  * @returns {string}
  */
 export function localizeModelName(canonicalId) {
   switch (canonicalId) {
-    case "flash":    return t("model_label_flash");
-    case "thinking": return t("model_label_thinking");
-    case "pro":      return t("model_label_pro");
-    default:         return canonicalId || "";
+    case "flash-lite": return t("model_label_flash_lite");
+    case "flash":      return t("model_label_flash");
+    case "pro":        return t("model_label_pro");
+    default:           return canonicalId || "";
+  }
+}
+
+/**
+ * Returns the localized display name for a canonical thinking level.
+ * @param {"standard"|"extended"|string} level
+ * @returns {string}
+ */
+export function localizeThinkingLevel(level) {
+  switch (level) {
+    case "standard": return t("thinking_level_standard");
+    case "extended": return t("thinking_level_extended");
+    default:         return level || "";
   }
 }

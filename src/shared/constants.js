@@ -10,16 +10,16 @@ export const MAX_HISTORY = 20;
 export const DEFAULT_SUMMARIZE_PREFIX_KEY = "default_summarize_prefix";
 
 export const DEFAULT_TEMPLATE_KEYS_BY_MODEL = {
+  "flash-lite": [
+    "default_template_flash_lite_quick",
+    "default_template_flash_lite_tldr",
+    "default_template_flash_lite_define",
+  ],
   flash: [
     "default_template_flash_summarize",
     "default_template_flash_translate",
     "default_template_flash_explain",
     "default_template_flash_proscons",
-  ],
-  thinking: [
-    "default_template_thinking_step",
-    "default_template_thinking_edges",
-    "default_template_thinking_analyze",
   ],
   pro: [
     "default_template_pro_deep",
@@ -28,6 +28,15 @@ export const DEFAULT_TEMPLATE_KEYS_BY_MODEL = {
     "default_template_pro_report",
   ],
 };
+
+/** Canonical model identifiers. */
+export const MODEL_IDS = ["flash-lite", "flash", "pro"];
+
+/** Canonical thinking level identifiers. */
+export const THINKING_LEVELS = ["standard", "extended"];
+
+/** Default thinking level for new installs and storage migration. */
+export const DEFAULT_THINKING_LEVEL = "standard";
 
 export const PE_TEMPLATE_MAX = 400;
 export const PE_ROLE_MAX     = 240;

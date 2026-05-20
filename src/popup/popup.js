@@ -132,20 +132,32 @@ function applyTheme(pref) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// 2. MODEL SWITCHER  (flash | pro | thinking)
+// 2. MODEL SWITCHER  (flash-lite | flash | pro) + thinking toggle
 // ══════════════════════════════════════════════════════════════════
 
 let currentModel = "flash";
+let currentThinkingLevel = "standard";
+
+const thinkingToggle = document.getElementById("thinkingToggle");
 
 /**
  * Sets the active model and updates the model-switcher button states.
- * @param {"flash"|"thinking"|"pro"} model
+ * @param {"flash-lite"|"flash"|"pro"} model
  */
 function applyModel(model) {
   currentModel = model || "flash";
   document.querySelectorAll(".model-opt").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.model === currentModel);
   });
+}
+
+/**
+ * Sets the active thinking level and updates the toggle button state.
+ * @param {"standard"|"extended"} level
+ */
+function applyThinkingLevel(level) {
+  currentThinkingLevel = level || "standard";
+  thinkingToggle?.classList.toggle("active", currentThinkingLevel === "extended");
 }
 
 modelSwitcher.addEventListener("click", async (e) => {
@@ -158,6 +170,12 @@ modelSwitcher.addEventListener("click", async (e) => {
   dismissAC();
 });
 
+thinkingToggle?.addEventListener("click", async () => {
+  const next = currentThinkingLevel === "extended" ? "standard" : "extended";
+  await chrome.storage.sync.set({ askGeminiThinkingLevel: next });
+  applyThinkingLevel(next);
+});
+
 // ══════════════════════════════════════════════════════════════════
 // 3. TEMPLATES — storage & button-triggered dropdown
 // ══════════════════════════════════════════════════════════════════
@@ -166,7 +184,7 @@ let templates = [];
 
 /**
  * Loads the template list for the given model from storage into `templates`.
- * @param {"flash"|"thinking"|"pro"} model
+ * @param {"flash-lite"|"flash"|"pro"} model
  */
 async function loadTemplatesForModel(model) {
   const { askGeminiTemplates } = await chrome.storage.sync.get("askGeminiTemplates");
@@ -812,7 +830,7 @@ async function askGemini() {
   dismissAC();
 
   try {
-    const storagePayload = { pendingMessage: message, pendingModel: currentModel };
+    const storagePayload = { pendingMessage: message, pendingModel: currentModel, pendingThinkingLevel: currentThinkingLevel };
 
     if (attachedFiles.length > 0) {
       storagePayload.pendingFiles = await Promise.all(
@@ -897,10 +915,11 @@ sendBtn.disabled = true;
 applyI18n();
 
 (async () => {
-  const data = await chrome.storage.sync.get(["askGeminiTheme", "askGeminiModel"]);
+  const data = await chrome.storage.sync.get(["askGeminiTheme", "askGeminiModel", "askGeminiThinkingLevel"]);
 
   applyTheme(data.askGeminiTheme || "auto");
   applyModel(data.askGeminiModel || "flash");
+  applyThinkingLevel(data.askGeminiThinkingLevel || "standard");
 
   await loadTemplatesForModel(currentModel);
   renderDropdownList();

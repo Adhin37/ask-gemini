@@ -118,13 +118,14 @@ function showUploadError(msg) {
 }
 
 (async () => {
-  const data = await chrome.storage.local.get(["pendingMessage", "pendingModel", "pendingFiles"]);
+  const data = await chrome.storage.local.get(["pendingMessage", "pendingModel", "pendingThinkingLevel", "pendingFiles"]);
   if (!data.pendingMessage) return;
 
-  const message   = data.pendingMessage;
-  const modelPref = data.pendingModel || "flash";
-  const files     = data.pendingFiles  || [];
-  await chrome.storage.local.remove(["pendingMessage", "pendingModel", "pendingFiles"]);
+  const message       = data.pendingMessage;
+  const modelPref     = data.pendingModel        || "flash";
+  const thinkingLevel = data.pendingThinkingLevel || "standard";
+  const files         = data.pendingFiles         || [];
+  await chrome.storage.local.remove(["pendingMessage", "pendingModel", "pendingThinkingLevel", "pendingFiles"]);
 
   showStatus(t("content_status_ask_gemini"));
 
@@ -155,18 +156,21 @@ function showUploadError(msg) {
     return;
   }
 
-  // ── 2. Guarantee the correct model is active ───────────────────
-  if (readModelFromButton() !== modelPref) showStatus(t("content_status_switching_model"));
-  const modelResult = await ensureModel(modelPref);
+  // ── 2. Guarantee the correct model + thinking level are active ───
+  const currentState = readCurrentState();
+  if (currentState.model !== modelPref || currentState.thinkingLevel !== thinkingLevel) {
+    showStatus(t("content_status_switching_model"));
+  }
+  const modelResult = await ensureModel({ model: modelPref, thinkingLevel });
   if (modelResult.fellBack === "flash") {
     showStatus(t("content_status_model_unavailable", { model: localizeModelName(modelPref) }));
     await new Promise((r) => setTimeout(r, 2200));
   } else if (!modelResult.confirmed) {
     console.warn(
-      `[Ask Gemini] Could not confirm model "${modelPref}" after switch. Proceeding anyway.`
+      `[Ask Gemini] Could not confirm model "${modelPref}"/thinking="${thinkingLevel}" after switch. Proceeding anyway.`
     );
   } else {
-    console.info(`[Ask Gemini] ✓ Model confirmed: "${modelPref}"`);
+    console.info(`[Ask Gemini] ✓ Model confirmed: "${modelPref}" thinking="${thinkingLevel}"`);
   }
 
   // ── 3. Upload any attached files and verify ───────────────────
@@ -285,38 +289,88 @@ function waitForCondition(predicate, timeoutMs = 5_000, root = document.body) {
  */
 function findModelTrigger() {
   return (
-    document.querySelector('button[data-test-id="bard-mode-menu-button"]') ||
-    document.querySelector("button.input-area-switch")                      ||
-    document.querySelector('button[aria-label="Open mode picker"]')         ||
+    document.querySelector('[data-test-id="logo-pill-label-container"]')?.closest("button") ||
+    document.querySelector('button[data-test-id="bard-mode-menu-button"]')                  ||
+    document.querySelector("button.input-area-switch")                                       ||
+    document.querySelector('button[aria-label="Open mode picker"]')                          ||
     null
   );
 }
 
 /**
- * Reads the currently active model from the trigger button label.
- * Tries icon classification first (locale-stable), then text.
- * @returns {"flash"|"thinking"|"pro"|null}
+ * Returns the label container inside the trigger button that holds primary/secondary text.
+ * @param {Element} btn
+ * @returns {Element|null}
+ */
+function _findLabelContainer(btn) {
+  return (
+    btn.querySelector('[data-test-id="logo-pill-label-container"]') ||
+    btn.querySelector(".logo-pill-label-container")                  ||
+    null
+  );
+}
+
+/**
+ * Reads the currently active model from the trigger button's primary text span.
+ * Falls back to icon classification then full-button text.
+ * @returns {"flash-lite"|"flash"|"pro"|null}
  */
 function readModelFromButton() {
   const btn = findModelTrigger();
   if (!btn) return null;
 
+  const container = _findLabelContainer(btn);
+  if (container) {
+    const primaryEl = container.querySelector(".picker-primary-text");
+    if (primaryEl) {
+      const text = primaryEl.textContent.trim();
+      console.debug("[Ask Gemini] readModelFromButton primary-text:", JSON.stringify(text));
+      return classifyModelTextLegacy(text);
+    }
+    // fallback: first plain-text span
+    const span = Array.from(container.querySelectorAll("span")).find(
+      s => s.textContent.trim() && !s.querySelector("mat-icon")
+    );
+    if (span) return classifyModelTextLegacy(span.textContent.trim());
+  }
+
   const iconResult = iconNameOf(btn);
   if (iconResult && ICON_TO_MODEL[iconResult]) return ICON_TO_MODEL[iconResult];
 
-  const container =
-    btn.querySelector('[data-test-id="logo-pill-label-container"]') ||
-    btn.querySelector(".logo-pill-label-container");
-
-  const span = container
-    ? Array.from(container.querySelectorAll("span")).find(
-        s => s.textContent.trim() && !s.querySelector("mat-icon")
-      )
-    : null;
-
-  const text = span ? span.textContent.trim() : btn.textContent.trim();
-  console.debug("[Ask Gemini] readModelFromButton:", JSON.stringify(text));
+  const text = btn.textContent.trim();
+  console.debug("[Ask Gemini] readModelFromButton (fallback text):", JSON.stringify(text));
   return classifyModelTextLegacy(text);
+}
+
+/**
+ * Reads the currently active thinking level from the trigger button's secondary text span.
+ * @returns {"standard"|"extended"|null}
+ */
+function readThinkingLevelFromButton() {
+  const btn = findModelTrigger();
+  if (!btn) return null;
+
+  const container = _findLabelContainer(btn);
+  if (container) {
+    const secondaryEl = container.querySelector(".picker-secondary-text");
+    if (secondaryEl) {
+      const text = secondaryEl.textContent.trim();
+      console.debug("[Ask Gemini] readThinkingLevelFromButton secondary-text:", JSON.stringify(text));
+      return classifyThinkingLevelText(text);
+    }
+  }
+  return null;
+}
+
+/**
+ * Reads both model and thinking level from the trigger button in one call.
+ * @returns {{ model: string|null, thinkingLevel: string|null }}
+ */
+function readCurrentState() {
+  return {
+    model:         readModelFromButton(),
+    thinkingLevel: readThinkingLevelFromButton() || "standard",
+  };
 }
 
 
@@ -326,10 +380,11 @@ function readModelFromButton() {
 
 // ── Locale-stable icon → model map ───────────────────────────
 // Material icon glyph names observed in the Gemini model picker.
-// Add entries here as Gemini updates its icon set.
+// Thinking is now a separate dimension — removed from this map.
 const ICON_TO_MODEL = {
   bolt: "flash", auto_awesome: "flash", lightning_bolt: "flash",
-  bulb: "thinking", lightbulb: "thinking", psychology: "thinking", neurology: "thinking",
+  flash_on: "flash",
+  lightbulb: "flash-lite", bulb: "flash-lite", eco: "flash-lite",
   star: "pro", workspace_premium: "pro", workspace_premium_filled: "pro",
 };
 
@@ -352,19 +407,19 @@ function iconNameOf(el) {
 /**
  * Classifies a dropdown option using three layers in priority order:
  * (a) Material icon glyph name — locale-stable.
- * (b) DOM index within the option list (0=flash, 1=thinking, 2=pro).
+ * (b) DOM index within the option list (0=flash-lite, 1=flash, 2=pro).
  *     Pass -1 to skip this layer (e.g. when reading the selected option).
- * (c) English text substring match — legacy fallback.
+ * (c) Text substring match — legacy fallback.
  * @param {Element} el
  * @param {number}  indexInGroup
- * @returns {"flash"|"thinking"|"pro"|null}
+ * @returns {"flash-lite"|"flash"|"pro"|null}
  */
 function classifyOption(el, indexInGroup) {
   const icon = iconNameOf(el);
   if (icon && ICON_TO_MODEL[icon]) return ICON_TO_MODEL[icon];
 
-  if (indexInGroup === 0) return "flash";
-  if (indexInGroup === 1) return "thinking";
+  if (indexInGroup === 0) return "flash-lite";
+  if (indexInGroup === 1) return "flash";
   if (indexInGroup === 2) return "pro";
 
   return classifyModelTextLegacy(el.textContent);
@@ -372,13 +427,13 @@ function classifyOption(el, indexInGroup) {
 
 /**
  * Maps a free-form model label string to a canonical model id.
- * Kept as legacy fallback for non-icon, non-ordered detection paths.
+ * Rule order: "lite" first (subset of "flash"), then "pro", then "flash".
  * @param {string} text
- * @returns {"flash"|"thinking"|"pro"|null}
+ * @returns {"flash-lite"|"flash"|"pro"|null}
  */
 function classifyModelTextLegacy(text) {
   const lower = text.toLowerCase();
-  if (lower.includes("think") || lower.includes("reason"))               return "thinking";
+  if (lower.includes("lite"))                                             return "flash-lite";
   if (lower.includes("pro")   || lower.includes("advanced"))             return "pro";
   if (lower.includes("flash") || lower.includes("fast") ||
       lower.includes("quick") || lower.includes("gemini") ||
@@ -388,9 +443,23 @@ function classifyModelTextLegacy(text) {
 }
 
 /**
+ * Maps a free-form thinking-level label to a canonical level id.
+ * @param {string} text
+ * @returns {"standard"|"extended"|null}
+ */
+function classifyThinkingLevelText(text) {
+  const lower = text.toLowerCase();
+  if (lower.includes("extend") || lower.includes("deep") ||
+      lower.includes("think")  || lower.includes("reason"))              return "extended";
+  if (lower.includes("standard") || lower.includes("normal") ||
+      lower.includes("default"))                                          return "standard";
+  return null;
+}
+
+/**
  * Maps a free-form model label string to a canonical model id.
  * @param {string} text
- * @returns {"flash"|"thinking"|"pro"|null}
+ * @returns {"flash-lite"|"flash"|"pro"|null}
  */
 function classifyModelText(text) {
   return classifyModelTextLegacy(text);
@@ -398,9 +467,8 @@ function classifyModelText(text) {
 
 /**
  * Returns true if the dropdown option text corresponds to the target model.
- * Legacy text-only check retained for the __TEST__ export.
  * @param {string} optionText
- * @param {"flash"|"thinking"|"pro"} target
+ * @param {"flash-lite"|"flash"|"pro"} target
  * @returns {boolean}
  */
 function matchesTarget(optionText, target) {
@@ -408,16 +476,15 @@ function matchesTarget(optionText, target) {
   const lower     = firstLine.toLowerCase();
 
   switch (target) {
+    case "flash-lite":
+      return lower.includes("lite");
     case "flash":
-      // Reject options that also contain thinking/pro markers — those take priority.
-      if (lower.includes("think") || lower.includes("reason")) return false;
-      if (lower.includes("pro") || lower.includes("advanced")) return false;
+      if (lower.includes("lite"))                                   return false;
+      if (lower.includes("pro") || lower.includes("advanced"))      return false;
       return lower.includes("flash") || lower.includes("fast") || lower.includes("quick");
-    case "thinking":
-      return lower.includes("think") || lower.includes("reason");
     case "pro":
       return (lower.includes("pro") || lower.includes("advanced")) &&
-             !lower.includes("think") && !lower.includes("reason");
+             !lower.includes("lite");
     default:
       return false;
   }
@@ -444,9 +511,10 @@ const OPTION_SELECTORS = [
 
 /** Selectors tried in order to locate Gemini's send button. */
 const SEND_SELECTORS = [
-  "button.send-button",                           // locale-stable class, primary
+  'button[aria-label="Send message"]',            // inner button inside gem-icon-button wrapper
+  "button.send-button",                           // class-based fallback
   'button.send-button[aria-label="Send message"]',
-  'button[aria-label="Send message"]',
+  'button[mat-icon-button][aria-label="Send message"]',
   'button[aria-label*="Send" i].submit',
   'button.submit[aria-label*="Send" i]',
 ];
@@ -518,49 +586,43 @@ const UPLOAD_CHIP_SELECTORS = [
 // ══════════════════════════════════════════════════════════════════
 
 /**
- * Detects the currently active model, opening the picker dropdown if the
- * button label alone is insufficient.
- * @returns {Promise<"flash"|"thinking"|"pro"|null>}
+ * Detects the currently active model + thinking level by opening the picker.
+ * Used as a slow-path fallback when the button label is insufficient.
+ * @returns {Promise<{model: string|null, thinkingLevel: string|null}>}
  */
-async function _detectCurrentModel() {
-  const quick = readModelFromButton();
-  if (quick) {
-    console.debug(`[Ask Gemini] _detectCurrentModel (fast path) → "${quick}"`);
+async function _detectCurrentState() {
+  const quick = readCurrentState();
+  if (quick.model) {
+    console.debug(`[Ask Gemini] _detectCurrentState (fast path) → model="${quick.model}" thinking="${quick.thinkingLevel}"`);
     return quick;
   }
 
   const triggerBtn = findModelTrigger();
-  if (!triggerBtn) return null;
+  if (!triggerBtn) return { model: null, thinkingLevel: null };
 
   triggerBtn.click();
 
   const anyOption = () => OPTION_SELECTORS.some(s => document.querySelector(s));
-
   await waitForCondition(anyOption, 2_000);
 
-  let detected = null;
+  let detectedModel = null;
   for (const sel of OPTION_SELECTORS) {
     for (const opt of document.querySelectorAll(sel)) {
       if (isSelectedOption(opt)) {
-        // Skip DOM-order fallback (-1) — we are identifying the selected option,
-        // not scanning by position.
-        detected = classifyOption(opt, -1);
+        detectedModel = classifyOption(opt, -1);
         break;
       }
     }
-    if (detected) break;
+    if (detectedModel) break;
   }
 
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await waitForCondition(() => !OPTION_SELECTORS.some(s => document.querySelector(s)), 1_000);
 
-  await waitForCondition(
-    () => !OPTION_SELECTORS.some(s => document.querySelector(s)),
-    1_000
-  );
-
-  if (detected === null) detected = readModelFromButton();
-  console.debug(`[Ask Gemini] _detectCurrentModel (slow path) → "${detected}"`);
-  return detected;
+  const state = readCurrentState();
+  if (detectedModel === null) detectedModel = state.model;
+  console.debug(`[Ask Gemini] _detectCurrentState (slow path) → model="${detectedModel}" thinking="${state.thinkingLevel}"`);
+  return { model: detectedModel, thinkingLevel: state.thinkingLevel };
 }
 
 /**
@@ -598,71 +660,71 @@ function isOptionDisabled(el) {
 // ══════════════════════════════════════════════════════════════════
 
 /**
- * Ensures the given model is active, switching if necessary, and waits for
- * the UI to confirm the change. Retries up to MAX_ATTEMPTS times in case
- * the page is still initialising (e.g. Angular hasn't settled after a redirect).
+ * Ensures the given model + thinking level are active, switching if needed.
+ * Retries up to MAX_ATTEMPTS times. Falls back to "flash" when the option is
+ * disabled (quota / sign-in) and returns `{ confirmed, fellBack: "flash", reason: "locked" }`.
  *
- * When the requested option is disabled (quota / sign-in) and `target` is
- * "thinking" or "pro", falls back to "flash" instead of retrying, and returns
- * `{ confirmed, fellBack: "flash", reason: "locked" }`.
- *
- * @param {"flash"|"thinking"|"pro"} target
+ * @param {{ model: "flash-lite"|"flash"|"pro", thinkingLevel: "standard"|"extended" }} target
  * @param {number} [_attempt]
  * @returns {Promise<{confirmed: boolean, fellBack?: "flash", reason?: "locked"}>}
  */
-async function ensureModel(target, _attempt = 1) {
+async function ensureModel({ model, thinkingLevel = "standard" }, _attempt = 1) {
   const MAX_ATTEMPTS = 3;
-  const current = readModelFromButton();
-  console.debug(`[Ask Gemini] ensureModel attempt ${_attempt}/${MAX_ATTEMPTS}: current="${current}" target="${target}"`);
+  const currentModel = readModelFromButton();
+  console.debug(`[Ask Gemini] ensureModel attempt ${_attempt}/${MAX_ATTEMPTS}: current="${currentModel}" target="${model}"`);
 
-  if (current === target) {
-    console.info("[Ask Gemini] Model already correct — no switch needed.");
-    return { confirmed: true };
+  if (currentModel !== model) {
+    const switchStatus = await performModelSwitch(model);
+
+    if (switchStatus === "disabled" && model !== "flash") {
+      console.warn(`[Ask Gemini] Model "${model}" is locked — falling back to "flash"`);
+      const fallbackResult = await ensureModel({ model: "flash", thinkingLevel });
+      return { confirmed: fallbackResult.confirmed, fellBack: "flash", reason: "locked" };
+    }
+
+    // Wait for dropdown to close
+    await waitForCondition(() => !OPTION_SELECTORS.some(s => document.querySelector(s)), 3_000);
+
+    const switched = await waitForCondition(
+      () => readModelFromButton() === model,
+      5_000,
+      document.body
+    );
+
+    const after = readModelFromButton();
+    console.debug(`[Ask Gemini] ensureModel after model switch: "${after}" (observer: ${switched})`);
+
+    if (after !== model) {
+      if (_attempt < MAX_ATTEMPTS) {
+        console.debug(`[Ask Gemini] Model switch not confirmed — retrying (${_attempt + 1}/${MAX_ATTEMPTS})…`);
+        await new Promise((r) => setTimeout(r, 500));
+        return ensureModel({ model, thinkingLevel }, _attempt + 1);
+      }
+      return { confirmed: false };
+    }
+  } else {
+    console.info("[Ask Gemini] Model already correct — no model switch needed.");
   }
 
-  const switchStatus = await performModelSwitch(target);
-
-  // If the option is locked and the user asked for a premium model, fall back
-  // to flash immediately — no point retrying a disabled button.
-  if (switchStatus === "disabled" && target !== "flash") {
-    console.warn(`[Ask Gemini] Model "${target}" is locked (quota / sign-in) — falling back to "flash"`);
-    const fallbackResult = await ensureModel("flash");
-    return { confirmed: fallbackResult.confirmed, fellBack: "flash", reason: "locked" };
+  // ── Step 2: ensure thinking level ────────────────────────────
+  if (thinkingLevel === "extended") {
+    const levelResult = await switchThinkingLevel("extended");
+    console.debug(`[Ask Gemini] switchThinkingLevel("extended") → ${levelResult}`);
+  } else {
+    // Ensure standard is set if currently on extended (best-effort; not always needed)
+    const currentLevel = readThinkingLevelFromButton();
+    if (currentLevel === "extended") {
+      const levelResult = await switchThinkingLevel("standard");
+      console.debug(`[Ask Gemini] switchThinkingLevel("standard") → ${levelResult}`);
+    }
   }
 
-  // Wait for the dropdown to close — that's the reliable signal Angular
-  // processed the option click (avoids an arbitrary fixed sleep).
-  await waitForCondition(
-    () => !OPTION_SELECTORS.some(s => document.querySelector(s)),
-    3_000
-  );
-
-  const switched = await waitForCondition(
-    () => readModelFromButton() === target,
-    5_000,
-    document.body
-  );
-
-  const after = readModelFromButton();
-  console.debug(`[Ask Gemini] ensureModel after switch: "${after}" (observer resolved: ${switched})`);
-
-  if (after === target) return { confirmed: true };
-
-  if (_attempt < MAX_ATTEMPTS) {
-    console.debug(`[Ask Gemini] Model switch not confirmed — retrying (${_attempt + 1}/${MAX_ATTEMPTS})…`);
-    await new Promise((r) => setTimeout(r, 500));
-    return ensureModel(target, _attempt + 1);
-  }
-
-  return { confirmed: false };
+  return { confirmed: true };
 }
 
 /**
  * Opens the model picker dropdown and clicks the option matching `target`.
- * Waits specifically for the target option to appear (not just any option)
- * to avoid premature resolution when other [role="option"] elements exist
- * elsewhere on the page. Closes the dropdown if no match is found.
- * @param {"flash"|"thinking"|"pro"} target
+ * @param {"flash-lite"|"flash"|"pro"} target
  * @returns {Promise<"switched"|"disabled"|"not-found">}
  */
 async function performModelSwitch(target) {
@@ -674,8 +736,7 @@ async function performModelSwitch(target) {
 
   triggerBtn.click();
 
-  // Wait for the Material menu panel to open before querying options.
-  // 400 ms matches the observed render delay on the real Gemini page.
+  // 400 ms matches observed Angular menu render delay on the real Gemini page.
   await new Promise((r) => setTimeout(r, 400));
 
   const targetOption = await waitForElement(
@@ -698,7 +759,7 @@ async function performModelSwitch(target) {
   }
 
   if (isOptionDisabled(targetOption)) {
-    console.debug(`[Ask Gemini] Option "${target}" is disabled (quota/sign-in) — closing dropdown`);
+    console.debug(`[Ask Gemini] Option "${target}" is disabled — closing dropdown`);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     return "disabled";
   }
@@ -706,6 +767,86 @@ async function performModelSwitch(target) {
   console.debug(`[Ask Gemini] Clicking: "${(targetOption.innerText || targetOption.textContent).trim().slice(0, 50)}" for target="${target}"`);
   targetOption.scrollIntoView({ block: "nearest" });
   targetOption.click();
+  return "switched";
+}
+
+/**
+ * Finds the "Thinking level" submenu trigger inside an open model picker.
+ * Scans menu items by text rather than a CSS selector so it works across locales.
+ * @returns {Element|null}
+ */
+function findThinkingSubmenuTrigger() {
+  for (const sel of OPTION_SELECTORS) {
+    for (const el of document.querySelectorAll(sel)) {
+      const text = (el.textContent || "").toLowerCase();
+      if (text.includes("think") || text.includes("reasoning") || text.includes("level")) {
+        return el;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Opens the picker, expands the Thinking level submenu, and clicks the desired level.
+ * @param {"standard"|"extended"} level
+ * @returns {Promise<"switched"|"not-found">}
+ */
+async function switchThinkingLevel(level) {
+  const triggerBtn = findModelTrigger();
+  if (!triggerBtn) return "not-found";
+
+  triggerBtn.click();
+  await new Promise((r) => setTimeout(r, 400));
+
+  const submenuTrigger = await waitForElement(findThinkingSubmenuTrigger, 3_000);
+  if (!submenuTrigger) {
+    console.debug("[Ask Gemini] switchThinkingLevel: submenu trigger not found — closing");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    return "not-found";
+  }
+
+  // Hover to expand, then click to confirm
+  submenuTrigger.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 300));
+  submenuTrigger.click();
+  await new Promise((r) => setTimeout(r, 400));
+
+  // Find the target thinking level option
+  const levelOption = await waitForElement(
+    () => {
+      for (const sel of OPTION_SELECTORS) {
+        for (const el of document.querySelectorAll(sel)) {
+          const text = (el.textContent || "").toLowerCase();
+          if (level === "extended" && (text.includes("extend") || text.includes("deep"))) return el;
+          if (level === "standard" && (text.includes("standard") || text.includes("normal") || text.includes("default"))) return el;
+        }
+      }
+      return null;
+    },
+    3_000
+  );
+
+  if (!levelOption) {
+    console.debug(`[Ask Gemini] switchThinkingLevel: "${level}" option not found — closing`);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    return "not-found";
+  }
+
+  levelOption.scrollIntoView({ block: "nearest" });
+  levelOption.click();
+
+  // Wait for the secondary-text to update
+  await waitForCondition(
+    () => {
+      const current = readThinkingLevelFromButton();
+      return current === level;
+    },
+    4_000,
+    document.body
+  );
+
+  console.debug(`[Ask Gemini] switchThinkingLevel: confirmed "${level}"`);
   return "switched";
 }
 

@@ -178,11 +178,11 @@
 
         <!-- Model tabs — labels filled by applyI18n() via data-i18n -->
         <div class="tmpl-model-tabs" id="tmplModelTabs">
-          <button class="tmpl-model-tab active" data-model="flash">
-            <span data-i18n="model_label_flash">Fast</span> <span class="tmpl-tab-badge">0</span>
+          <button class="tmpl-model-tab" data-model="flash-lite">
+            <span data-i18n="model_label_flash_lite">Flash Lite</span> <span class="tmpl-tab-badge">0</span>
           </button>
-          <button class="tmpl-model-tab" data-model="thinking">
-            <span data-i18n="model_label_thinking">Think</span> <span class="tmpl-tab-badge">0</span>
+          <button class="tmpl-model-tab active" data-model="flash">
+            <span data-i18n="model_label_flash">Flash</span> <span class="tmpl-tab-badge">0</span>
           </button>
           <button class="tmpl-model-tab" data-model="pro">
             <span data-i18n="model_label_pro">Pro</span> <span class="tmpl-tab-badge">0</span>
@@ -280,9 +280,28 @@
               <span class="pref-sub" data-i18n="options_model_sub">Which model to target when sending a prompt from the popup</span>
             </div>
             <div class="seg-control" id="modelControl">
-              <button class="seg-btn" data-value="flash" data-i18n="model_label_flash">Fast</button>
-              <button class="seg-btn" data-value="thinking" data-i18n="model_label_thinking">Think</button>
+              <button class="seg-btn" data-value="flash-lite" data-i18n="model_label_flash_lite">Flash Lite</button>
+              <button class="seg-btn" data-value="flash" data-i18n="model_label_flash">Flash</button>
               <button class="seg-btn" data-value="pro" data-i18n="model_label_pro">Pro</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="pref-row">
+            <div class="pref-info">
+              <span class="pref-label">
+                <span data-i18n="options_thinking_level_label">Default thinking level</span>
+                <span class="hint-wrap">
+                  <span class="hint-icon">?</span>
+                  <span class="hint-tooltip" data-i18n="options_thinking_level_hint"></span>
+                </span>
+              </span>
+              <span class="pref-sub" data-i18n="options_thinking_level_sub">Standard uses normal reasoning; Extended enables deeper, slower thinking</span>
+            </div>
+            <div class="seg-control" id="thinkingLevelControl">
+              <button class="seg-btn" data-value="standard" data-i18n="thinking_level_standard">Standard</button>
+              <button class="seg-btn" data-value="extended" data-i18n="thinking_level_extended">Extended</button>
             </div>
           </div>
         </div>

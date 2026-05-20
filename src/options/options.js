@@ -150,15 +150,27 @@ document.getElementById("themeControl")?.addEventListener("click", async (e) => 
 // ══════════════════════════════════════════════════════════════════
 
 let currentModel = "flash";
+let currentThinkingLevel = "standard";
 
 /**
  * Sets the active model and updates the model segment control.
- * @param {"flash"|"thinking"|"pro"} model
+ * @param {"flash-lite"|"flash"|"pro"} model
  */
 function applyModel(model) {
   currentModel = model || "flash";
   document.querySelectorAll("#modelControl .seg-btn").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.value === currentModel);
+  });
+}
+
+/**
+ * Sets the active thinking level and updates the thinking-level segment control.
+ * @param {"standard"|"extended"} level
+ */
+function applyThinkingLevel(level) {
+  currentThinkingLevel = level || "standard";
+  document.querySelectorAll("#thinkingLevelControl .seg-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.value === currentThinkingLevel);
   });
 }
 
@@ -170,6 +182,15 @@ document.getElementById("modelControl")?.addEventListener("click", async (e) => 
   await chrome.storage.sync.set({ askGeminiModel: val });
   applyModel(val);
   showToast(t("options_toast_model_set", { model: localizeModelName(val) }));
+});
+
+document.getElementById("thinkingLevelControl")?.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".seg-btn");
+  if (!btn) return;
+  const val = btn.dataset.value;
+  if (val === currentThinkingLevel) return;
+  await chrome.storage.sync.set({ askGeminiThinkingLevel: val });
+  applyThinkingLevel(val);
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -379,7 +400,7 @@ historyEnabledToggle.addEventListener("change", async () => {
 // 7. TEMPLATES  (per-model)
 // ══════════════════════════════════════════════════════════════════
 
-const TMPL_MODELS = ["flash", "thinking", "pro"];
+const TMPL_MODELS = ["flash-lite", "flash", "pro"];
 
 const addTemplateBtn    = document.getElementById("addTemplateBtn");
 const tmplFormCard      = document.getElementById("tmplFormCard");
@@ -396,7 +417,7 @@ const tmplDeleteCancel  = document.getElementById("tmplDeleteCancel");
 const tmplDeleteConfirm = document.getElementById("tmplDeleteConfirm");
 const tmplModelTabs     = document.getElementById("tmplModelTabs");
 
-let allTemplatesByModel = { flash: [], thinking: [], pro: [] };
+let allTemplatesByModel = { "flash-lite": [], flash: [], pro: [] };
 let activeTemplateModel = "flash";
 let editingIndex        = -1;
 let pendingDeleteIndex  = -1;
@@ -421,32 +442,33 @@ async function loadTemplates() {
     activeTemplateModel = askGeminiModel;
   }
 
-  const _defaultTplFlash    = DEFAULT_TEMPLATE_KEYS_BY_MODEL.flash.map(k => t(k));
-  const _defaultTplThinking = DEFAULT_TEMPLATE_KEYS_BY_MODEL.thinking.map(k => t(k));
-  const _defaultTplPro      = DEFAULT_TEMPLATE_KEYS_BY_MODEL.pro.map(k => t(k));
+  const _defaultTplFlashLite = DEFAULT_TEMPLATE_KEYS_BY_MODEL["flash-lite"].map(k => t(k));
+  const _defaultTplFlash     = DEFAULT_TEMPLATE_KEYS_BY_MODEL.flash.map(k => t(k));
+  const _defaultTplPro       = DEFAULT_TEMPLATE_KEYS_BY_MODEL.pro.map(k => t(k));
 
   if (!askGeminiTemplates) {
     // First run — seed all models with defaults
     allTemplatesByModel = {
-      flash:    [..._defaultTplFlash],
-      thinking: [..._defaultTplThinking],
-      pro:      [..._defaultTplPro],
+      "flash-lite": [..._defaultTplFlashLite],
+      flash:        [..._defaultTplFlash],
+      pro:          [..._defaultTplPro],
     };
     await saveTemplates();
   } else if (Array.isArray(askGeminiTemplates)) {
     // Migration: old flat array → assign to flash, seed others
     allTemplatesByModel = {
-      flash:    askGeminiTemplates,
-      thinking: [..._defaultTplThinking],
-      pro:      [..._defaultTplPro],
+      "flash-lite": [..._defaultTplFlashLite],
+      flash:        askGeminiTemplates,
+      pro:          [..._defaultTplPro],
     };
     await saveTemplates();
   } else {
-    // Normal load — ensure all model keys exist
+    // Normal load — ensure all model keys exist; migrate away from legacy "thinking" key
+    const legacyThinking = askGeminiTemplates.thinking;
     allTemplatesByModel = {
-      flash:    askGeminiTemplates.flash    ?? [..._defaultTplFlash],
-      thinking: askGeminiTemplates.thinking ?? [..._defaultTplThinking],
-      pro:      askGeminiTemplates.pro      ?? [..._defaultTplPro],
+      "flash-lite": askGeminiTemplates["flash-lite"] ?? (legacyThinking ?? [..._defaultTplFlashLite]),
+      flash:        askGeminiTemplates.flash          ?? [..._defaultTplFlash],
+      pro:          askGeminiTemplates.pro            ?? [..._defaultTplPro],
     };
   }
 
@@ -1320,9 +1342,10 @@ function showToast(msg) {
   document.querySelectorAll(".hint-tooltip").forEach((el) => {
     el.textContent = el.textContent.replace(/([.!?]) /g, "$1\n");
   });
-  const data = await chrome.storage.sync.get(["askGeminiTheme", "askGeminiModel"]);
+  const data = await chrome.storage.sync.get(["askGeminiTheme", "askGeminiModel", "askGeminiThinkingLevel"]);
   applyTheme(data.askGeminiTheme || "auto");
   applyModel(data.askGeminiModel || "flash");
+  applyThinkingLevel(data.askGeminiThinkingLevel || "standard");
   await loadShortcut();
   await loadHistory();
   await loadHistoryEnabled();
