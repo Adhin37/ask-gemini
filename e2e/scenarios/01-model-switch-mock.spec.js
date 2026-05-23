@@ -7,12 +7,12 @@
  * __testLockedModels).
  *
  * Tests covered:
- *   1. Popup model cycle (flash → thinking → pro) then send — ends on Pro
- *   2. Switch to Fast from Thinking (mock starts on Thinking; content.js switches back)
- *   3. Switch to Thinking from Fast
- *   4. Switch to Pro from Fast
- *   5. Pro locked (quota) → falls back to Fast with warning
- *   6. Thinking locked (not signed in) → falls back to Fast with warning
+ *   1. Popup model cycle (flash → flash-lite → pro) then send — ends on Pro
+ *   2. Switch to Flash from Flash Lite (mock starts on Flash Lite; content.js switches back)
+ *   3. Switch to Flash Lite from Flash
+ *   4. Switch to Pro from Flash
+ *   5. Pro locked (quota) → falls back to Flash with warning
+ *   6. Flash Lite locked → falls back to Flash with warning
  */
 
 import { test, expect } from "@playwright/test";
@@ -43,11 +43,12 @@ test.afterAll(async () => {
  * starts.
  *
  * @param {string} msg
- * @param {string} model  — "flash" | "thinking" | "pro"
+ * @param {string} model  — "flash-lite" | "flash" | "pro"
  * @param {string} [initialModel="flash"]  — model the mock page should start on
+ * @param {string} [thinkingLevel="standard"]  — "standard" | "extended"
  * @returns {Promise<import("@playwright/test").Page>}
  */
-async function openGeminiWithPending(msg, model, initialModel = "flash") {
+async function openGeminiWithPending(msg, model, initialModel = "flash", thinkingLevel = "standard") {
   const page = await context.newPage();
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.bringToFront();
@@ -60,8 +61,9 @@ async function openGeminiWithPending(msg, model, initialModel = "flash") {
   }
 
   await context.serviceWorkers()[0].evaluate(
-    ({ msg: m, mdl }) => chrome.storage.local.set({ pendingMessage: m, pendingModel: mdl }),
-    { msg, mdl: model }
+    ({ msg: m, mdl, lvl }) =>
+      chrome.storage.local.set({ pendingMessage: m, pendingModel: mdl, pendingThinkingLevel: lvl }),
+    { msg, mdl: model, lvl: thinkingLevel }
   );
 
   await page.goto("https://gemini.google.com/app");
@@ -77,9 +79,10 @@ async function openGeminiWithPending(msg, model, initialModel = "flash") {
  * @param {string} model
  * @param {string[]} lockedModels  — model ids to render as disabled
  * @param {string} [initialModel="flash"]
+ * @param {string} [thinkingLevel="standard"]  — "standard" | "extended"
  * @returns {Promise<import("@playwright/test").Page>}
  */
-async function openGeminiWithLocked(msg, model, lockedModels, initialModel = "flash") {
+async function openGeminiWithLocked(msg, model, lockedModels, initialModel = "flash", thinkingLevel = "standard") {
   const page = await context.newPage();
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.bringToFront();
@@ -99,8 +102,9 @@ async function openGeminiWithLocked(msg, model, lockedModels, initialModel = "fl
   }
 
   await context.serviceWorkers()[0].evaluate(
-    ({ msg: m, mdl }) => chrome.storage.local.set({ pendingMessage: m, pendingModel: mdl }),
-    { msg, mdl: model }
+    ({ msg: m, mdl, lvl }) =>
+      chrome.storage.local.set({ pendingMessage: m, pendingModel: mdl, pendingThinkingLevel: lvl }),
+    { msg, mdl: model, lvl: thinkingLevel }
   );
 
   await page.goto("https://gemini.google.com/app");
@@ -114,7 +118,7 @@ test("popup — model cycle then send (ends on Pro)", async () => {
   const popup = await openPopupWindow(context, extensionId);
   await popup.waitForTimeout(1200);
 
-  await popup.locator(".model-opt[data-model='thinking']").click();
+  await popup.locator(".model-opt[data-model='flash-lite']").click();
   await popup.waitForTimeout(900);
   await popup.locator(".model-opt[data-model='flash']").click();
   await popup.waitForTimeout(900);
@@ -140,8 +144,9 @@ test("popup — model cycle then send (ends on Pro)", async () => {
 
   await initialPage.close();
   await context.serviceWorkers()[0].evaluate(
-    ({ msg, mdl }) => chrome.storage.local.set({ pendingMessage: msg, pendingModel: mdl }),
-    { msg: message, mdl: model }
+    ({ msg, mdl, lvl }) =>
+      chrome.storage.local.set({ pendingMessage: msg, pendingModel: mdl, pendingThinkingLevel: lvl }),
+    { msg: message, mdl: model, lvl: "standard" }
   );
 
   const geminiPage = await context.newPage();
@@ -167,16 +172,16 @@ test("popup — model cycle then send (ends on Pro)", async () => {
 /** @type {Array<{ popupModel: string, initialModel: string, expectedLabel: string, question: string, contains: string }>} */
 const MODEL_SWITCH_CASES = [
   {
-    popupModel:    "flash",
-    initialModel:  "thinking",
-    expectedLabel: "Fast",
+    popupModel:    "flash-lite",
+    initialModel:  "flash",
+    expectedLabel: "Flash Lite",
     question:      "Explain HTTP in one sentence.",
     contains:      "HTTP",
   },
   {
-    popupModel:    "thinking",
-    initialModel:  "flash",
-    expectedLabel: "Thinking",
+    popupModel:    "flash",
+    initialModel:  "flash-lite",
+    expectedLabel: "Flash",
     question:      "What is quantum entanglement?",
     contains:      "quantum",
   },
@@ -230,10 +235,10 @@ for (const { popupModel, initialModel, expectedLabel, question, contains } of MO
 
 // ── Tests 5–6: locked-model fallback ──────────────────────────────────────
 
-test("Gemini — Pro locked (quota) falls back to Fast with warning", async () => {
+test("Gemini — Pro locked (quota) falls back to Flash with warning", async () => {
   const page = await openGeminiWithLocked("Why is the sky blue?", "pro", ["pro"]);
 
-  await expect(page.locator("#modelName")).toHaveText("Fast", { timeout: 10_000 });
+  await expect(page.locator("#modelName")).toHaveText("Flash", { timeout: 10_000 });
 
   await expect(page.locator(".msg.user")).toBeVisible({ timeout: 10_000 });
   await expect(page.locator(".msg.user .msg-body"))
@@ -245,14 +250,14 @@ test("Gemini — Pro locked (quota) falls back to Fast with warning", async () =
   await page.close();
 });
 
-test("Gemini — Thinking locked (not signed in) falls back to Fast with warning", async () => {
+test("Gemini — Flash Lite locked falls back to Flash with warning", async () => {
   const page = await openGeminiWithLocked(
     "Explain transformer architecture.",
-    "thinking",
-    ["pro", "thinking"]
+    "flash-lite",
+    ["flash-lite"]
   );
 
-  await expect(page.locator("#modelName")).toHaveText("Fast", { timeout: 10_000 });
+  await expect(page.locator("#modelName")).toHaveText("Flash", { timeout: 10_000 });
 
   await expect(page.locator(".msg.user")).toBeVisible({ timeout: 10_000 });
   await expect(page.locator(".msg.user .msg-body"))

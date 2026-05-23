@@ -4,9 +4,9 @@
  * Exports selectors, sign-in guard utilities, model-picker interaction, and
  * the full popup → Gemini send pipelines used by real-Gemini scenario files.
  *
- * Uses the default e2e/.chrome-profile (free Google account; only Fast model available).
- * Tests skip gracefully when not signed in. Point CHROME_PROFILE to a premium
- * profile to verify Pro/Thinking model switching against real Gemini.
+ * Uses the default e2e/.chrome-profile (free Google account; Flash Lite and Flash
+ * are available, Pro requires Google AI Plus). Tests skip gracefully when not
+ * signed in. Point CHROME_PROFILE to a premium profile to verify Pro switching.
  */
 
 import { test, expect } from "@playwright/test";
@@ -34,12 +34,13 @@ export const OPTION_SEL = [
 
 /**
  * Models probed during picker round-trip tests, in attempt order.
+ * Flash Lite and Flash are free-tier; Pro requires Google AI Plus.
  * @type {Array<{ label: string, pattern: RegExp }>}
  */
 export const PROBE_MODELS = [
-  { label: "Fast",     pattern: /fast/i },
-  { label: "Pro",      pattern: /\bpro\b/i },
-  { label: "Thinking", pattern: /think/i },
+  { label: "Flash Lite", pattern: /flash\s+lite/i },
+  { label: "Flash",      pattern: /\bflash\b/i },
+  { label: "Pro",        pattern: /\bpro\b/i },
 ];
 
 /**
@@ -176,21 +177,22 @@ export async function sendViaPopup(context, popup) {
     }
   } catch { /* consent overlay not present or already past it */ }
 
-  // Fire-and-forget: accept the "Create content from images and files" consent
-  // dialog that Gemini shows on fresh/unlogged profiles before the first upload.
-  // If it never appears the promise rejects silently; if it does appear it is
-  // clicked before content.js's 11-second chip-verification window expires.
-  geminiPage
-    .locator('[role="dialog"], mat-dialog-container')
-    .getByRole("button", { name: /agree/i })
-    .waitFor({ state: "visible", timeout: 20_000 })
-    .then(() =>
-      geminiPage
-        .locator('[role="dialog"], mat-dialog-container')
-        .getByRole("button", { name: /agree/i })
-        .click()
-    )
-    .catch(() => {});
+  // Auto-dismiss Gemini's "Create content from images and files" consent dialog
+  // using addLocatorHandler — Playwright's dedicated overlay-dismissal API.
+  // Unlike fire-and-forget, the handler fires on every Playwright polling cycle
+  // (~100–200 ms), so the dialog is dismissed before content.js's 300 ms
+  // chip-poll can register a false-positive and submit without the image.
+  // Broader button pattern catches label variations across Gemini UI updates.
+  // The handler is a no-op on tests that never trigger the dialog.
+  await geminiPage.addLocatorHandler(
+    geminiPage.locator('[role="dialog"], mat-dialog-container'),
+    async (dialog) => {
+      await dialog
+        .getByRole("button", { name: /agree|allow|accept|continue/i })
+        .click({ timeout: 3_000 })
+        .catch(() => {});
+    }
+  );
 
   return { geminiPage, logs };
 }

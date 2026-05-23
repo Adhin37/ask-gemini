@@ -84,10 +84,10 @@ test("context menu — select text then Ask Gemini", async () => {
   const [geminiPage] = await Promise.all([
     context.waitForEvent("page", { timeout: 25_000 }),
     context.serviceWorkers()[0].evaluate(
-      ({ msg, mdl }) => chrome.storage.local
-        .set({ pendingMessage: msg, pendingModel: mdl })
+      ({ msg, mdl, lvl }) => chrome.storage.local
+        .set({ pendingMessage: msg, pendingModel: mdl, pendingThinkingLevel: lvl })
         .then(() => chrome.tabs.create({ url: "https://gemini.google.com/app" })),
-      { msg: message, mdl: "flash" }
+      { msg: message, mdl: "flash", lvl: "standard" }
     ),
   ]);
 

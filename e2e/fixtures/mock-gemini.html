@@ -363,7 +363,8 @@
               id="modelTrigger"
             >
               <div data-test-id="logo-pill-label-container" id="modelLabel">
-                <span id="modelName">Fast</span>
+                <span class="picker-primary-text" id="modelName">Flash</span>
+                <span class="picker-secondary-text" id="modelThinkingLevel">Standard</span>
               </div>
               <!-- Chevron -->
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -404,29 +405,30 @@
 -->
 <div class="mat-mdc-menu-panel" id="modelMenu" role="menu" aria-label="Select model">
 
-  <!-- Group label — matches real Gemini's "Gemini 3" header -->
-  <div class="mat-mdc-menu-group-label" aria-hidden="true">Gemini 3</div>
+  <!-- Group label — matches real Gemini's model group header -->
+  <div class="mat-mdc-menu-group-label" aria-hidden="true">Gemini</div>
 
   <!--
     Model options: button.mat-mdc-menu-item[role="menuitem"]
     content.js OPTION_SELECTORS[0] = "button.mat-mdc-menu-item"
     matchesTarget() uses opt.innerText.split('\n')[0] for the title line.
     Block <span> elements produce the newline that separates title from description.
+    Order: Flash Lite → Flash → Pro (matches real Gemini's new picker order).
   -->
-  <button class="mat-mdc-menu-item" role="menuitem" aria-selected="true" data-model="flash" id="opt-flash">
+  <button class="mat-mdc-menu-item" role="menuitem" aria-selected="false" data-model="flash-lite" id="opt-flash-lite">
     <div class="model-item-content">
-      <span class="model-item-title">Fast</span>
-      <span class="model-item-desc">Answers quickly</span>
+      <span class="model-item-title">Flash Lite</span>
+      <span class="model-item-desc">Fast and efficient</span>
     </div>
     <span class="model-item-check" aria-hidden="true">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </span>
   </button>
 
-  <button class="mat-mdc-menu-item" role="menuitem" aria-selected="false" data-model="thinking" id="opt-thinking">
+  <button class="mat-mdc-menu-item" role="menuitem" aria-selected="true" data-model="flash" id="opt-flash">
     <div class="model-item-content">
-      <span class="model-item-title">Thinking</span>
-      <span class="model-item-desc">Solves complex problems</span>
+      <span class="model-item-title">Flash</span>
+      <span class="model-item-desc">Answers quickly</span>
     </div>
     <span class="model-item-check" aria-hidden="true">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -436,7 +438,7 @@
   <button class="mat-mdc-menu-item" role="menuitem" aria-selected="false" data-model="pro" id="opt-pro">
     <div class="model-item-content">
       <span class="model-item-title">Pro</span>
-      <span class="model-item-desc">Advanced maths and code with 3.1 Pro</span>
+      <span class="model-item-desc">Advanced maths and code</span>
     </div>
     <span class="model-item-check" aria-hidden="true">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -516,8 +518,8 @@
     // Simulate Angular's async change-detection cycle —
     // the trigger label updates after a short delay, exactly as on the real page.
     setTimeout(() => {
-      const labels = { flash: "Fast", thinking: "Thinking", pro: "Pro" };
-      modelName.textContent = labels[m] || "Fast";
+      const labels = { "flash-lite": "Flash Lite", flash: "Flash", pro: "Pro" };
+      modelName.textContent = labels[m] || "Flash";
     }, 250);
   });
 
@@ -529,7 +531,7 @@
   (function applyTestInitialModel() {
     const m = sessionStorage.getItem("__testInitialModel");
     if (!m || m === "flash") return;
-    const labels = { flash: "Fast", thinking: "Thinking", pro: "Pro" };
+    const labels = { "flash-lite": "Flash Lite", flash: "Flash", pro: "Pro" };
     if (!labels[m]) return;
     modelName.textContent = labels[m];
     // modelMenu is still in DOM here (detach happens below)

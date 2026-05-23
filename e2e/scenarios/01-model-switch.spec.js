@@ -11,9 +11,9 @@
  * 01-model-switch-mock.spec.js (require premium or sessionStorage hooks).
  *
  * Tests covered:
- *   1. Popup sends Fast message → arrives in real Gemini chat, picker is reachable
- *   2. Picker opens and shows at least one model option (Fast always present)
- *   3. Model switches update the trigger label (Fast hard-asserted; Pro/Thinking soft-warned)
+ *   1. Popup sends Flash message → arrives in real Gemini chat, picker is reachable
+ *   2. Picker opens and shows at least one model option (Flash always present)
+ *   3. Model switches update the trigger label (Flash hard-asserted; Pro soft-warned)
  */
 
 import { test, expect } from "@playwright/test";
@@ -42,9 +42,9 @@ test.beforeAll(async ({ playwright }) => {
 
 /**
  * Full popup → Gemini pipeline executed before each test.
- * Closes any existing Gemini tab, opens the popup, picks Flash, fills the
- * probe message, clicks Send, and captures the new Gemini page.
- * Skips the test gracefully if the resulting page is not on gemini.google.com.
+ * Closes any existing Gemini tab, opens the popup, picks Flash (the default
+ * free-tier model), fills the probe message, clicks Send, and captures the
+ * new Gemini page. Skips gracefully if not on gemini.google.com.
  */
 test.beforeEach(async () => {
   await closeGeminiTabs(context);
@@ -73,12 +73,12 @@ test.afterAll(async () => {
 
 // ── Test 1: full pipeline — message arrives, picker reachable ─────────────
 
-test("real Gemini — popup sends Fast message and picker is reachable", async () => {
+test("real Gemini — popup sends Flash message and picker is reachable", async () => {
   try {
     await assertMessageOnGemini(geminiPage, PROBE_MESSAGE);
     await expect(geminiPage.locator(MODEL_BTN)).toBeVisible({ timeout: 20_000 });
   } finally {
-    console.info("[01] Fast send — picker reachable");
+    console.info("[01] Flash send — picker reachable");
   }
 });
 
@@ -92,8 +92,8 @@ test("real Gemini — picker opens and shows at least one model option", async (
   const options = geminiPage.locator(OPTION_SEL);
   await expect(options.first()).toBeVisible({ timeout: 6_000 });
 
-  // "Fast" must always be present — it is the baseline free-tier model.
-  await expect(options.filter({ hasText: /fast/i }).first()).toBeVisible();
+  // "Flash" must always be present — it is the baseline free-tier model.
+  await expect(options.filter({ hasText: /flash/i }).first()).toBeVisible();
 
   const count = await options.count();
   const labels = [];
@@ -119,22 +119,23 @@ test("real Gemini — model switches update the trigger label (skips locked mode
     console.info(`[01] model switch "${label}": ${ok ? "✓ success" : "✗ skipped (locked or unavailable)"}`);
   }
 
-  // "Fast" must always be switchable — selector regression if it is not.
-  if (!results["Fast"]) {
+  // "Flash" must always be switchable — selector regression if it is not.
+  if (!results["Flash"]) {
     throw new Error(
-      "Could not switch to the Fast model. This indicates a selector regression, " +
+      "Could not switch to the Flash model. This indicates a selector regression, " +
       "not a subscription issue. Selectors may need to be updated."
     );
   }
 
-  const premium = ["Pro", "Thinking"].filter(m => results[m]);
+  const premium = ["Flash Lite", "Pro"].filter(m => results[m]);
   if (premium.length > 0) {
-    console.info(`[01] Premium models confirmed working: ${premium.join(", ")}`);
+    console.info(`[01] Additional models confirmed working: ${premium.join(", ")}`);
   } else {
     console.warn(
-      "[01] Neither Pro nor Thinking was switchable. " +
-      "Expected on free-tier accounts. " +
-      "Run with a Google AI Premium profile to verify premium model switching."
+      "[01] Flash Lite and Pro were not switchable. " +
+      "Flash Lite should be available on free-tier accounts — check selector if absent. " +
+      "Pro requires Google AI Plus. " +
+      "Run with a Google AI Premium profile to verify Pro model switching."
     );
   }
 });
