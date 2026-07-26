@@ -212,6 +212,10 @@ Playwright cannot drive native OS context menus, so `context.serviceWorkers()[0]
 
 All scenario files without a `-mock` suffix run against the live `gemini.google.com`. The `-mock` suffix is reserved for the small set of scenarios that genuinely cannot run on a free account: premium model switching (Pro, Thinking) and locked-model fallback simulation. Do not add mock Gemini routes to non-mock spec files.
 
+### Fixing a failing e2e test
+
+While iterating on a fix, run only the scenario file being fixed (e.g. `npx playwright test e2e/scenarios/04-contextmenu.spec.js`) — do not run the full `npm run e2e` suite on every iteration, it wastes time. Once the target scenario passes, run the full `npm run e2e` suite once to confirm the fix did not break anything else before considering the work done.
+
 ## Common Patterns
 
 ### Sending data from popup → content script via storage
