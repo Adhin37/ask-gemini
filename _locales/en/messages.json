@@ -4,7 +4,7 @@
   "ext_action_title":               { "message": "Ask Gemini (Ctrl+Shift+L)",                                    "description": "Toolbar icon tooltip" },
   "cmd_open_popup_description":     { "message": "Open Ask Gemini popup",                                        "description": "Keyboard shortcut description in chrome://extensions/shortcuts" },
 
-  "model_label_flash_lite":         { "message": "Flash Lite", "description": "Display name for the Flash Lite (lightest) model" },
+  "model_label_flash_lite":         { "message": "Flash-Lite", "description": "Display name for the Flash-Lite (lightest) model" },
   "model_label_flash":              { "message": "Flash",      "description": "Display name for the Flash model" },
   "model_label_pro":                { "message": "Pro",        "description": "Display name for the Pro model" },
   "model_char_flash_lite":          { "message": "L",          "description": "Single-letter abbreviation for Flash Lite, shown in collapsed popup button" },
@@ -18,7 +18,7 @@
   "thinking_level_extended":        { "message": "Extended",   "description": "Thinking level: extended / deep reasoning" },
 
   "popup_logo_tag":                 { "message": "AI Assistant",                                    "description": "Tagline shown under the logo in the popup header" },
-  "popup_model_flash_lite_title":   { "message": "Gemini Flash Lite — lightest & fastest",     "description": "Tooltip for the Flash Lite model button" },
+  "popup_model_flash_lite_title":   { "message": "Gemini Flash-Lite — lightest & fastest",     "description": "Tooltip for the Flash-Lite model button" },
   "popup_model_flash_title":        { "message": "Gemini Flash — quick & efficient",            "description": "Tooltip for the Flash model button" },
   "popup_model_pro_title":          { "message": "Gemini Pro ✨ — most capable (requires Gemini Advanced)", "description": "Tooltip for the Pro model button" },
   "popup_thinking_extended_title":  { "message": "Extended thinking — deeper reasoning (slower)", "description": "Tooltip for the Extended thinking toggle button" },
@@ -61,6 +61,7 @@
   "content_status_sending":          { "message": "Sending…",                                   "description": "Status overlay: submitting the message" },
   "content_status_switching_model":  { "message": "Switching model…",                           "description": "Status overlay: changing the active model" },
   "content_status_model_unavailable":{ "message": "{{model}} unavailable — using Fast",          "description": "Status overlay: requested model is locked, fell back to Flash" },
+  "content_status_thinking_unavailable":{ "message": "Extended thinking unavailable — using model's default",  "description": "Status overlay: Extended thinking is locked (quota/sign-in), model switch still succeeded" },
   "content_upload_failed":           { "message": "Image upload failed — prompt not sent",       "description": "Error banner shown in Gemini when upload verification fails" },
 
   "bg_menu_open_gemini":             { "message": "Open Gemini",                                     "description": "Context menu item: open Gemini (action button right-click)" },
@@ -117,7 +118,7 @@
   "options_theme_hint":              { "message": "Auto follows your OS setting. Changes take effect in both the popup and this page immediately.", "description": "Hint below the theme selector" },
   "options_model_label":             { "message": "Default Gemini model",                            "description": "Preference row label for default model selector" },
   "options_model_sub":               { "message": "Which model to target when sending a prompt from the popup", "description": "Preference row subtitle" },
-  "options_model_hint":              { "message": "Flash Lite is the lightest model — ideal for simple tasks. Flash is the efficient default. Pro ✨ is the advanced model — requires Gemini Advanced. Enable Extended thinking for deeper reasoning on any model.", "description": "Hint below the model selector" },
+  "options_model_hint":              { "message": "Flash-Lite is the lightest model — ideal for simple tasks. Flash is the efficient default. Pro ✨ is the advanced model — requires Gemini Advanced. Enable Extended thinking for deeper reasoning on any model.", "description": "Hint below the model selector" },
   "options_thinking_level_label":   { "message": "Default thinking level",                     "description": "Preference row label for the thinking level selector" },
   "options_thinking_level_sub":     { "message": "Standard uses normal reasoning; Extended enables deeper, slower thinking", "description": "Preference row subtitle for the thinking level selector" },
   "options_thinking_level_hint":    { "message": "Extended thinking takes longer but reasons more carefully. Works with all three models.", "description": "Hint below the thinking level selector" },
@@ -316,6 +317,6 @@
   "welcome_feat3_title":             { "message": "Prompt templates",                                "description": "Feature card 3 title" },
   "welcome_feat3_desc":              { "message": "Type / in the popup to pick a saved snippet. Manage them in Settings → Templates.", "description": "Feature card 3 description" },
   "welcome_feat4_title":             { "message": "Model selector",                                  "description": "Feature card 4 title" },
-  "welcome_feat4_desc":              { "message": "Switch between Flash Lite, Flash, and Pro right in the popup, and toggle Extended thinking — no detours to Gemini.", "description": "Feature card 4 description" },
+  "welcome_feat4_desc":              { "message": "Switch between Flash-Lite, Flash, and Pro right in the popup, and toggle Extended thinking — no detours to Gemini.", "description": "Feature card 4 description" },
   "welcome_cta":                     { "message": "Start browsing",                                  "description": "CTA button on the welcome page" }
 }

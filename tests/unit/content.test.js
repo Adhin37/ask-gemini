@@ -7,27 +7,29 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 // populates globalThis.__TEST__ with the pure functions we want to test.
 let classifyModelText;
 let matchesTarget;
+let classifyOption;
+let isThinkingText;
 let waitForElement;
 let waitForCondition;
 
 beforeAll(async () => {
   globalThis.__TEST__ = {};
   await import("../../src/content/content.js");
-  ({ classifyModelText, matchesTarget, waitForElement, waitForCondition } = globalThis.__TEST__);
+  ({ classifyModelText, matchesTarget, classifyOption, isThinkingText, waitForElement, waitForCondition } = globalThis.__TEST__);
 });
 
 // ════════════════════════════════════════════════════════════════════
 // classifyModelText
+// Labels verified against the real Gemini picker, July 2026: "3.5 Flash-Lite",
+// "3.6 Flash", "3.1 Pro". There is no "thinking" model id any more — Extended
+// thinking is a separate, mutually exclusive picker row (see isThinkingText).
 // ════════════════════════════════════════════════════════════════════
 
 describe("classifyModelText", () => {
   it.each([
     ["Gemini Flash",          "flash"],
     ["Flash",                 "flash"],
-    ["Gemini 2.0 Flash",      "flash"],
-    ["Gemini 1.5",            "flash"],
-    ["Gemini 2.5",            "flash"],
-    ["Default model",         "flash"],
+    ["3.6 Flash",             "flash"],
     ["Quick answer",          "flash"],
     ["Fast",                  "flash"],
   ])('"%s" → "flash"', (input, expected) => {
@@ -35,8 +37,17 @@ describe("classifyModelText", () => {
   });
 
   it.each([
+    ["3.5 Flash-Lite",        "flash-lite"],
+    ["Flash Lite",            "flash-lite"],   // legacy label, no hyphen
+    ["Flash-Lite",            "flash-lite"],
+  ])('"%s" → "flash-lite"', (input, expected) => {
+    expect(classifyModelText(input)).toBe(expected);
+  });
+
+  it.each([
     ["Gemini Pro",            "pro"],
     ["Pro",                   "pro"],
+    ["3.1 Pro",               "pro"],
     ["Advanced",              "pro"],
     ["Gemini Advanced",       "pro"],
   ])('"%s" → "pro"', (input, expected) => {
@@ -44,21 +55,50 @@ describe("classifyModelText", () => {
   });
 
   it.each([
-    ["Thinking",              "thinking"],
-    ["Gemini Thinking",       "thinking"],
-    ["Reasoning model",       "thinking"],
-    ["Flash Thinking",        "thinking"],   // "think" takes priority over "flash"
-  ])('"%s" → "thinking"', (input, expected) => {
+    ["Something entirely unknown",                          null],
+    // Dropped version-number heuristics — no longer sufficient on their own.
+    ["Gemini 1.5",                                           null],
+    ["Gemini 2.5",                                           null],
+    ["Default model",                                        null],
+    // The "Extended thinking" row must never resolve to a model, even though
+    // its sublabel "Complex problem solving" contains the substring "pro"
+    // (inside "problem") — this was a real bug caught while building this out.
+    ["Extended thinking\nComplex problem solving",           null],
+    // The signed-out "Sign in" row mentions "Flash" in its sublabel and must
+    // not be misclassified as the Flash model — another real bug caught here.
+    ["Sign in for all models\nTry the latest Flash",         null],
+  ])('"%s" → null', (input, expected) => {
     expect(classifyModelText(input)).toBe(expected);
-  });
-
-  it('returns null for unrecognised text', () => {
-    expect(classifyModelText("Something entirely unknown")).toBeNull();
   });
 
   it('is case-insensitive', () => {
     expect(classifyModelText("GEMINI FLASH")).toBe("flash");
-    expect(classifyModelText("THINKING")).toBe("thinking");
+    expect(classifyModelText("3.5 FLASH-LITE")).toBe("flash-lite");
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════
+// isThinkingText
+// ════════════════════════════════════════════════════════════════════
+
+describe("isThinkingText", () => {
+  it.each([
+    "Extended thinking",
+    "extend",
+    "deep",
+    "think",
+    "reasoning",
+  ])('"%s" is thinking text', (input) => {
+    expect(isThinkingText(input)).toBe(true);
+  });
+
+  it.each([
+    "Complex problem solving",   // no "think"/"extend"/"deep"/"reason" alone
+    "3.6 Flash",
+    "3.1 Pro",
+    "",
+  ])('"%s" is not thinking text', (input) => {
+    expect(isThinkingText(input)).toBe(false);
   });
 });
 
@@ -68,30 +108,70 @@ describe("classifyModelText", () => {
 
 describe("matchesTarget", () => {
   describe('target "flash"', () => {
-    it("matches Flash label",        () => expect(matchesTarget("Gemini Flash",    "flash")).toBe(true));
+    it("matches Flash label",        () => expect(matchesTarget("3.6 Flash",      "flash")).toBe(true));
     it("matches Fast label",         () => expect(matchesTarget("Fast model",      "flash")).toBe(true));
     it("matches Quick label",        () => expect(matchesTarget("Quick",           "flash")).toBe(true));
-    it("rejects Pro label",          () => expect(matchesTarget("Gemini Pro",      "flash")).toBe(false));
-    it("rejects Thinking label",     () => expect(matchesTarget("Flash Thinking",  "flash")).toBe(false));
-    it("rejects bare Pro + flash",   () => expect(matchesTarget("Flash Pro",       "flash")).toBe(false));
+    it("rejects Pro label",          () => expect(matchesTarget("3.1 Pro",         "flash")).toBe(false));
+    it("rejects Flash-Lite label",   () => expect(matchesTarget("3.5 Flash-Lite",  "flash")).toBe(false));
+    it("rejects Extended thinking",  () => expect(matchesTarget("Extended thinking\nComplex problem solving", "flash")).toBe(false));
+  });
+
+  describe('target "flash-lite"', () => {
+    it("matches Flash-Lite label",   () => expect(matchesTarget("3.5 Flash-Lite",  "flash-lite")).toBe(true));
+    it("rejects Flash label",        () => expect(matchesTarget("3.6 Flash",       "flash-lite")).toBe(false));
   });
 
   describe('target "pro"', () => {
-    it("matches Pro label",          () => expect(matchesTarget("Gemini Pro",      "pro")).toBe(true));
+    it("matches Pro label",          () => expect(matchesTarget("3.1 Pro",         "pro")).toBe(true));
     it("matches Advanced label",     () => expect(matchesTarget("Advanced",        "pro")).toBe(true));
-    it("rejects Flash label",        () => expect(matchesTarget("Gemini Flash",    "pro")).toBe(false));
+    it("rejects Flash label",        () => expect(matchesTarget("3.6 Flash",       "pro")).toBe(false));
     it("rejects plain text",         () => expect(matchesTarget("something else",  "pro")).toBe(false));
-  });
-
-  describe('target "thinking"', () => {
-    it("matches Thinking label",     () => expect(matchesTarget("Thinking",        "thinking")).toBe(true));
-    it("matches Reasoning label",    () => expect(matchesTarget("Reasoning",       "thinking")).toBe(true));
-    it("rejects Flash",              () => expect(matchesTarget("Gemini Flash",    "thinking")).toBe(false));
-    it("rejects Pro",                () => expect(matchesTarget("Gemini Pro",      "thinking")).toBe(false));
+    it("rejects Extended thinking",  () => expect(matchesTarget("Extended thinking\nComplex problem solving", "pro")).toBe(false));
   });
 
   it("returns false for unknown target", () => {
     expect(matchesTarget("Flash", "unknown")).toBe(false);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════
+// classifyOption
+// ════════════════════════════════════════════════════════════════════
+
+/** Builds a bare element with the given textContent and optional dataset. */
+function optionEl(text, dataset = {}) {
+  const el = document.createElement("button");
+  el.textContent = text;
+  Object.assign(el.dataset, dataset);
+  return el;
+}
+
+describe("classifyOption", () => {
+  it("classifies via text before consulting index", () => {
+    const el = optionEl("3.6 Flash\nAll-around help");
+    expect(classifyOption(el, 1)).toBe("flash");
+  });
+
+  it("falls back to index when text is unclassifiable", () => {
+    const el = optionEl("");
+    expect(classifyOption(el, 0)).toBe("flash-lite");
+    expect(classifyOption(el, 1)).toBe("flash");
+    expect(classifyOption(el, 2)).toBe("pro");
+  });
+
+  it("never classifies the signed-out sign-in row as a model, regardless of index", () => {
+    const el = optionEl(
+      "Sign in for all models\nTry the latest Flash",
+      { testId: "mode-picker-sign-in-button" }
+    );
+    expect(classifyOption(el, 3)).toBeNull();
+    expect(classifyOption(el, 1)).toBeNull(); // structural guard wins even at a model's index
+  });
+
+  it("never classifies the Extended thinking row as a model, even at a model index", () => {
+    const el = optionEl("Extended thinking\nComplex problem solving");
+    expect(classifyOption(el, -1)).toBeNull();
+    expect(classifyOption(el, 2)).toBeNull(); // text guard beats the index-2="pro" fallback
   });
 });
 

@@ -4,7 +4,7 @@
   "ext_action_title":               { "message": "Ask Gemini (Ctrl+Maj+L)" },
   "cmd_open_popup_description":     { "message": "Ouvrir le popup Ask Gemini" },
 
-  "model_label_flash_lite":         { "message": "Flash Lite" },
+  "model_label_flash_lite":         { "message": "Flash-Lite" },
   "model_label_flash":              { "message": "Flash" },
   "model_label_pro":                { "message": "Pro" },
   "model_char_flash_lite":          { "message": "L" },
@@ -18,7 +18,7 @@
   "thinking_level_extended":        { "message": "Etendu" },
 
   "popup_logo_tag":                 { "message": "Assistant IA" },
-  "popup_model_flash_lite_title":   { "message": "Gemini Flash Lite — le plus leger et le plus rapide" },
+  "popup_model_flash_lite_title":   { "message": "Gemini Flash-Lite — le plus leger et le plus rapide" },
   "popup_model_flash_title":        { "message": "Gemini Flash — rapide et efficace" },
   "popup_model_pro_title":          { "message": "Gemini Pro ✨ — le plus puissant (necessite Gemini Advanced)" },
   "popup_thinking_extended_title":  { "message": "Raisonnement etendu — plus approfondi (plus lent)" },
@@ -61,6 +61,7 @@
   "content_status_sending":          { "message": "Envoi…" },
   "content_status_switching_model":  { "message": "Changement de modèle…" },
   "content_status_model_unavailable":{ "message": "{{model}} indisponible — utilisation de Flash" },
+  "content_status_thinking_unavailable":{ "message": "Raisonnement etendu indisponible — utilisation du mode par defaut du modele" },
   "content_upload_failed":           { "message": "Échec du téléchargement — message non envoyé" },
 
   "bg_menu_open_gemini":             { "message": "Ouvrir Gemini" },
@@ -117,7 +118,7 @@
   "options_theme_hint":              { "message": "Auto suit le réglage de votre OS. Les changements prennent effet immédiatement dans le popup et cette page." },
   "options_model_label":             { "message": "Modèle Gemini par défaut" },
   "options_model_sub":               { "message": "Quel modèle cibler lors de l'envoi d'une invite depuis le popup" },
-  "options_model_hint":              { "message": "Flash Lite est le modele le plus leger — ideal pour les taches simples. Flash est le defaut efficace. Pro ✨ est le modele avance — necessite Gemini Advanced. Activez Raisonnement etendu pour une reflexion plus approfondie." },
+  "options_model_hint":              { "message": "Flash-Lite est le modele le plus leger — ideal pour les taches simples. Flash est le defaut efficace. Pro ✨ est le modele avance — necessite Gemini Advanced. Activez Raisonnement etendu pour une reflexion plus approfondie." },
   "options_thinking_level_label":   { "message": "Niveau de raisonnement par defaut" },
   "options_thinking_level_sub":     { "message": "Standard utilise un raisonnement normal ; Etendu active une reflexion plus profonde et plus lente" },
   "options_thinking_level_hint":    { "message": "Le raisonnement etendu prend plus de temps mais reflechit plus soigneusement. Fonctionne avec les trois modeles." },
@@ -315,6 +316,6 @@
   "welcome_feat3_title":             { "message": "Modèles d'invite" },
   "welcome_feat3_desc":              { "message": "Tapez / dans le popup pour choisir un extrait sauvegardé. Gérez-les dans Paramètres → Modèles." },
   "welcome_feat4_title":             { "message": "Sélecteur de modèle" },
-  "welcome_feat4_desc":              { "message": "Basculez entre Flash Lite, Flash et Pro directement dans le popup, et activez le Raisonnement etendu — sans detour vers Gemini." },
+  "welcome_feat4_desc":              { "message": "Basculez entre Flash-Lite, Flash et Pro directement dans le popup, et activez le Raisonnement etendu — sans detour vers Gemini." },
   "welcome_cta":                     { "message": "Commencer" }
 }

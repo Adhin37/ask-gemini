@@ -4,7 +4,7 @@
   "ext_action_title":               { "message": "Ask Gemini (Ctrl+Shift+L)" },
   "cmd_open_popup_description":     { "message": "打开 Ask Gemini 弹窗" },
 
-  "model_label_flash_lite":         { "message": "Flash Lite" },
+  "model_label_flash_lite":         { "message": "Flash-Lite" },
   "model_label_flash":              { "message": "Flash" },
   "model_label_pro":                { "message": "Pro" },
   "model_char_flash_lite":          { "message": "L" },
@@ -18,7 +18,7 @@
   "thinking_level_extended":        { "message": "深度" },
 
   "popup_logo_tag":                 { "message": "AI 助手" },
-  "popup_model_flash_lite_title":   { "message": "Gemini Flash Lite — 最轻量最快速" },
+  "popup_model_flash_lite_title":   { "message": "Gemini Flash-Lite — 最轻量最快速" },
   "popup_model_flash_title":        { "message": "Gemini Flash — 快速高效" },
   "popup_model_pro_title":          { "message": "Gemini Pro ✨ — 最强大（需要 Gemini Advanced）" },
   "popup_thinking_extended_title":  { "message": "深度思考 — 更深入的推理（较慢）" },
@@ -61,6 +61,7 @@
   "content_status_sending":          { "message": "正在发送…" },
   "content_status_switching_model":  { "message": "正在切换模型…" },
   "content_status_model_unavailable":{ "message": "{{model}} 不可用 — 使用快速模式" },
+  "content_status_thinking_unavailable":{ "message": "深度思考不可用 — 使用模型默认设置" },
   "content_upload_failed":           { "message": "图片上传失败 — 提示未发送" },
 
   "bg_menu_open_gemini":             { "message": "打开 Gemini" },
@@ -117,7 +118,7 @@
   "options_theme_hint":              { "message": "自动模式跟随操作系统设置。更改将立即在弹窗和本页同步生效。" },
   "options_model_label":             { "message": "默认 Gemini 模型" },
   "options_model_sub":               { "message": "从弹窗发送提示词时使用的目标模型" },
-  "options_model_hint":              { "message": "Flash Lite 是最轻量的模型 — 适合简单任务。Flash 是高效默认模型。Pro ✨ 是高级模型 — 需要 Gemini Advanced。启用深度思考可对任何模型进行更深入的推理。" },
+  "options_model_hint":              { "message": "Flash-Lite 是最轻量的模型 — 适合简单任务。Flash 是高效默认模型。Pro ✨ 是高级模型 — 需要 Gemini Advanced。启用深度思考可对任何模型进行更深入的推理。" },
   "options_thinking_level_label":   { "message": "默认思考级别" },
   "options_thinking_level_sub":     { "message": "标准使用普通推理；深度启用更慢但更深入的思考" },
   "options_thinking_level_hint":    { "message": "深度思考耗时更长但推理更仔细。适用于所有三种模型。" },
@@ -316,6 +317,6 @@
   "welcome_feat3_title":             { "message": "提示词模板" },
   "welcome_feat3_desc":              { "message": "在弹窗中输入 / 以选择已保存的片段。在设置 → 模板中管理。" },
   "welcome_feat4_title":             { "message": "模型选择" },
-  "welcome_feat4_desc":              { "message": "在弹窗中直接切换 Flash Lite、Flash 和 Pro，并开启深度思考 — 无需前往 Gemini。" },
+  "welcome_feat4_desc":              { "message": "在弹窗中直接切换 Flash-Lite、Flash 和 Pro，并开启深度思考 — 无需前往 Gemini。" },
   "welcome_cta":                     { "message": "开始浏览" }
 }

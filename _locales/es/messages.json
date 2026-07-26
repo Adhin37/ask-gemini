@@ -4,7 +4,7 @@
   "ext_action_title":               { "message": "Ask Gemini (Ctrl+Shift+L)" },
   "cmd_open_popup_description":     { "message": "Abrir el popup de Ask Gemini" },
 
-  "model_label_flash_lite":         { "message": "Flash Lite" },
+  "model_label_flash_lite":         { "message": "Flash-Lite" },
   "model_label_flash":              { "message": "Flash" },
   "model_label_pro":                { "message": "Pro" },
   "model_char_flash_lite":          { "message": "L" },
@@ -18,7 +18,7 @@
   "thinking_level_extended":        { "message": "Extendido" },
 
   "popup_logo_tag":                 { "message": "Asistente IA" },
-  "popup_model_flash_lite_title":   { "message": "Gemini Flash Lite — el mas ligero y rapido" },
+  "popup_model_flash_lite_title":   { "message": "Gemini Flash-Lite — el mas ligero y rapido" },
   "popup_model_flash_title":        { "message": "Gemini Flash — rapido y eficiente" },
   "popup_model_pro_title":          { "message": "Gemini Pro ✨ — el mas potente (requiere Gemini Advanced)" },
   "popup_thinking_extended_title":  { "message": "Razonamiento extendido — mas profundo (mas lento)" },
@@ -61,6 +61,7 @@
   "content_status_sending":          { "message": "Enviando…" },
   "content_status_switching_model":  { "message": "Cambiando modelo…" },
   "content_status_model_unavailable":{ "message": "{{model}} no disponible — usando Flash" },
+  "content_status_thinking_unavailable":{ "message": "Razonamiento extendido no disponible — usando el predeterminado del modelo" },
   "content_upload_failed":           { "message": "Error al subir imagen — mensaje no enviado" },
 
   "bg_menu_open_gemini":             { "message": "Abrir Gemini" },
@@ -117,7 +118,7 @@
   "options_theme_hint":              { "message": "Auto sigue la configuración de tu sistema. Los cambios se aplican inmediatamente en el popup y esta página." },
   "options_model_label":             { "message": "Modelo Gemini predeterminado" },
   "options_model_sub":               { "message": "Qué modelo usar al enviar un prompt desde el popup" },
-  "options_model_hint":              { "message": "Flash Lite es el modelo mas ligero — ideal para tareas simples. Flash es el predeterminado eficiente. Pro ✨ es el modelo avanzado — requiere Gemini Advanced. Activa Razonamiento extendido para una reflexion mas profunda." },
+  "options_model_hint":              { "message": "Flash-Lite es el modelo mas ligero — ideal para tareas simples. Flash es el predeterminado eficiente. Pro ✨ es el modelo avanzado — requiere Gemini Advanced. Activa Razonamiento extendido para una reflexion mas profunda." },
   "options_thinking_level_label":   { "message": "Nivel de razonamiento predeterminado" },
   "options_thinking_level_sub":     { "message": "Estandar usa razonamiento normal; Extendido activa una reflexion mas profunda y lenta" },
   "options_thinking_level_hint":    { "message": "El razonamiento extendido tarda mas pero razona con mas cuidado. Funciona con los tres modelos." },
@@ -315,6 +316,6 @@
   "welcome_feat3_title":             { "message": "Plantillas de prompt" },
   "welcome_feat3_desc":              { "message": "Escribe / en el popup para elegir un fragmento guardado. Gestiónalo en Ajustes → Plantillas." },
   "welcome_feat4_title":             { "message": "Selector de modelo" },
-  "welcome_feat4_desc":              { "message": "Cambia entre Flash Lite, Flash y Pro directamente en el popup, y activa el Razonamiento extendido — sin pasar por Gemini." },
+  "welcome_feat4_desc":              { "message": "Cambia entre Flash-Lite, Flash y Pro directamente en el popup, y activa el Razonamiento extendido — sin pasar por Gemini." },
   "welcome_cta":                     { "message": "Empezar" }
 }

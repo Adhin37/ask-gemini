@@ -15,8 +15,8 @@ export function setupOptionsDom() {
     </div>
 
     <div id="modelControl">
+      <button class="seg-btn" data-value="flash-lite">Lite</button>
       <button class="seg-btn" data-value="flash">Fast</button>
-      <button class="seg-btn" data-value="thinking">Think</button>
       <button class="seg-btn" data-value="pro">Pro</button>
     </div>
 
@@ -72,8 +72,8 @@ export function setupOptionsDom() {
     <button id="shortcutEditBtn"></button>
 
     <div id="tmplModelTabs">
+      <button class="tmpl-model-tab" data-model="flash-lite">Lite<span class="tmpl-tab-badge">0</span></button>
       <button class="tmpl-model-tab" data-model="flash">Fast<span class="tmpl-tab-badge">0</span></button>
-      <button class="tmpl-model-tab" data-model="thinking">Think<span class="tmpl-tab-badge">0</span></button>
       <button class="tmpl-model-tab" data-model="pro">Pro<span class="tmpl-tab-badge">0</span></button>
     </div>
 

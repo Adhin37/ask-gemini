@@ -169,6 +169,11 @@ function showUploadError(msg) {
     console.warn(
       `[Ask Gemini] Could not confirm model "${modelPref}"/thinking="${thinkingLevel}" after switch. Proceeding anyway.`
     );
+  } else if (modelResult.reason === "thinking-locked") {
+    // Model switched fine — only Extended thinking was unavailable (quota/sign-in).
+    // Keep the model choice; do not fall back, this isn't a model-level failure.
+    showStatus(t("content_status_thinking_unavailable"));
+    await new Promise((r) => setTimeout(r, 2200));
   } else {
     console.info(`[Ask Gemini] ✓ Model confirmed: "${modelPref}" thinking="${thinkingLevel}"`);
   }
@@ -285,6 +290,8 @@ function waitForCondition(predicate, timeoutMs = 5_000, root = document.body) {
 
 /**
  * Returns the Gemini model-picker trigger button, or null if not found.
+ * `data-test-id="bard-mode-menu-button"` and `[data-test-id="logo-pill-label-container"]`
+ * are both still present in the current Gemini markup (verified July 2026).
  * @returns {Element|null}
  */
 function findModelTrigger() {
@@ -313,6 +320,11 @@ function _findLabelContainer(btn) {
 /**
  * Reads the currently active model from the trigger button's primary text span.
  * Falls back to icon classification then full-button text.
+ *
+ * The current Gemini picker (verified July 2026) has no `.picker-primary-text`
+ * class on the label span — that path is kept for older builds, and the
+ * "first plain-text span" fallback below is what actually resolves the label
+ * (a bare `<span>Flash-Lite</span>` inside the pill container) today.
  * @returns {"flash-lite"|"flash"|"pro"|null}
  */
 function readModelFromButton() {
@@ -343,7 +355,12 @@ function readModelFromButton() {
 }
 
 /**
- * Reads the currently active thinking level from the trigger button's secondary text span.
+ * Reads the currently active thinking level from the trigger button.
+ * Prefers a dedicated secondary-text span (older Gemini builds); the current
+ * picker has no such span, so falls back to checking whether the trigger's
+ * own label/aria-label reads as "Extended thinking" (Gemini appears to swap
+ * the pill's label to the thinking mode's name when it is the active mode,
+ * mirroring how a model name is shown otherwise).
  * @returns {"standard"|"extended"|null}
  */
 function readThinkingLevelFromButton() {
@@ -359,6 +376,12 @@ function readThinkingLevelFromButton() {
       return classifyThinkingLevelText(text);
     }
   }
+
+  // Combine both text sources rather than preferring one — real Gemini's
+  // aria-label ("Open mode picker, currently Flash-Lite") and its visible
+  // label span are usually in sync, but either alone could carry the signal.
+  const label = `${btn.getAttribute("aria-label") || ""} ${btn.textContent || ""}`.trim();
+  if (isThinkingText(label)) return "extended";
   return null;
 }
 
@@ -381,6 +404,9 @@ function readCurrentState() {
 // ── Locale-stable icon → model map ───────────────────────────
 // Material icon glyph names observed in the Gemini model picker.
 // Thinking is now a separate dimension — removed from this map.
+// The current picker (verified July 2026) renders no per-model icons at all —
+// only a checkmark on the selected row — so this map is a fallback for older
+// or regional Gemini builds; text classification is the primary signal now.
 const ICON_TO_MODEL = {
   bolt: "flash", auto_awesome: "flash", lightning_bolt: "flash",
   flash_on: "flash",
@@ -405,16 +431,48 @@ function iconNameOf(el) {
 }
 
 /**
- * Classifies a dropdown option using three layers in priority order:
- * (a) Material icon glyph name — locale-stable.
- * (b) DOM index within the option list (0=flash-lite, 1=flash, 2=pro).
- *     Pass -1 to skip this layer (e.g. when reading the selected option).
- * (c) Text substring match — legacy fallback.
+ * True when a menu-option label reads as the "Extended thinking" row
+ * (or a non-model row that should never be classified as a model, such as
+ * the "Sign in for all models" prompt shown to signed-out users — its
+ * "Try the latest Flash" sub-copy would otherwise false-match "flash").
+ * @param {string} text
+ * @returns {boolean}
+ */
+function isThinkingText(text) {
+  const lower = text.toLowerCase();
+  return lower.includes("extend") || lower.includes("deep") ||
+         lower.includes("think")  || lower.includes("reason");
+}
+
+/**
+ * Classifies a dropdown option using layers in priority order:
+ * (a) Structural skip — the "sign in" prompt row is never a model.
+ * (b) Thinking-text guard — the "Extended thinking" row is never a model,
+ *     checked before the icon/index layers below so a future Gemini build
+ *     can't accidentally hand it a model id just by landing at index 0-2
+ *     (there's no icon or index rule that identifies "Extended thinking"
+ *     itself — only this text check does).
+ * (c) Text substring match — primary signal; current Gemini labels
+ *     ("3.5 Flash-Lite", "3.6 Flash", "3.1 Pro") classify unambiguously.
+ * (d) Material icon glyph name — locale-stable fallback for older builds
+ *     that render icons instead of (or alongside) text.
+ * (e) DOM index within the option list (0=flash-lite, 1=flash, 2=pro),
+ *     last resort only. Pass -1 to skip this layer (e.g. when reading the
+ *     selected option).
  * @param {Element} el
  * @param {number}  indexInGroup
  * @returns {"flash-lite"|"flash"|"pro"|null}
  */
 function classifyOption(el, indexInGroup) {
+  const testId = el.dataset.testId || "";
+  if (testId.includes("sign-in")) return null;
+
+  const text = el.textContent || "";
+  if (isThinkingText(text)) return null;
+
+  const byText = classifyModelTextLegacy(text);
+  if (byText) return byText;
+
   const icon = iconNameOf(el);
   if (icon && ICON_TO_MODEL[icon]) return ICON_TO_MODEL[icon];
 
@@ -422,23 +480,26 @@ function classifyOption(el, indexInGroup) {
   if (indexInGroup === 1) return "flash";
   if (indexInGroup === 2) return "pro";
 
-  return classifyModelTextLegacy(el.textContent);
+  return null;
 }
 
 /**
  * Maps a free-form model label string to a canonical model id.
- * Rule order: "lite" first (subset of "flash"), then "pro", then "flash".
+ * Guards against the "Extended thinking" row and the signed-out "Sign in"
+ * prompt first — both contain substrings ("problem", "Flash") that would
+ * otherwise false-match the rules below — then checks "lite" first (subset
+ * of "flash"), then "pro", then "flash".
  * @param {string} text
  * @returns {"flash-lite"|"flash"|"pro"|null}
  */
 function classifyModelTextLegacy(text) {
   const lower = text.toLowerCase();
+  if (isThinkingText(lower))                                              return null;
+  if (lower.includes("sign in"))                                          return null;
   if (lower.includes("lite"))                                             return "flash-lite";
   if (lower.includes("pro")   || lower.includes("advanced"))             return "pro";
   if (lower.includes("flash") || lower.includes("fast") ||
-      lower.includes("quick") || lower.includes("gemini") ||
-      lower.includes("default") || lower.includes("2.") ||
-      lower.includes("1.5"))                                              return "flash";
+      lower.includes("quick"))                                            return "flash";
   return null;
 }
 
@@ -449,8 +510,7 @@ function classifyModelTextLegacy(text) {
  */
 function classifyThinkingLevelText(text) {
   const lower = text.toLowerCase();
-  if (lower.includes("extend") || lower.includes("deep") ||
-      lower.includes("think")  || lower.includes("reason"))              return "extended";
+  if (isThinkingText(lower))                                              return "extended";
   if (lower.includes("standard") || lower.includes("normal") ||
       lower.includes("default"))                                          return "standard";
   return null;
@@ -467,6 +527,9 @@ function classifyModelText(text) {
 
 /**
  * Returns true if the dropdown option text corresponds to the target model.
+ * Never matches the "Extended thinking" row — kept in sync with the same
+ * guard in classifyModelTextLegacy even though the first-line-only text this
+ * function inspects isn't currently reachable by the "problem" substring bug.
  * @param {string} optionText
  * @param {"flash-lite"|"flash"|"pro"} target
  * @returns {boolean}
@@ -474,6 +537,7 @@ function classifyModelText(text) {
 function matchesTarget(optionText, target) {
   const firstLine = optionText.trim().split("\n")[0].trim();
   const lower     = firstLine.toLowerCase();
+  if (isThinkingText(lower)) return false;
 
   switch (target) {
     case "flash-lite":
@@ -497,10 +561,15 @@ function matchesTarget(optionText, target) {
 
 /**
  * Selectors tried in order to locate model-picker dropdown options.
- * Primary: Material Design menu items used by the real Gemini UI.
- * Fallbacks cover layout variants and possible future DOM changes.
+ * Primary: `<gem-menu-item>` custom elements, the current Gemini picker's
+ * markup (verified July 2026 — replaced the older Material `.mat-mdc-menu-*`
+ * panel). `[role="menuitem"]` alone already matches these (role is set
+ * directly on the custom element) and is kept as a fallback in case a future
+ * build drops the tag name but keeps the role. Remaining entries cover older
+ * layout variants and possible future DOM changes.
  */
 const OPTION_SELECTORS = [
+  'gem-menu-item[role="menuitem"]',
   "button.mat-mdc-menu-item",
   '[role="menuitem"]',
   '[role="option"]',
@@ -627,7 +696,10 @@ async function _detectCurrentState() {
 
 /**
  * Heuristically determines whether a dropdown option element is the currently
- * selected/active one.
+ * selected/active one. The current Gemini picker (verified July 2026) marks
+ * the selected `<gem-menu-item>` with a `"selected"` class and no
+ * `aria-selected`/`aria-checked` attribute, so the class-name check below is
+ * the layer that actually matches today.
  * @param {Element} el
  * @returns {boolean}
  */
@@ -661,12 +733,16 @@ function isOptionDisabled(el) {
 
 /**
  * Ensures the given model + thinking level are active, switching if needed.
- * Retries up to MAX_ATTEMPTS times. Falls back to "flash" when the option is
- * disabled (quota / sign-in) and returns `{ confirmed, fellBack: "flash", reason: "locked" }`.
+ * Retries up to MAX_ATTEMPTS times. Falls back to "flash" when the model
+ * option is disabled (quota / sign-in) and returns
+ * `{ confirmed, fellBack: "flash", reason: "locked" }`. A locked Extended
+ * thinking row does *not* trigger this model fallback — the model stays as
+ * requested and `thinkingConfirmed` is reported false instead, since a
+ * thinking-only failure shouldn't discard a successful model switch.
  *
  * @param {{ model: "flash-lite"|"flash"|"pro", thinkingLevel: "standard"|"extended" }} target
  * @param {number} [_attempt]
- * @returns {Promise<{confirmed: boolean, fellBack?: "flash", reason?: "locked"}>}
+ * @returns {Promise<{confirmed: boolean, thinkingConfirmed?: boolean, fellBack?: "flash", reason?: "locked"|"thinking-locked"}>}
  */
 async function ensureModel({ model, thinkingLevel = "standard" }, _attempt = 1) {
   const MAX_ATTEMPTS = 3;
@@ -707,19 +783,27 @@ async function ensureModel({ model, thinkingLevel = "standard" }, _attempt = 1) 
   }
 
   // ── Step 2: ensure thinking level ────────────────────────────
+  // There is no "Standard" row to click — Extended thinking and a model
+  // choice are mutually exclusive entries in the same list, so reverting to
+  // standard means re-selecting the model instead of picking a level option.
   if (thinkingLevel === "extended") {
-    const levelResult = await switchThinkingLevel("extended");
-    console.debug(`[Ask Gemini] switchThinkingLevel("extended") → ${levelResult}`);
-  } else {
-    // Ensure standard is set if currently on extended (best-effort; not always needed)
-    const currentLevel = readThinkingLevelFromButton();
-    if (currentLevel === "extended") {
-      const levelResult = await switchThinkingLevel("standard");
-      console.debug(`[Ask Gemini] switchThinkingLevel("standard") → ${levelResult}`);
+    const levelResult = await selectExtendedThinking();
+    console.debug(`[Ask Gemini] selectExtendedThinking() → ${levelResult}`);
+    if (levelResult === "disabled") {
+      return { confirmed: true, thinkingConfirmed: false, reason: "thinking-locked" };
     }
+    return { confirmed: true, thinkingConfirmed: levelResult === "switched" };
   }
 
-  return { confirmed: true };
+  const currentLevel = readThinkingLevelFromButton();
+  if (currentLevel === "extended") {
+    console.debug("[Ask Gemini] Reverting from Extended thinking to standard — re-selecting model.");
+    await performModelSwitch(model);
+    await waitForCondition(() => !OPTION_SELECTORS.some(s => document.querySelector(s)), 3_000);
+    await waitForCondition(() => readModelFromButton() === model, 5_000, document.body);
+  }
+
+  return { confirmed: true, thinkingConfirmed: true };
 }
 
 /**
@@ -771,82 +855,60 @@ async function performModelSwitch(target) {
 }
 
 /**
- * Finds the "Thinking level" submenu trigger inside an open model picker.
- * Scans menu items by text rather than a CSS selector so it works across locales.
- * @returns {Element|null}
+ * Opens the model picker and clicks the "Extended thinking" row.
+ *
+ * Gemini's current picker (verified July 2026, screenshot-confirmed) shows
+ * Extended thinking as a fourth row in the same flat, checkmark-style list as
+ * the three models — below a divider — rather than a hover-to-expand submenu
+ * on an older model option. There is no separate "Standard" row to click:
+ * reverting to standard thinking means re-selecting a model instead (handled
+ * by the caller, see `ensureModel`).
+ *
+ * @returns {Promise<"switched"|"disabled"|"not-found">}
  */
-function findThinkingSubmenuTrigger() {
-  for (const sel of OPTION_SELECTORS) {
-    for (const el of document.querySelectorAll(sel)) {
-      const text = (el.textContent || "").toLowerCase();
-      if (text.includes("think") || text.includes("reasoning") || text.includes("level")) {
-        return el;
-      }
-    }
-  }
-  return null;
-}
-
-/**
- * Opens the picker, expands the Thinking level submenu, and clicks the desired level.
- * @param {"standard"|"extended"} level
- * @returns {Promise<"switched"|"not-found">}
- */
-async function switchThinkingLevel(level) {
+async function selectExtendedThinking() {
   const triggerBtn = findModelTrigger();
   if (!triggerBtn) return "not-found";
 
   triggerBtn.click();
+  // 400 ms matches observed Angular menu render delay on the real Gemini page.
   await new Promise((r) => setTimeout(r, 400));
 
-  const submenuTrigger = await waitForElement(findThinkingSubmenuTrigger, 3_000);
-  if (!submenuTrigger) {
-    console.debug("[Ask Gemini] switchThinkingLevel: submenu trigger not found — closing");
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    return "not-found";
-  }
-
-  // Hover to expand, then click to confirm
-  submenuTrigger.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
-  await new Promise((r) => setTimeout(r, 300));
-  submenuTrigger.click();
-  await new Promise((r) => setTimeout(r, 400));
-
-  // Find the target thinking level option
-  const levelOption = await waitForElement(
+  const thinkingOption = await waitForElement(
     () => {
       for (const sel of OPTION_SELECTORS) {
         for (const el of document.querySelectorAll(sel)) {
-          const text = (el.textContent || "").toLowerCase();
-          if (level === "extended" && (text.includes("extend") || text.includes("deep"))) return el;
-          if (level === "standard" && (text.includes("standard") || text.includes("normal") || text.includes("default"))) return el;
+          if (isThinkingText(el.textContent || "")) return el;
         }
       }
       return null;
     },
-    3_000
+    4_000
   );
 
-  if (!levelOption) {
-    console.debug(`[Ask Gemini] switchThinkingLevel: "${level}" option not found — closing`);
+  if (!thinkingOption) {
+    console.debug('[Ask Gemini] selectExtendedThinking: "Extended thinking" row not found — closing');
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     return "not-found";
   }
 
-  levelOption.scrollIntoView({ block: "nearest" });
-  levelOption.click();
+  if (isOptionDisabled(thinkingOption)) {
+    console.debug("[Ask Gemini] selectExtendedThinking: row is disabled — closing");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    return "disabled";
+  }
 
-  // Wait for the secondary-text to update
-  await waitForCondition(
-    () => {
-      const current = readThinkingLevelFromButton();
-      return current === level;
-    },
+  thinkingOption.scrollIntoView({ block: "nearest" });
+  thinkingOption.click();
+
+  await waitForCondition(() => !OPTION_SELECTORS.some(s => document.querySelector(s)), 3_000);
+  const confirmed = await waitForCondition(
+    () => readThinkingLevelFromButton() === "extended",
     4_000,
     document.body
   );
 
-  console.debug(`[Ask Gemini] switchThinkingLevel: confirmed "${level}"`);
+  console.debug(`[Ask Gemini] selectExtendedThinking: confirmed=${confirmed}`);
   return "switched";
 }
 
@@ -1067,7 +1129,7 @@ async function injectMessage(message) {
 if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
   Object.assign(globalThis.__TEST__, {
     classifyModelText, classifyModelTextLegacy, matchesTarget,
-    classifyOption, iconNameOf, ICON_TO_MODEL,
+    classifyOption, iconNameOf, ICON_TO_MODEL, isThinkingText,
     waitForElement, waitForCondition,
   });
 }

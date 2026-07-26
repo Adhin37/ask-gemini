@@ -24,6 +24,7 @@ export const MODEL_BTN = '[data-test-id="bard-mode-menu-button"], button.input-a
  * selector = the same DOM regression caught.
  */
 export const OPTION_SEL = [
+  'gem-menu-item[role="menuitem"]',
   "button.mat-mdc-menu-item",
   '[role="menuitem"]',
   '[role="option"]',
@@ -33,14 +34,22 @@ export const OPTION_SEL = [
 ].join(", ");
 
 /**
- * Models probed during picker round-trip tests, in attempt order.
- * Flash Lite and Flash are free-tier; Pro requires Google AI Plus.
- * @type {Array<{ label: string, pattern: RegExp }>}
+ * Models (and the Extended thinking row) probed during picker round-trip
+ * tests, in attempt order. Flash-Lite and Flash are free-tier; Pro requires
+ * Google AI Plus. Labels carry version prefixes in the real picker (verified
+ * July 2026 — "3.5 Flash-Lite", "3.6 Flash", "3.1 Pro"), so patterns match
+ * loosely on the model name rather than the version number.
+ *
+ * `exclude` filters out an option whose text would otherwise also match
+ * `pattern` — e.g. plain `/\bflash\b/i` matches inside "Flash-Lite" too,
+ * since a hyphen is a word boundary.
+ * @type {Array<{ label: string, pattern: RegExp, exclude?: RegExp }>}
  */
 export const PROBE_MODELS = [
-  { label: "Flash Lite", pattern: /flash\s+lite/i },
-  { label: "Flash",      pattern: /\bflash\b/i },
-  { label: "Pro",        pattern: /\bpro\b/i },
+  { label: "Flash-Lite",         pattern: /flash[\s-]?lite/i },
+  { label: "Flash",              pattern: /\bflash\b/i, exclude: /lite/i },
+  { label: "Pro",                pattern: /\bpro\b/i },
+  { label: "Extended thinking",  pattern: /extended thinking/i },
 ];
 
 /**
@@ -78,14 +87,18 @@ export async function skipIfNotReady(page) {
  * @param {import("@playwright/test").Page} page
  * @param {RegExp} pattern - matched against option text content
  * @param {number} [switchTimeout=7_000]
+ * @param {RegExp} [exclude] - options otherwise matching `pattern` to skip
+ *   (e.g. excluding "Flash-Lite" when probing for plain "Flash")
  * @returns {Promise<boolean>}
  */
-export async function tryModelSwitch(page, pattern, switchTimeout = 7_000) {
+export async function tryModelSwitch(page, pattern, switchTimeout = 7_000, exclude = undefined) {
   const modelBtn = page.locator(MODEL_BTN);
   await modelBtn.click();
 
   const options = page.locator(OPTION_SEL);
-  const target  = options.filter({ hasText: pattern }).first();
+  let filtered  = options.filter({ hasText: pattern });
+  if (exclude) filtered = filtered.filter({ hasNotText: exclude });
+  const target  = filtered.first();
 
   try {
     await target.waitFor({ state: "visible", timeout: 5_000 });

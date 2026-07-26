@@ -228,6 +228,20 @@
       color: var(--text-dim);
     }
 
+    /* Divider between the model rows and the Extended thinking row —
+       mirrors the real picker's flat checkmark list with a separator. */
+    .mat-mdc-menu-divider {
+      height: 1px; margin: 4px 0; border: none;
+      background: var(--border);
+    }
+
+    /* "New" badge shown next to the Flash row, matching the real picker */
+    .model-item-badge {
+      font-size: 10px; font-weight: 600; color: var(--accent);
+      border: 1px solid var(--accent); border-radius: 999px;
+      padding: 1px 7px; flex-shrink: 0;
+    }
+
     /* Upgrade row at the bottom of the picker */
     .model-upgrade-row {
       display: flex; align-items: center; justify-content: space-between;
@@ -355,6 +369,12 @@
                 1. button[data-test-id="bard-mode-menu-button"]  (primary)
                 2. button.input-area-switch                       (fallback)
               Label read via: [data-test-id="logo-pill-label-container"] > span
+
+              Matches the real Gemini trigger (verified July 2026): no
+              secondary-text span any more — the pill shows one plain
+              `<span>` that reads either the current model's short name
+              ("Flash-Lite" / "Flash" / "Pro") or, when Extended thinking is
+              the active mode instead of a model, "Extended thinking".
             -->
             <button
               class="input-area-switch"
@@ -364,7 +384,6 @@
             >
               <div data-test-id="logo-pill-label-container" id="modelLabel">
                 <span class="picker-primary-text" id="modelName">Flash</span>
-                <span class="picker-secondary-text" id="modelThinkingLevel">Standard</span>
               </div>
               <!-- Chevron -->
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -413,12 +432,15 @@
     content.js OPTION_SELECTORS[0] = "button.mat-mdc-menu-item"
     matchesTarget() uses opt.innerText.split('\n')[0] for the title line.
     Block <span> elements produce the newline that separates title from description.
-    Order: Flash Lite → Flash → Pro (matches real Gemini's new picker order).
+    Order: Flash-Lite → Flash → Pro → (divider) → Extended thinking
+    (matches real Gemini's picker, verified July 2026 — titles/descriptions
+    are the real menu-item copy; the trigger's own label omits the version
+    prefix, see #modelName below).
   -->
   <button class="mat-mdc-menu-item" role="menuitem" aria-selected="false" data-model="flash-lite" id="opt-flash-lite">
     <div class="model-item-content">
-      <span class="model-item-title">Flash Lite</span>
-      <span class="model-item-desc">Fast and efficient</span>
+      <span class="model-item-title">3.5 Flash-Lite</span>
+      <span class="model-item-desc">Fastest answers</span>
     </div>
     <span class="model-item-check" aria-hidden="true">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -427,9 +449,10 @@
 
   <button class="mat-mdc-menu-item" role="menuitem" aria-selected="true" data-model="flash" id="opt-flash">
     <div class="model-item-content">
-      <span class="model-item-title">Flash</span>
-      <span class="model-item-desc">Answers quickly</span>
+      <span class="model-item-title">3.6 Flash</span>
+      <span class="model-item-desc">All-around help</span>
     </div>
+    <span class="model-item-badge">New</span>
     <span class="model-item-check" aria-hidden="true">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </span>
@@ -437,8 +460,26 @@
 
   <button class="mat-mdc-menu-item" role="menuitem" aria-selected="false" data-model="pro" id="opt-pro">
     <div class="model-item-content">
-      <span class="model-item-title">Pro</span>
-      <span class="model-item-desc">Advanced maths and code</span>
+      <span class="model-item-title">3.1 Pro</span>
+      <span class="model-item-desc">Advanced math &amp; code</span>
+    </div>
+    <span class="model-item-check" aria-hidden="true">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+  </button>
+
+  <hr class="mat-mdc-menu-divider" aria-hidden="true" />
+
+  <!--
+    Extended thinking — a sibling row in the same checkmark list, mutually
+    exclusive with the three models above (selecting it clears every model's
+    checkmark and vice versa). Uses data-mode instead of data-model so the
+    click handler and classifyOption's structural guards can tell it apart.
+  -->
+  <button class="mat-mdc-menu-item" role="menuitem" aria-selected="false" data-mode="extended" id="opt-extended-thinking">
+    <div class="model-item-content">
+      <span class="model-item-title">Extended thinking</span>
+      <span class="model-item-desc">Complex problem solving</span>
     </div>
     <span class="model-item-check" aria-hidden="true">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -497,19 +538,34 @@
     menuOpen = false;
   }
 
+  // All checkmark rows in the list — the three models plus the mutually
+  // exclusive "Extended thinking" row (data-mode instead of data-model).
+  const ALL_OPTIONS_SEL = ".mat-mdc-menu-item[data-model], .mat-mdc-menu-item[data-mode]";
+  const MODEL_LABELS = { "flash-lite": "Flash-Lite", flash: "Flash", pro: "Pro" };
+
+  /**
+   * Returns the canonical id this row represents: a model id, or "extended"
+   * for the Extended thinking row.
+   */
+  function optionId(o) {
+    return o.dataset.model || o.dataset.mode;
+  }
+
   // Use event delegation on modelMenu — listener stays attached even when the
   // element is detached from document (Angular Material does the same).
   modelMenu.addEventListener("click", (e) => {
     e.stopPropagation();
-    const opt = e.target.closest(".mat-mdc-menu-item[data-model]");
+    const opt = e.target.closest(ALL_OPTIONS_SEL);
     if (!opt) return; // click on non-option (e.g. upgrade row)
     if (opt.hasAttribute("disabled") || opt.getAttribute("aria-disabled") === "true") return;
 
-    const m = opt.dataset.model;
+    const id = optionId(opt);
 
-    // Update aria-selected on all siblings (querySelectorAll on the detached
-    // element itself works fine since we're querying within modelMenu).
-    modelMenu.querySelectorAll(".mat-mdc-menu-item[data-model]").forEach(o => {
+    // Update aria-selected on every row (models and Extended thinking are
+    // mutually exclusive, so selecting one clears the other's checkmark) —
+    // querySelectorAll on the detached element itself works fine since we're
+    // querying within modelMenu.
+    modelMenu.querySelectorAll(ALL_OPTIONS_SEL).forEach(o => {
       o.setAttribute("aria-selected", o === opt ? "true" : "false");
     });
 
@@ -518,8 +574,7 @@
     // Simulate Angular's async change-detection cycle —
     // the trigger label updates after a short delay, exactly as on the real page.
     setTimeout(() => {
-      const labels = { "flash-lite": "Flash Lite", flash: "Flash", pro: "Pro" };
-      modelName.textContent = labels[m] || "Flash";
+      modelName.textContent = id === "extended" ? "Extended thinking" : (MODEL_LABELS[id] || "Flash");
     }, 250);
   });
 
@@ -531,24 +586,25 @@
   (function applyTestInitialModel() {
     const m = sessionStorage.getItem("__testInitialModel");
     if (!m || m === "flash") return;
-    const labels = { "flash-lite": "Flash Lite", flash: "Flash", pro: "Pro" };
-    if (!labels[m]) return;
-    modelName.textContent = labels[m];
+    if (!MODEL_LABELS[m]) return;
+    modelName.textContent = MODEL_LABELS[m];
     // modelMenu is still in DOM here (detach happens below)
-    modelMenu.querySelectorAll(".mat-mdc-menu-item[data-model]").forEach(o => {
-      o.setAttribute("aria-selected", o.dataset.model === m ? "true" : "false");
+    modelMenu.querySelectorAll(ALL_OPTIONS_SEL).forEach(o => {
+      o.setAttribute("aria-selected", optionId(o) === m ? "true" : "false");
     });
   })();
 
-  // Test hook: mark specific model options as disabled (quota / sign-in simulation).
-  // Tests set "__testLockedModels" to a comma-separated list of model ids, e.g. "pro,thinking".
-  // Mirrors the real Gemini DOM: disabled="true" aria-disabled="true" on the button element.
+  // Test hook: mark specific options as disabled (quota / sign-in simulation).
+  // Tests set "__testLockedModels" to a comma-separated list of ids, e.g.
+  // "pro,extended" — "extended" locks the Extended thinking row, any model id
+  // locks that model. Mirrors the real Gemini DOM: disabled="true"
+  // aria-disabled="true" on the button element.
   (function applyTestLockedModels() {
     const raw = sessionStorage.getItem("__testLockedModels");
     if (!raw) return;
     const locked = new Set(raw.split(",").map(s => s.trim()));
-    modelMenu.querySelectorAll(".mat-mdc-menu-item[data-model]").forEach(o => {
-      if (locked.has(o.dataset.model)) {
+    modelMenu.querySelectorAll(ALL_OPTIONS_SEL).forEach(o => {
+      if (locked.has(optionId(o))) {
         o.setAttribute("disabled", "true");
         o.setAttribute("aria-disabled", "true");
       }

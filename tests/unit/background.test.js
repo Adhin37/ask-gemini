@@ -218,6 +218,12 @@ describe("contextMenus.onClicked — ask-gemini-selection", () => {
   });
 
   it("passes the stored model to dispatchToGemini", async () => {
+    // "thinking" is a deliberately stale/legacy value here — this test checks
+    // that onContextMenuClicked forwards whatever askGeminiModel already holds
+    // verbatim (no validation), which is exactly what onInstalled's migration
+    // at background.js relies on when it rewrites old "thinking" values to
+    // "pro" + askGeminiThinkingLevel: "extended". It is not asserting that
+    // "thinking" is a currently valid model id.
     chrome.storage.sync.get.mockResolvedValue({
       askGeminiModel:           "thinking",
       askGeminiSummarizePrefix: "Think about:",

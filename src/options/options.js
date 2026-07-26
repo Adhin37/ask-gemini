@@ -11,6 +11,7 @@ import {
   PE_ROLE_MAX,
   PE_VARIABLES,
   DEFAULT_PE_ROLE_KEY,
+  MODEL_IDS,
 } from "../shared/constants.js";
 import { t, localizeModelName } from "../shared/stringUtils.js";
 import { applyI18n } from "../shared/i18nDom.js";
@@ -400,7 +401,7 @@ historyEnabledToggle.addEventListener("change", async () => {
 // 7. TEMPLATES  (per-model)
 // ══════════════════════════════════════════════════════════════════
 
-const TMPL_MODELS = ["flash-lite", "flash", "pro"];
+const TMPL_MODELS = MODEL_IDS;
 
 const addTemplateBtn    = document.getElementById("addTemplateBtn");
 const tmplFormCard      = document.getElementById("tmplFormCard");
@@ -417,7 +418,7 @@ const tmplDeleteCancel  = document.getElementById("tmplDeleteCancel");
 const tmplDeleteConfirm = document.getElementById("tmplDeleteConfirm");
 const tmplModelTabs     = document.getElementById("tmplModelTabs");
 
-let allTemplatesByModel = { "flash-lite": [], flash: [], pro: [] };
+let allTemplatesByModel = Object.fromEntries(MODEL_IDS.map((m) => [m, []]));
 let activeTemplateModel = "flash";
 let editingIndex        = -1;
 let pendingDeleteIndex  = -1;

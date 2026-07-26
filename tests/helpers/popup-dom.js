@@ -12,10 +12,11 @@ export function setupPopupDom() {
     <span    id="selectionText"></span>
     <button  id="selectionClear"></button>
     <div     id="modelSwitcher">
+      <button class="model-opt" data-model="flash-lite">Lite</button>
       <button class="model-opt" data-model="flash">Flash</button>
       <button class="model-opt" data-model="pro">Pro</button>
-      <button class="model-opt" data-model="thinking">Think</button>
     </div>
+    <button  id="thinkingToggle"></button>
     <div id="inputWrapper">
       <div id="acStrip">
         <div  id="acGhost"></div>
