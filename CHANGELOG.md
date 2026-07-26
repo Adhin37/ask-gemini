@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## 🚀 Release v1.9.1 (2026-07-26)
+
+### ✨ Features
+* feat: gemini update + e2e (0a99389)
+
+### 🐛 Bug Fixes
+* fix: e2e new gemini ui (8529749)
+
+### ⚙️ Maintenance
+* chore: bump version to v1.9.0 [skip ci] (c26070a)
+
+---
+### 📊 Release Stats
+* **Total Commits:** 3
+* **Contributors:** Adhin,github-actions[bot]
+* **Full Changelog:** [View Changes](https://github.com/Adhin37/ask-gemini/compare/v1.9.0...v1.9.1)
+
 ## 🚀 Release v1.9.0 (2026-05-20)
 
 ### ✨ Features
