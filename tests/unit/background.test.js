@@ -95,25 +95,28 @@ describe("badge — storage watcher", () => {
 // ════════════════════════════════════════════════════════════════════
 
 describe("welcome tab (onInstalled)", () => {
-  it("opens the welcome tab on fresh install", () => {
-    onInstalled({ reason: "install" });
+  it("opens the welcome tab on fresh install", async () => {
+    // onInstalled is async (it awaits the model/thinking-level migration's
+    // chrome.storage.sync.get before reaching the welcome-tab branch), so the
+    // call must be awaited or these assertions run before it resumes.
+    await onInstalled({ reason: "install" });
     expect(chrome.tabs.create).toHaveBeenCalledWith({
       url: "chrome-extension://fake/src/welcome/welcome.html",
     });
   });
 
-  it("does NOT open the welcome tab on extension update", () => {
-    onInstalled({ reason: "update" });
+  it("does NOT open the welcome tab on extension update", async () => {
+    await onInstalled({ reason: "update" });
     expect(chrome.tabs.create).not.toHaveBeenCalled();
   });
 
-  it("does NOT open the welcome tab on browser update", () => {
-    onInstalled({ reason: "chrome_update" });
+  it("does NOT open the welcome tab on browser update", async () => {
+    await onInstalled({ reason: "chrome_update" });
     expect(chrome.tabs.create).not.toHaveBeenCalled();
   });
 
-  it("still registers menus on fresh install", () => {
-    onInstalled({ reason: "install" });
+  it("still registers menus on fresh install", async () => {
+    await onInstalled({ reason: "install" });
     expect(chrome.contextMenus.removeAll).toHaveBeenCalled();
     expect(chrome.contextMenus.create).toHaveBeenCalled();
   });
@@ -124,22 +127,22 @@ describe("welcome tab (onInstalled)", () => {
 // ════════════════════════════════════════════════════════════════════
 
 describe("registerMenus (via onInstalled)", () => {
-  it("creates the three expected menu items", () => {
-    onInstalled({ reason: "update" });
+  it("creates the three expected menu items", async () => {
+    await onInstalled({ reason: "update" });
     const ids = chrome.contextMenus.create.mock.calls.map(c => c[0].id);
     expect(ids).toContain("open-gemini-direct");
     expect(ids).toContain("open-gemini-page");
     expect(ids).toContain("ask-gemini-selection");
   });
 
-  it("does NOT create a separate summarize entry (menus are merged)", () => {
-    onInstalled({ reason: "update" });
+  it("does NOT create a separate summarize entry (menus are merged)", async () => {
+    await onInstalled({ reason: "update" });
     const ids = chrome.contextMenus.create.mock.calls.map(c => c[0].id);
     expect(ids).not.toContain("ask-gemini-summarize");
   });
 
-  it("calls removeAll before recreating", () => {
-    onInstalled({ reason: "update" });
+  it("calls removeAll before recreating", async () => {
+    await onInstalled({ reason: "update" });
     expect(chrome.contextMenus.removeAll).toHaveBeenCalled();
   });
 });
