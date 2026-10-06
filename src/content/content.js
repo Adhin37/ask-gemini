@@ -445,6 +445,28 @@ function isThinkingText(text) {
 }
 
 /**
+ * True when the text names a concrete model ("Flash", "Flash-Lite", "Pro",
+ * "Advanced"). Model rows often carry descriptions mentioning "reasoning" or
+ * "thinking" (e.g. Pro), so thinking words alone must not identify the
+ * Extended thinking row — the absence of a model name must too.
+ * @param {string} text
+ * @returns {boolean}
+ */
+function hasModelName(text) {
+  return /\b(flash|pro|advanced)\b|lite/i.test(text);
+}
+
+/**
+ * True only for the "Extended thinking" row itself: thinking wording and no
+ * model name anywhere in the row.
+ * @param {string} text
+ * @returns {boolean}
+ */
+function isExtendedRow(text) {
+  return isThinkingText(text) && !hasModelName(text);
+}
+
+/**
  * Classifies a dropdown option using layers in priority order:
  * (a) Structural skip — the "sign in" prompt row is never a model.
  * (b) Thinking-text guard — the "Extended thinking" row is never a model,
@@ -468,7 +490,7 @@ function classifyOption(el, indexInGroup) {
   if (testId.includes("sign-in")) return null;
 
   const text = el.textContent || "";
-  if (isThinkingText(text)) return null;
+  if (isExtendedRow(text)) return null;
 
   const byText = classifyModelTextLegacy(text);
   if (byText) return byText;
@@ -494,10 +516,10 @@ function classifyOption(el, indexInGroup) {
  */
 function classifyModelTextLegacy(text) {
   const lower = text.toLowerCase();
-  if (isThinkingText(lower))                                              return null;
+  if (isExtendedRow(lower))                                               return null;
   if (lower.includes("sign in"))                                          return null;
   if (lower.includes("lite"))                                             return "flash-lite";
-  if (lower.includes("pro")   || lower.includes("advanced"))             return "pro";
+  if (/\bpro\b/.test(lower) || lower.includes("advanced"))               return "pro";
   if (lower.includes("flash") || lower.includes("fast") ||
       lower.includes("quick"))                                            return "flash";
   return null;
@@ -716,6 +738,19 @@ function isSelectedOption(el) {
 }
 
 /**
+ * True when a picker row is marked selected via the `selected` class token or
+ * aria attributes. Stricter than isSelectedOption: ignores hover/focus
+ * ("active") state, which matters for the Extended thinking toggle row.
+ * @param {Element} el
+ * @returns {boolean}
+ */
+function isRowSelected(el) {
+  return el.classList.contains("selected") ||
+         el.getAttribute("aria-selected") === "true" ||
+         el.getAttribute("aria-checked")  === "true";
+}
+
+/**
  * Returns true if the picker option is locked (quota exhausted / not signed in / paywall).
  * @param {Element} el
  * @returns {boolean}
@@ -797,10 +832,8 @@ async function ensureModel({ model, thinkingLevel = "standard" }, _attempt = 1) 
 
   const currentLevel = readThinkingLevelFromButton();
   if (currentLevel === "extended") {
-    console.debug("[Ask Gemini] Reverting from Extended thinking to standard — re-selecting model.");
-    await performModelSwitch(model);
-    await waitForCondition(() => !OPTION_SELECTORS.some(s => document.querySelector(s)), 3_000);
-    await waitForCondition(() => readModelFromButton() === model, 5_000, document.body);
+    console.debug("[Ask Gemini] Extended thinking is on — toggling it off.");
+    await deselectExtendedThinking();
   }
 
   return { confirmed: true, thinkingConfirmed: true };
@@ -855,6 +888,36 @@ async function performModelSwitch(target) {
 }
 
 /**
+ * Opens the model picker and turns the Extended thinking toggle off if it is on.
+ * @returns {Promise<void>}
+ */
+async function deselectExtendedThinking() {
+  const triggerBtn = findModelTrigger();
+  if (!triggerBtn) return;
+
+  triggerBtn.click();
+  await new Promise((r) => setTimeout(r, 400));
+
+  const row = await waitForElement(
+    () => {
+      for (const sel of OPTION_SELECTORS) {
+        for (const el of document.querySelectorAll(sel)) {
+          if (isExtendedRow(el.textContent || "")) return el;
+        }
+      }
+      return null;
+    },
+    4_000
+  );
+
+  if (row && isRowSelected(row) && !isOptionDisabled(row)) row.click();
+  else document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+  await waitForCondition(() => !OPTION_SELECTORS.some(s => document.querySelector(s)), 3_000);
+  await waitForCondition(() => readThinkingLevelFromButton() !== "extended", 4_000, document.body);
+}
+
+/**
  * Opens the model picker and clicks the "Extended thinking" row.
  *
  * Gemini's current picker (verified July 2026, screenshot-confirmed) shows
@@ -878,7 +941,7 @@ async function selectExtendedThinking() {
     () => {
       for (const sel of OPTION_SELECTORS) {
         for (const el of document.querySelectorAll(sel)) {
-          if (isThinkingText(el.textContent || "")) return el;
+          if (isExtendedRow(el.textContent || "")) return el;
         }
       }
       return null;
@@ -896,6 +959,15 @@ async function selectExtendedThinking() {
     console.debug("[Ask Gemini] selectExtendedThinking: row is disabled — closing");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     return "disabled";
+  }
+
+  // Extended thinking is a toggle independent of the model — clicking it
+  // while already on would switch it off.
+  if (isRowSelected(thinkingOption)) {
+    console.debug("[Ask Gemini] selectExtendedThinking: already on — closing");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await waitForCondition(() => !OPTION_SELECTORS.some(s => document.querySelector(s)), 3_000);
+    return "switched";
   }
 
   thinkingOption.scrollIntoView({ block: "nearest" });
