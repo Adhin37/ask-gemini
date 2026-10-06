@@ -47,6 +47,19 @@ See [CLAUDE.md](CLAUDE.md) for the full architecture, i18n and coding convention
 
 ## 📦 Pull Request Process
 
+```mermaid
+flowchart TD
+    A[Create branch] --> B[Make changes]
+    B --> C{lint, test, build pass?}
+    C -->|No| B
+    C -->|Yes| D[Open pull request]
+    D --> E[Review and merge to main]
+    E --> F{Release ready?}
+    F -->|No| G[Done]
+    F -->|Yes| H[Push vX.Y.Z tag]
+    H --> I[release.yml bumps version, builds and publishes zip]
+```
+
 1. Create a new branch for your fix or feature.
 2. Ensure your code is tested and does not break the core injection flow on `https://gemini.google.com/*`. Before opening the PR, run:
    ```bash

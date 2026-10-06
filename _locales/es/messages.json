@@ -63,6 +63,7 @@
   "content_status_model_unavailable":{ "message": "{{model}} no disponible — usando Flash" },
   "content_status_thinking_unavailable":{ "message": "Razonamiento extendido no disponible — usando el predeterminado del modelo" },
   "content_upload_failed":           { "message": "Error al subir imagen — mensaje no enviado" },
+  "content_upload_signin_required":  { "message": "Inicia sesión en Gemini para adjuntar imágenes — mensaje no enviado" },
 
   "bg_menu_open_gemini":             { "message": "Abrir Gemini" },
   "bg_menu_ask_gemini":              { "message": "Ask Gemini" },

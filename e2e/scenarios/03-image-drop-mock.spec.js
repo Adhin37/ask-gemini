@@ -22,12 +22,14 @@
 
 import { test, expect } from "@playwright/test";
 import { launchExtension } from "../helpers/extension.js";
+import { captureOnFailure } from "../helpers/debug.js";
 import { openPopupWindow } from "../helpers/open-popup.js";
 import { enableMockGeminiRoute } from "../helpers/mock-gemini.js";
 import { buildAndDropImage } from "../helpers/images.js";
 import { sendViaPopup } from "../helpers/real-gemini.js";
 
 let context;
+captureOnFailure(() => context);
 let extensionId;
 
 test.beforeAll(async ({ playwright }) => {

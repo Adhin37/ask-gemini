@@ -2,7 +2,8 @@
  * Scenario 03 — Drag & drop image + send (real Gemini)
  *
  * Uses the default e2e/.chrome-profile. Tests 1–2 are popup-only and always run.
- * Tests 3–6 skip gracefully via skipIfNotReady() when not signed in.
+ * Tests 3–6 send with FREE_MODEL and skip via skipIfUploadsUnavailable() when
+ * the profile is signed out — Gemini disables every upload entry point then.
  *
  * Tests covered:
  *   1. popup — too-large image rejected with error, not added to chip list
@@ -11,6 +12,7 @@
  *   4. real Gemini — WebP upload via popup: image chip detected, prompt sent
  *   5. real Gemini — JPEG upload via popup: image chip detected, prompt sent
  *   6. real Gemini — multi-file upload (PNG + WebP) via popup: both chips detected
+ *   7. real Gemini (signed out) — upload refused: sign-in banner, prompt NOT sent
  *
  * Key assertion strategy:
  *   • page.getByText(message) — the message text appears in Gemini's user
@@ -30,9 +32,13 @@
 
 import { test, expect } from "@playwright/test";
 import { launchExtension } from "../helpers/extension.js";
-import { openPopupWindow } from "../helpers/open-popup.js";
+import { captureOnFailure } from "../helpers/debug.js";
+import { openPopupWindow, configurePopup } from "../helpers/open-popup.js";
 import {
+  FREE_MODEL,
   skipIfNotReady,
+  skipIfUploadsUnavailable,
+  isSignedOut,
   closeGeminiTabs,
   sendViaPopup,
   sendImageViaPopup,
@@ -41,6 +47,7 @@ import {
 import { buildAndDropImage } from "../helpers/images.js";
 
 let context;
+captureOnFailure(() => context);
 let extensionId;
 
 test.beforeAll(async ({ playwright }) => {
@@ -109,6 +116,7 @@ test("real Gemini — PNG upload via popup: image chip detected, prompt sent", a
   );
 
   await skipIfNotReady(geminiPage);
+  await skipIfUploadsUnavailable(geminiPage);
 
   try {
     await assertMessageOnGemini(geminiPage, MSG);
@@ -125,6 +133,7 @@ test("real Gemini — WebP upload via popup: image chip detected, prompt sent", 
   );
 
   await skipIfNotReady(geminiPage);
+  await skipIfUploadsUnavailable(geminiPage);
 
   try {
     await assertMessageOnGemini(geminiPage, MSG);
@@ -141,6 +150,7 @@ test("real Gemini — JPEG upload via popup: image chip detected, prompt sent", 
   );
 
   await skipIfNotReady(geminiPage);
+  await skipIfUploadsUnavailable(geminiPage);
 
   try {
     await assertMessageOnGemini(geminiPage, MSG);
@@ -156,6 +166,7 @@ test("real Gemini — multi-file upload (PNG + WebP) via popup: both chips detec
   await closeGeminiTabs(context);
 
   const popup = await openPopupWindow(context, extensionId);
+  await configurePopup(popup, { model: FREE_MODEL });
 
   // Drop PNG — first chip
   await buildAndDropImage(popup, "image/png", "photo.png");
@@ -171,6 +182,7 @@ test("real Gemini — multi-file upload (PNG + WebP) via popup: both chips detec
 
   const { geminiPage, logs } = await sendViaPopup(context, popup);
   await skipIfNotReady(geminiPage);
+  await skipIfUploadsUnavailable(geminiPage);
 
   try {
     await assertMessageOnGemini(geminiPage, MSG);
@@ -180,3 +192,24 @@ test("real Gemini — multi-file upload (PNG + WebP) via popup: both chips detec
   }
 });
 
+// ── Test 7: signed-out session refuses uploads with a clear banner ───────
+
+test("real Gemini (signed out) — upload refused: sign-in banner, prompt not sent", async () => {
+  const MSG = "e2e signed-out upload test — this prompt must not be sent";
+  const { geminiPage, logs } = await sendImageViaPopup(
+    context, extensionId, { mimeType: "image/png", filename: "test.png", message: MSG }
+  );
+
+  await skipIfNotReady(geminiPage);
+  test.skip(!(await isSignedOut(geminiPage)), "Profile is signed in — covered by tests 3–6.");
+
+  try {
+    // content.js detects the disabled "Upload files" item and bails out
+    // immediately instead of waiting for chips that can never appear.
+    await expect(geminiPage.getByText("Sign in to Gemini to attach images")).toBeVisible({ timeout: 15_000 });
+    await expect(geminiPage.getByText(MSG)).toHaveCount(0);
+  } finally {
+    console.info("[03] signed-out upload — content.js logs:", logs.length ? logs : "(none captured)");
+    await geminiPage.close().catch(() => {});
+  }
+});

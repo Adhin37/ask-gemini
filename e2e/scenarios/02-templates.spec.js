@@ -1,8 +1,10 @@
 /**
  * Scenario 02 — Templates and autocomplete (real Gemini)
  *
- * Uses the default e2e/.chrome-profile. Tests skip gracefully via skipIfNotReady()
- * when not signed in.
+ * Uses the default e2e/.chrome-profile. Sends with FREE_MODEL (Flash-Lite), so
+ * the templates exercised are the Flash-Lite defaults ("Quick answer: ",
+ * "TL;DR: ", "Define: "). The Gemini step skips gracefully via skipIfNotReady()
+ * when Gemini is unreachable.
  *
  * Tests covered:
  *   1. Template grid dropdown + "/" autocomplete + send to real Gemini
@@ -10,14 +12,17 @@
 
 import { test, expect } from "@playwright/test";
 import { launchExtension } from "../helpers/extension.js";
-import { openPopupWindow } from "../helpers/open-popup.js";
+import { captureOnFailure } from "../helpers/debug.js";
+import { openPopupWindow, configurePopup } from "../helpers/open-popup.js";
 import {
+  FREE_MODEL,
   skipIfNotReady,
   sendViaPopup,
   assertMessageOnGemini,
 } from "../helpers/real-gemini.js";
 
 let context;
+captureOnFailure(() => context);
 let extensionId;
 
 test.beforeAll(async ({ playwright }) => {
@@ -32,57 +37,41 @@ test.afterAll(async () => {
 
 test("popup — template dropdown and autocomplete", async () => {
   const popup = await openPopupWindow(context, extensionId);
-  await popup.waitForTimeout(1000);
+  const input = popup.locator("#questionInput");
 
-  // Ensure flash model is active — its templates include "Summarize: " which
-  // the "/sum" autocomplete test depends on. Prior scenario runs may have left
-  // the popup on "pro" (whose templates don't start with "sum").
-  await popup.locator(".model-opt[data-model='flash']").click();
-  await popup.waitForTimeout(500);
+  // Flash-Lite templates back both the dropdown and the "/def" autocomplete.
+  await configurePopup(popup, { model: FREE_MODEL });
 
   // ── Template grid dropdown ─────────────────────────────────────────
-  await popup.locator("#tmplTriggerBtn").click();
-  await popup.waitForTimeout(1200);
-  // Hover first so the recording shows "Summarize:" highlighted before click.
-  await popup.locator(".tmpl-item").first().hover();
-  await popup.waitForTimeout(600);
-  await popup.locator(".tmpl-item").first().click();
-  await popup.waitForTimeout(800);
+  // The trigger toggles, so only click while closed and retry until open —
+  // a stray second activation (seen once under slowMo) would close it again.
+  const dropdown = popup.locator("#tmplDropdown");
+  await expect(async () => {
+    if (!(await dropdown.getAttribute("class"))?.includes("visible")) {
+      await popup.locator("#tmplTriggerBtn").click();
+    }
+    await expect(dropdown).toHaveClass(/\bvisible\b/, { timeout: 1_000 });
+  }).toPass({ timeout: 8_000 });
+  const firstItem = popup.locator(".tmpl-item").first();
+  await expect(firstItem).toBeVisible();
+  // Hover first so the recording shows the item highlighted before click.
+  await firstItem.hover();
+  await firstItem.click();
 
-  const afterTemplate = await popup.locator("#questionInput").inputValue();
-  expect(afterTemplate.length).toBeGreaterThan(0);
-
-  await popup.locator("#questionInput").type(
-    "the history of the Eiffel Tower in 3 bullet points",
-    { delay: 18 }
-  );
-  await popup.waitForTimeout(700);
+  await expect(input).toHaveValue(/^Quick answer: /);
+  await input.pressSequentially("the history of the Eiffel Tower in 3 bullet points", { delay: 18 });
 
   // ── "/" inline autocomplete ────────────────────────────────────────
-  await popup.locator("#questionInput").fill("");
-  await popup.locator("#questionInput").dispatchEvent("input");
-  await popup.waitForTimeout(600);
-
-  await popup.locator("#questionInput").type("/sum", { delay: 40 });
-
-  // Wait until the AC strip is visible before pressing Tab.
-  await popup.locator("#acStrip.visible").waitFor({ state: "attached", timeout: 8_000 });
-  await popup.waitForTimeout(400);
+  await input.fill("");
+  await input.pressSequentially("/def", { delay: 40 });
+  await expect(popup.locator("#acStrip")).toHaveClass(/\bvisible\b/, { timeout: 8_000 });
 
   // locator.press() targets the element directly via CDP, unlike
   // page.keyboard.press() which depends on OS window focus.
-  await popup.locator("#questionInput").press("Tab");
-  await popup.waitForTimeout(700);
+  await input.press("Tab");
+  await expect(input).toHaveValue(/^Define: /);
 
-  const afterAC = await popup.locator("#questionInput").inputValue();
-  expect(afterAC).not.toMatch(/^\//);
-  expect(afterAC.length).toBeGreaterThan(0);
-
-  await popup.locator("#questionInput").type("recent AI breakthroughs", { delay: 18 });
-  await popup.waitForTimeout(600);
-
-  const message = await popup.locator("#questionInput").inputValue();
-  expect(message.trim().length).toBeGreaterThan(0);
+  await input.pressSequentially("recent AI breakthroughs", { delay: 18 });
   await expect(popup.locator("#sendBtn")).not.toBeDisabled({ timeout: 3_000 });
 
   // ── Send to real Gemini ────────────────────────────────────────────
@@ -90,9 +79,7 @@ test("popup — template dropdown and autocomplete", async () => {
   await skipIfNotReady(geminiPage);
 
   try {
-    // The template inserts "Summarize: " as the prefix — check that keyword
-    // rather than the full dynamic message to avoid newline-matching issues.
-    await assertMessageOnGemini(geminiPage, "Summarize");
+    await assertMessageOnGemini(geminiPage, "Define: recent AI breakthroughs");
   } finally {
     console.info("[02] templates — content.js logs:", logs.length ? logs : "(none captured)");
     await geminiPage.close().catch(() => {});

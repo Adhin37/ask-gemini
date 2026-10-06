@@ -49,11 +49,51 @@ The interface is available in English, German, Spanish, French and Simplified Ch
 2. Gemini opens (or an existing tab refreshes to a fresh session).
 3. The content script (`content.js`) runs on `gemini.google.com`, reads the stored message and model, optionally switches the Gemini model and thinking level, uploads attached images, then injects the message into Gemini's input field and fires a submit event.
 
+```mermaid
+sequenceDiagram
+    actor User
+    participant Entry as Popup / Shortcut / Context menu
+    participant Storage as chrome.storage.local
+    participant BG as background.js
+    participant Tab as gemini.google.com
+    participant CS as content.js
+
+    User->>Entry: Question (+ images, model, thinking level)
+    Entry->>Storage: Save pendingMessage, pendingModel, pendingThinkingLevel, pendingFiles
+    Entry->>Tab: Open or refresh Gemini tab
+    opt Redirected to consent.google.com
+        BG->>Tab: Auto-accept consent
+    end
+    Tab->>CS: Inject at document_idle
+    CS->>Storage: Read pending data
+    CS->>Tab: Switch model / thinking level
+    CS->>Tab: Upload images
+    CS->>Tab: Inject message and submit
+    CS-->>BG: injectionResult
+    BG-->>User: Toolbar badge (sending / success / error)
+```
+
 > **Note:** Gemini is a complex React SPA. If the message isn't auto-submitted on the first try (Google occasionally changes their DOM), you can still paste it manually — your question is always in your clipboard flow via storage.
 
 ---
 
 ## Project layout
+
+```mermaid
+flowchart LR
+    subgraph Shared["src/shared"]
+        C[constants.js]
+        S[stringUtils.js / i18nDom.js]
+        P[promptEngine.js]
+    end
+    Popup[popup] --> Shared
+    Options[options] --> Shared
+    Welcome[welcome] --> Shared
+    BG[background service worker] --> Shared
+    Popup -- storage.local --> CS[content script]
+    BG -- storage.local --> CS
+    CS --> Gemini[(gemini.google.com)]
+```
 
 ```
 ask-gemini-extension/

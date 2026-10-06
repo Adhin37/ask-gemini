@@ -2,33 +2,33 @@
  * Scenario 01 — Model switcher (real Gemini)
  *
  * Exercises the live gemini.google.com UI via the full extension pipeline
- * (popup → storage → content.js → Gemini). Every test enters Gemini through
- * the extension popup — no direct page.goto(GEMINI_URL).
+ * (popup → storage → content.js → Gemini). Gemini is entered through the
+ * extension popup — no direct page.goto(GEMINI_URL).
  *
- * Uses the default e2e/.chrome-profile. Tests skip gracefully when not signed
- * in via skipIfNotReady(). Note: this profile can itself be in a degraded,
- * effectively-anonymous state (verified July 2026) where only Flash-Lite is
- * enabled and Flash/Pro render aria-disabled="true" with a "Sign in for all
- * models" row in the picker — that's a real, reachable Gemini state, not a
- * test bug, so Flash-Lite (not Flash) is what test 3 hard-asserts on.
- * Pro/Extended-thinking switching and locked-model fallback live in
- * 01-model-switch-mock.spec.js (require premium or sessionStorage hooks).
+ * Uses the default e2e/.chrome-profile, which is normally signed out (verified
+ * October 2026): only Flash-Lite with standard thinking is enabled and the
+ * other picker rows are aria-disabled. So this spec sends once with
+ * FREE_MODEL and only interacts with Flash-Lite — it never clicks locked rows.
+ * Flash / Pro / Extended-thinking switching and locked-model fallback live in
+ * 01-model-switch-mock.spec.js.
+ *
+ * The prompt is sent once in beforeAll and the three tests inspect the same
+ * Gemini tab, so the recording shows one send rather than three.
  *
  * Tests covered:
- *   1. Popup sends Flash message → arrives in real Gemini chat, picker is reachable
- *   2. Picker opens and shows at least one model option (Flash always present);
- *      logs whether the Extended thinking row is present
- *   3. Model switches update the trigger label (Flash-Lite hard-asserted;
- *      Flash/Pro/Extended thinking soft-warned)
+ *   1. Popup sends Flash-Lite message → arrives in real Gemini chat
+ *   2. Picker opens and offers an enabled Flash-Lite row
+ *   3. Selecting Flash-Lite keeps the trigger label on Flash-Lite
  */
 
 import { test, expect } from "@playwright/test";
 import { launchExtension } from "../helpers/extension.js";
-import { openPopupWindow } from "../helpers/open-popup.js";
+import { captureOnFailure } from "../helpers/debug.js";
+import { openPopupWindow, configurePopup } from "../helpers/open-popup.js";
 import {
+  FREE_MODEL,
   MODEL_BTN,
   OPTION_SEL,
-  PROBE_MODELS,
   skipIfNotReady,
   tryModelSwitch,
   sendViaPopup,
@@ -37,30 +37,24 @@ import {
 } from "../helpers/real-gemini.js";
 
 const PROBE_MESSAGE = "Explain what HTTP status codes are.";
+const FLASH_LITE = /flash[\s-]?lite/i;
 
 let context;
+captureOnFailure(() => context);
 let extensionId;
 let geminiPage;
 
+/**
+ * Full popup → Gemini pipeline, run once for the whole file: opens the popup,
+ * picks Flash-Lite with standard thinking, sends the probe message and keeps
+ * the resulting Gemini tab for the tests below.
+ */
 test.beforeAll(async ({ playwright }) => {
   ({ context, extensionId } = await launchExtension(playwright.chromium, { slowMo: 400 }));
-});
-
-/**
- * Full popup → Gemini pipeline executed before each test.
- * Closes any existing Gemini tab, opens the popup, picks Flash (the default
- * free-tier model), fills the probe message, clicks Send, and captures the
- * new Gemini page. Skips gracefully if not on gemini.google.com.
- */
-test.beforeEach(async () => {
   await closeGeminiTabs(context);
 
   const popup = await openPopupWindow(context, extensionId);
-  await popup.waitForTimeout(600);
-
-  await popup.locator(".model-opt[data-model='flash']").click();
-  await popup.waitForTimeout(400);
-
+  await configurePopup(popup, { model: FREE_MODEL });
   await popup.locator("#questionInput").fill(PROBE_MESSAGE);
   await expect(popup.locator("#sendBtn")).not.toBeDisabled({ timeout: 3_000 });
 
@@ -68,29 +62,20 @@ test.beforeEach(async () => {
   await skipIfNotReady(geminiPage);
 });
 
-test.afterEach(async () => {
-  await geminiPage?.close().catch(() => {});
-  geminiPage = undefined;
-});
-
 test.afterAll(async () => {
   await context.close();
 });
 
-// ── Test 1: full pipeline — message arrives, picker reachable ─────────────
+// ── Test 1: full pipeline — message arrives ───────────────────────────────
 
-test("real Gemini — popup sends Flash message and picker is reachable", async () => {
-  try {
-    await assertMessageOnGemini(geminiPage, PROBE_MESSAGE);
-    await expect(geminiPage.locator(MODEL_BTN)).toBeVisible({ timeout: 20_000 });
-  } finally {
-    console.info("[01] Flash send — picker reachable");
-  }
+test("real Gemini — popup sends Flash-Lite message", async () => {
+  await assertMessageOnGemini(geminiPage, PROBE_MESSAGE);
+  await expect(geminiPage.locator(MODEL_BTN)).toContainText(FLASH_LITE);
 });
 
 // ── Test 2: option discovery ───────────────────────────────────────────────
 
-test("real Gemini — picker opens and shows at least one model option", async () => {
+test("real Gemini — picker offers an enabled Flash-Lite row", async () => {
   const modelBtn = geminiPage.locator(MODEL_BTN);
   await expect(modelBtn).toBeVisible({ timeout: 20_000 });
   await modelBtn.click();
@@ -98,60 +83,25 @@ test("real Gemini — picker opens and shows at least one model option", async (
   const options = geminiPage.locator(OPTION_SEL);
   await expect(options.first()).toBeVisible({ timeout: 6_000 });
 
-  // "Flash" must always be present — it is the baseline free-tier model
-  // (matches both "3.6 Flash" and "3.5 Flash-Lite").
-  await expect(options.filter({ hasText: /flash/i }).first()).toBeVisible();
+  const flashLite = options.filter({ hasText: FLASH_LITE }).first();
+  await expect(flashLite).toBeVisible();
+  await expect(flashLite).not.toHaveAttribute("aria-disabled", "true");
 
-  const count = await options.count();
-  const labels = [];
-  for (let i = 0; i < count; i++) {
-    const text = (await options.nth(i).textContent() ?? "").trim().slice(0, 60);
-    if (text) labels.push(text.replace(/\s+/g, " "));
-  }
+  const labels = (await options.allTextContents())
+    .map(t => t.trim().replace(/\s+/g, " ").slice(0, 60))
+    .filter(Boolean);
   console.info("[01] picker options found:", labels);
-
-  // Extended thinking is only shown to fully signed-in accounts — log rather
-  // than hard-assert, since e2e/.chrome-profile may be in a degraded/anonymous
-  // state where the row is absent (see PROBE_MODELS doc in real-gemini.js).
-  const hasExtendedThinking = await options.filter({ hasText: /extended thinking/i }).count() > 0;
-  console.info(`[01] Extended thinking row present: ${hasExtendedThinking}`);
 
   await geminiPage.keyboard.press("Escape");
 });
 
-// ── Test 3: adaptive label round-trip ─────────────────────────────────────
+// ── Test 3: Flash-Lite selection round-trip ───────────────────────────────
 
-test("real Gemini — model switches update the trigger label (skips locked models)", async () => {
+test("real Gemini — selecting Flash-Lite updates the trigger label", async () => {
   await expect(geminiPage.locator(MODEL_BTN)).toBeVisible({ timeout: 20_000 });
 
-  const results = {};
-
-  for (const { label, pattern, exclude } of PROBE_MODELS) {
-    const ok = await tryModelSwitch(geminiPage, pattern, 7_000, exclude);
-    results[label] = ok;
-    console.info(`[01] model switch "${label}": ${ok ? "✓ success" : "✗ skipped (locked or unavailable)"}`);
-  }
-
-  // "Flash-Lite" must always be switchable — it is the one option enabled
-  // even in a signed-out/anonymous session (verified July 2026: Flash and
-  // Pro both render aria-disabled="true" until fully signed in). A failure
-  // here indicates a selector regression, not a subscription issue.
-  if (!results["Flash-Lite"]) {
-    throw new Error(
-      "Could not switch to the Flash-Lite model. This indicates a selector regression, " +
-      "not a subscription issue. Selectors may need to be updated."
-    );
-  }
-
-  const extras = ["Flash", "Pro", "Extended thinking"].filter(m => results[m]);
-  if (extras.length > 0) {
-    console.info(`[01] Additional modes confirmed working: ${extras.join(", ")}`);
-  } else {
-    console.warn(
-      "[01] Only Flash-Lite was switchable — Flash, Pro, and Extended thinking " +
-      "all require a fully signed-in account (Pro additionally requires Google AI Plus). " +
-      "Sign in to e2e/.chrome-profile interactively, or point CHROME_PROFILE at a " +
-      "signed-in profile, to exercise those paths."
-    );
-  }
+  // A failure here is a selector regression in the picker, not a
+  // subscription issue — Flash-Lite is enabled even when signed out.
+  const ok = await tryModelSwitch(geminiPage, FLASH_LITE);
+  expect(ok, "Could not select Flash-Lite — picker selectors may need updating").toBe(true);
 });

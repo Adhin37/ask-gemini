@@ -14,6 +14,21 @@ function resolveChromePath() {
 }
 
 /**
+ * Clears every chrome.storage area of the extension so each spec file starts
+ * from the extension defaults regardless of what earlier runs left behind.
+ *
+ * @param {import("@playwright/test").Worker} sw - the extension service worker
+ * @returns {Promise<void>}
+ */
+export async function resetExtensionState(sw) {
+  await sw.evaluate(() => Promise.all([
+    chrome.storage.sync.clear(),
+    chrome.storage.local.clear(),
+    chrome.storage.session.clear(),
+  ]));
+}
+
+/**
  * Launches a persistent Chromium context with the extension loaded.
  * Videos are recorded to e2e/videos/ via recordVideo (use.video in
  * playwright.config only applies to the built-in page fixture, not
@@ -81,6 +96,11 @@ export async function launchExtension(chromium, { slowMo = 600, suppressWelcome 
 
   const extensionId = sw.url().split("/")[2];
   console.log("[e2e] extensionId   :", extensionId);
+
+  // The profile is persistent, so settings written by a previous run (model,
+  // thinking level, templates, history) would otherwise leak into this one.
+  // Only extension storage is cleared — Google cookies/sign-in are untouched.
+  await resetExtensionState(sw);
 
   // Close any welcome tab opened by onInstalled (only fires on a fresh profile).
   // Also register a listener so any welcome tab that appears later in the test

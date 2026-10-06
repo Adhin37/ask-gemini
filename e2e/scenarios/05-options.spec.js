@@ -5,8 +5,10 @@
 
 import { test } from "@playwright/test";
 import { launchExtension } from "../helpers/extension.js";
+import { captureOnFailure } from "../helpers/debug.js";
 
 let context;
+captureOnFailure(() => context);
 let extensionId;
 
 test.beforeAll(async ({ playwright }) => {

@@ -63,6 +63,7 @@
   "content_status_model_unavailable":{ "message": "{{model}} 不可用 — 使用快速模式" },
   "content_status_thinking_unavailable":{ "message": "深度思考不可用 — 使用模型默认设置" },
   "content_upload_failed":           { "message": "图片上传失败 — 提示未发送" },
+  "content_upload_signin_required":  { "message": "请登录 Gemini 以附加图片 — 提示未发送" },
 
   "bg_menu_open_gemini":             { "message": "打开 Gemini" },
   "bg_menu_ask_gemini":              { "message": "Ask Gemini" },

@@ -21,7 +21,9 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { launchExtension } from "../helpers/extension.js";
+import { captureOnFailure } from "../helpers/debug.js";
 import {
+  FREE_MODEL,
   skipIfNotReady,
   closeGeminiTabs,
   assertMessageOnGemini,
@@ -33,6 +35,7 @@ const MOCK_ARTICLE = fs.readFileSync(path.join(__dirname, "../fixtures/mock-arti
 const ARTICLE_URL = "https://techread.example.com/ai-assistants";
 
 let context;
+captureOnFailure(() => context);
 
 test.beforeAll(async ({ playwright }) => {
   ({ context } = await launchExtension(playwright.chromium, { slowMo: 650 }));
@@ -87,7 +90,7 @@ test("context menu — select text then Ask Gemini", async () => {
       ({ msg, mdl, lvl }) => chrome.storage.local
         .set({ pendingMessage: msg, pendingModel: mdl, pendingThinkingLevel: lvl })
         .then(() => chrome.tabs.create({ url: "https://gemini.google.com/app" })),
-      { msg: message, mdl: "flash", lvl: "standard" }
+      { msg: message, mdl: FREE_MODEL, lvl: "standard" }
     ),
   ]);
 

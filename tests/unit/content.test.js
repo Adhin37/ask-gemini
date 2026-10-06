@@ -11,11 +11,16 @@ let classifyOption;
 let isThinkingText;
 let waitForElement;
 let waitForCondition;
+let revealFileInput;
+let uploadErrorMessage;
 
 beforeAll(async () => {
   globalThis.__TEST__ = {};
   await import("../../src/content/content.js");
-  ({ classifyModelText, matchesTarget, classifyOption, isThinkingText, waitForElement, waitForCondition } = globalThis.__TEST__);
+  ({
+    classifyModelText, matchesTarget, classifyOption, isThinkingText,
+    waitForElement, waitForCondition, revealFileInput, uploadErrorMessage,
+  } = globalThis.__TEST__);
 });
 
 // ════════════════════════════════════════════════════════════════════
@@ -257,6 +262,75 @@ describe("waitForCondition", () => {
 // ════════════════════════════════════════════════════════════════════
 // IIFE guard
 // ════════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════
+// revealFileInput / uploadErrorMessage
+// Gemini (October 2026) only mounts its file inputs inside the "Upload & tools"
+// menu overlay; signed out, the "Upload files" item is aria-disabled.
+// ════════════════════════════════════════════════════════════════════
+
+/**
+ * Builds a composer whose "Upload & tools" trigger mounts the menu on click.
+ * @param {{ disabled: boolean }} opts
+ * @returns {HTMLButtonElement}
+ */
+function buildUploadMenu({ disabled }) {
+  document.body.innerHTML = `
+    <div class="leading-actions-wrapper"><simplified-input-menu>
+      <button aria-haspopup="menu" aria-expanded="false" aria-label="Upload & tools"></button>
+    </simplified-input-menu></div>
+    <div class="cdk-overlay-container"></div>`;
+  const trigger = document.querySelector("button");
+  trigger.addEventListener("click", () => {
+    trigger.setAttribute("aria-expanded", "true");
+    const overlay = document.querySelector(".cdk-overlay-container");
+    overlay.innerHTML = `
+      <button data-test-id="local-images-files-uploader-button" ${disabled ? 'aria-disabled="true"' : ""}></button>
+      <input type="file" accept="image/*" multiple>`;
+  });
+  return trigger;
+}
+
+describe("revealFileInput", () => {
+  it("returns an input already in the DOM without opening the menu", async () => {
+    const trigger = buildUploadMenu({ disabled: false });
+    document.body.insertAdjacentHTML("beforeend", '<input type="file" accept="image/*">');
+    const click = vi.spyOn(trigger, "click");
+    const res = await revealFileInput();
+    expect(res.input).not.toBeNull();
+    expect(res.openedMenu).toBe(false);
+    expect(click).not.toHaveBeenCalled();
+  });
+
+  it("opens the Upload & tools menu to mount the image input", async () => {
+    buildUploadMenu({ disabled: false });
+    const res = await revealFileInput();
+    expect(res).toMatchObject({ openedMenu: true, signinRequired: false });
+    expect(res.input?.accept).toBe("image/*");
+  });
+
+  it("reports signinRequired when the upload item is disabled", async () => {
+    buildUploadMenu({ disabled: true });
+    const res = await revealFileInput();
+    expect(res).toMatchObject({ input: null, openedMenu: true, signinRequired: true });
+  });
+
+  it("returns no input when there is no menu trigger", async () => {
+    document.body.innerHTML = "<div></div>";
+    const res = await revealFileInput();
+    expect(res).toEqual({ input: null, openedMenu: false, signinRequired: false });
+  });
+});
+
+describe("uploadErrorMessage", () => {
+  it("uses the sign-in message for signin-required", () => {
+    expect(uploadErrorMessage({ reason: "signin-required" })).toMatch(/^Sign in to Gemini/);
+  });
+
+  it("uses the generic message otherwise", () => {
+    expect(uploadErrorMessage({})).toMatch(/^Image upload failed/);
+  });
+});
 
 describe("content script IIFE", () => {
   it("does not remove storage keys when pendingMessage is absent", async () => {

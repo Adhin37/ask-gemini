@@ -9,8 +9,10 @@
 
 import { test, expect } from "@playwright/test";
 import { launchExtension } from "../helpers/extension.js";
+import { captureOnFailure } from "../helpers/debug.js";
 
 let context;
+captureOnFailure(() => context);
 
 test.beforeAll(async ({ playwright }) => {
   // suppressWelcome:false — the welcome tab must stay open so this test

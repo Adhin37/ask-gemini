@@ -117,6 +117,17 @@ function showUploadError(msg) {
   }, 6_000);
 }
 
+/**
+ * Picks the banner text for a failed upload.
+ * @param {{ reason?: "signin-required" }} result
+ * @returns {string}
+ */
+function uploadErrorMessage(result) {
+  return result.reason === "signin-required"
+    ? t("content_upload_signin_required")
+    : t("content_upload_failed");
+}
+
 (async () => {
   const data = await chrome.storage.local.get(["pendingMessage", "pendingModel", "pendingThinkingLevel", "pendingFiles"]);
   if (!data.pendingMessage) return;
@@ -145,7 +156,7 @@ function showUploadError(msg) {
       const uploadResult = await uploadFilesToGemini(files);
       if (!uploadResult.success) {
         hideStatus();
-        showUploadError(t("content_upload_failed"));
+        showUploadError(uploadErrorMessage(uploadResult));
         reportResult(false);
         return;
       }
@@ -184,7 +195,7 @@ function showUploadError(msg) {
     const uploadResult = await uploadFilesToGemini(files);
     if (!uploadResult.success) {
       hideStatus();
-      showUploadError(t("content_upload_failed"));
+      showUploadError(uploadErrorMessage(uploadResult));
       reportResult(false);
       return;
     }
@@ -642,6 +653,71 @@ function findGeminiFileInput() {
 }
 
 /**
+ * Selectors for the composer's "Upload & tools" menu trigger. Structural
+ * selectors come first because the aria-label is localised.
+ */
+const UPLOAD_MENU_TRIGGER_SELECTORS = [
+  'simplified-input-menu button[aria-haspopup="menu"]',
+  '.leading-actions-wrapper button[aria-haspopup="menu"]',
+  'button[aria-haspopup="menu"][aria-label*="upload" i]',
+];
+
+/** "Upload files" item inside that menu — disabled while signed out. */
+const UPLOAD_MENU_ITEM_SELECTOR = '[data-test-id="local-images-files-uploader-button"]';
+
+/**
+ * Returns the "Upload & tools" menu trigger button, or null.
+ * @returns {HTMLElement|null}
+ */
+function findUploadMenuTrigger() {
+  for (const sel of UPLOAD_MENU_TRIGGER_SELECTORS) {
+    const el = document.querySelector(sel);
+    if (el) return el;
+  }
+  return null;
+}
+
+/**
+ * Locates a file input to upload through. Gemini (verified October 2026)
+ * only mounts its file inputs inside the "Upload & tools" menu overlay and
+ * removes them when the menu closes, so when none is in the DOM the menu is
+ * opened first. While signed out every upload entry is disabled, which is
+ * reported as `signinRequired` so the caller can fail fast.
+ *
+ * @returns {Promise<{ input: HTMLInputElement|null, openedMenu: boolean, signinRequired: boolean }>}
+ */
+async function revealFileInput() {
+  const existing = findGeminiFileInput();
+  if (existing) return { input: existing, openedMenu: false, signinRequired: false };
+
+  const trigger = findUploadMenuTrigger();
+  if (!trigger) return { input: null, openedMenu: false, signinRequired: false };
+
+  trigger.click();
+  await waitForElement(
+    () => findGeminiFileInput() || document.querySelector(UPLOAD_MENU_ITEM_SELECTOR),
+    3_000
+  );
+  const item = document.querySelector(UPLOAD_MENU_ITEM_SELECTOR);
+  const signinRequired = !!item && isOptionDisabled(item);
+  return {
+    input: signinRequired ? null : findGeminiFileInput(),
+    openedMenu: true,
+    signinRequired,
+  };
+}
+
+/**
+ * Closes the "Upload & tools" menu if it is still open.
+ * @returns {void}
+ */
+function closeUploadMenu() {
+  if (findUploadMenuTrigger()?.getAttribute("aria-expanded") === "true") {
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  }
+}
+
+/**
  * Selectors tried in order to detect upload-chip / thumbnail elements that
  * Gemini renders after a file is successfully attached.
  *
@@ -993,12 +1069,15 @@ async function selectExtendedThinking() {
  * Uploads all pending images to Gemini and verifies that upload chips appear
  * in the DOM before returning.
  *
- * Tries Gemini's native file input first (more reliable across MIME types),
- * falls back to a synthetic ClipboardEvent paste. After all files are
- * dispatched, polls `UPLOAD_CHIP_SELECTORS` for the expected number of chips.
+ * Tries Gemini's native file input first (more reliable across MIME types,
+ * opening the "Upload & tools" menu to mount it), falls back to a synthetic
+ * ClipboardEvent paste. After all files are dispatched, polls
+ * `UPLOAD_CHIP_SELECTORS` for the expected number of chips. Returns
+ * immediately with `reason: "signin-required"` when Gemini has uploads
+ * disabled (signed-out session).
  *
  * @param {{ name: string, type: string, size: number, data: string }[]} files
- * @returns {Promise<{ success: boolean, failedCount: number }>}
+ * @returns {Promise<{ success: boolean, failedCount: number, reason?: "signin-required" }>}
  */
 async function uploadFilesToGemini(files) {
   if (!files || files.length === 0) return { success: true, failedCount: 0 };
@@ -1019,7 +1098,6 @@ async function uploadFilesToGemini(files) {
     || document.body;
 
   console.debug(`[Ask Gemini] uploadFilesToGemini: container=${container.tagName}${container.id ? "#" + container.id : ""}${container.className ? "." + [...container.classList].join(".") : ""}`);
-  console.debug(`[Ask Gemini] uploadFilesToGemini: fileInput=${findGeminiFileInput() ? "found (" + (findGeminiFileInput().accept || "no accept attr") + ")" : "NOT FOUND — will use paste fallback"}`);
 
   // Snapshot chip count before upload to detect additions
   const baselineCount = new Set(
@@ -1027,10 +1105,31 @@ async function uploadFilesToGemini(files) {
   ).size;
   console.debug(`[Ask Gemini] uploadFilesToGemini: baselineCount=${baselineCount}`);
 
-  for (const fileData of files) {
-    await pasteImageToInput(fileData, inputEl);
-    // Small gap so Gemini registers each image separately
-    await new Promise((r) => setTimeout(r, 400));
+  const { input: fileInput, openedMenu, signinRequired } = await revealFileInput();
+  console.debug(`[Ask Gemini] uploadFilesToGemini: fileInput=${fileInput ? "found (" + (fileInput.accept || "no accept attr") + ")" : "NOT FOUND"}, openedMenu=${openedMenu}, signinRequired=${signinRequired}`);
+
+  if (signinRequired) {
+    closeUploadMenu();
+    console.warn("[Ask Gemini] Gemini uploads are disabled (signed out) — not sending");
+    return { success: false, failedCount: files.length, reason: "signin-required" };
+  }
+
+  const fileObjects = await Promise.all(files.map(toFile));
+  if (fileInput) {
+    // The input is `multiple`, so every file goes through one change event.
+    const dt = new DataTransfer();
+    fileObjects.forEach((f) => dt.items.add(f));
+    fileInput.files = dt.files;
+    fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    console.debug(`[Ask Gemini] uploadFilesToGemini: dispatched ${fileObjects.length} file(s) via file input`);
+    if (openedMenu) closeUploadMenu();
+  } else {
+    if (openedMenu) closeUploadMenu();
+    for (const file of fileObjects) {
+      pasteFileToInput(file, inputEl);
+      // Small gap so Gemini registers each image separately
+      await new Promise((r) => setTimeout(r, 400));
+    }
   }
 
   // Poll for chips — 8 s base + 3 s per file
@@ -1053,41 +1152,33 @@ async function uploadFilesToGemini(files) {
 }
 
 /**
- * Dispatches a single image File into the Gemini input.
- *
- * Primary path: assigns the file to Gemini's native `<input type="file">`
- * and fires a `change` event — goes through the browser's upload pipeline
- * and avoids MIME filtering applied by Gemini's clipboard paste handler.
- *
- * Fallback: synthetic ClipboardEvent paste on the contenteditable, used
- * when the file input cannot be located.
- *
+ * Converts a stored file record (data URL) back into a File.
  * @param {{ name: string, type: string, data: string }} fileData
- * @param {Element} inputEl  Gemini's contenteditable (used for paste fallback)
+ * @returns {Promise<File>}
  */
-async function pasteImageToInput(fileData, inputEl) {
-  const { name, type, data } = fileData;
+async function toFile({ name, type, data }) {
   const blob = await (await fetch(data)).blob();
-  const file = new File([blob], name, { type });
-  const dt   = new DataTransfer();
+  return new File([blob], name, { type });
+}
+
+/**
+ * Fallback upload path: dispatches a synthetic ClipboardEvent paste of one
+ * File on Gemini's contenteditable, used when no file input can be located.
+ *
+ * @param {File} file
+ * @param {Element} inputEl  Gemini's contenteditable
+ * @returns {void}
+ */
+function pasteFileToInput(file, inputEl) {
+  const dt = new DataTransfer();
   dt.items.add(file);
-
-  const fileInput = findGeminiFileInput();
-  if (fileInput) {
-    fileInput.files = dt.files;
-    fileInput.dispatchEvent(new Event("change", { bubbles: true }));
-    console.debug(`[Ask Gemini] pasteImageToInput: dispatched via file input for "${name}"`);
-    return;
-  }
-
-  // Fallback: synthetic ClipboardEvent paste
   inputEl.focus();
   inputEl.dispatchEvent(new ClipboardEvent("paste", {
     bubbles:       true,
     cancelable:    true,
     clipboardData: dt,
   }));
-  console.debug(`[Ask Gemini] pasteImageToInput: dispatched paste (fallback) for "${name}"`);
+  console.debug(`[Ask Gemini] pasteFileToInput: dispatched paste (fallback) for "${file.name}"`);
 }
 
 /**
@@ -1202,7 +1293,7 @@ if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
   Object.assign(globalThis.__TEST__, {
     classifyModelText, classifyModelTextLegacy, matchesTarget,
     classifyOption, iconNameOf, ICON_TO_MODEL, isThinkingText,
-    waitForElement, waitForCondition,
+    waitForElement, waitForCondition, revealFileInput, uploadErrorMessage,
   });
 }
 

@@ -63,6 +63,7 @@
   "content_status_model_unavailable":{ "message": "{{model}} unavailable — using Fast",          "description": "Status overlay: requested model is locked, fell back to Flash" },
   "content_status_thinking_unavailable":{ "message": "Extended thinking unavailable — using model's default",  "description": "Status overlay: Extended thinking is locked (quota/sign-in), model switch still succeeded" },
   "content_upload_failed":           { "message": "Image upload failed — prompt not sent",       "description": "Error banner shown in Gemini when upload verification fails" },
+  "content_upload_signin_required":  { "message": "Sign in to Gemini to attach images — prompt not sent", "description": "Error banner shown in Gemini when uploads are disabled because the user is signed out" },
 
   "bg_menu_open_gemini":             { "message": "Open Gemini",                                     "description": "Context menu item: open Gemini (action button right-click)" },
   "bg_menu_ask_gemini":              { "message": "Ask Gemini",                                      "description": "Context menu item: open Ask Gemini popup from page context" },

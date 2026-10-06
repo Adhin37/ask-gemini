@@ -206,7 +206,7 @@ npm run test:coverage  # v8 coverage over src/**/*.js
 
 ## E2E Testing
 
-Tests live in `e2e/scenarios/` (Playwright, single worker, video always on). Run with `npm run e2e`. Videos land in `e2e/videos/`; `npm run e2e:stitch` / `e2e:demo` stitch them into a demo.
+Tests live in `e2e/scenarios/` (Playwright, single worker, video always on). First run after a Playwright upgrade: `npx playwright install chromium`. Run with `npm run e2e`. Videos land in `e2e/videos/`; `npm run e2e:stitch` / `e2e:demo` stitch them into a demo.
 
 ### The full-pipeline rule
 
@@ -229,7 +229,28 @@ Playwright cannot drive native OS context menus, so `context.serviceWorkers()[0]
 
 ### Real Gemini is the default
 
-All scenario files without a `-mock` suffix run against the live `gemini.google.com`. The `-mock` suffix is reserved for the small set of scenarios that genuinely cannot run on a free account: premium model switching (Pro, Thinking) and locked-model fallback simulation. Do not add mock Gemini routes to non-mock spec files.
+All scenario files without a `-mock` suffix run against the live `gemini.google.com`. The `-mock` suffix is reserved for the scenarios that genuinely cannot run on the e2e profile: Flash / Pro / Extended-thinking switching and locked-model fallback simulation. Do not add mock Gemini routes to non-mock spec files.
+
+### The e2e profile is signed out
+
+`e2e/.chrome-profile` is normally a signed-out Gemini session (verified October 2026). Signed out, Gemini only enables **Flash-Lite with standard thinking**, and every file-upload entry point is disabled ("Sign in to try tools"). Consequences:
+
+- Real-Gemini specs send with `FREE_MODEL` (`"flash-lite"`) from `e2e/helpers/real-gemini.js` and never click locked picker rows.
+- Real image-upload tests skip via `skipIfUploadsUnavailable()` while signed out. The signed-out path itself is tested: `content.js` refuses the upload with a sign-in banner.
+- To run uploads for real, sign in to the profile once interactively, or point `CHROME_PROFILE` at a signed-in profile.
+
+### Shared e2e helpers
+
+- `launchExtension()` clears all extension storage at launch. The profile is persistent, so settings from a previous run would otherwise leak in. Google sign-in is untouched.
+- `openPopupWindow()` waits for `popup.js` to finish its async init before returning. Tests that act on the static HTML too early are flaky.
+- `configurePopup(popup, { model, thinking })` puts the popup into a known model / thinking state. Use it instead of clicking `.model-opt` or `#thinkingToggle` directly, because the toggle flips whatever state storage holds.
+- Prefer state-based waits (`expect(...).toHaveClass/toHaveValue`) over `waitForTimeout`. Keep fixed waits only for pacing the recording.
+
+### Debugging e2e failures
+
+- Every spec calls `captureOnFailure(() => context)` (`e2e/helpers/debug.js`). On failure it writes a full-page PNG and an ARIA snapshot of every open page into the test's folder under `e2e/videos/`. Playwright's `use.screenshot` does not apply to the manually launched persistent contexts.
+- `node e2e/tools/gemini-probe.mjs <steps.mjs> [--ext] [--headed]` opens live Gemini on a throwaway copy of the e2e profile and runs an ad-hoc steps module, which is useful for checking selectors after a Gemini DOM change. See the header of that file.
+- Gemini's file inputs are only mounted inside the "Upload & tools" menu overlay. `content.js` opens that menu (`revealFileInput()`) before uploading.
 
 ### Fixing a failing e2e test
 

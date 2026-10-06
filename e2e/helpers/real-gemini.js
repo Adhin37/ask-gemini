@@ -4,14 +4,21 @@
  * Exports selectors, sign-in guard utilities, model-picker interaction, and
  * the full popup → Gemini send pipelines used by real-Gemini scenario files.
  *
- * Uses the default e2e/.chrome-profile (free Google account; Flash Lite and Flash
- * are available, Pro requires Google AI Plus). Tests skip gracefully when not
- * signed in. Point CHROME_PROFILE to a premium profile to verify Pro switching.
+ * Uses the default e2e/.chrome-profile, which is normally signed out. Signed-out
+ * Gemini (verified October 2026) only enables Flash-Lite with standard thinking
+ * and disables every file-upload entry point ("Sign in to try tools"). Real-Gemini
+ * tests therefore send with FREE_MODEL; Flash / Pro / Extended thinking live in
+ * the *-mock specs. Image-upload tests skip via skipIfUploadsUnavailable() unless
+ * the profile is signed in (sign in once interactively, or point CHROME_PROFILE
+ * at a signed-in profile).
  */
 
 import { test, expect } from "@playwright/test";
-import { openPopupWindow } from "./open-popup.js";
+import { openPopupWindow, configurePopup } from "./open-popup.js";
 import { buildImageDataTransfer, dropImageOnPopup } from "./images.js";
+
+/** The only model a signed-out Gemini session can use. */
+export const FREE_MODEL = "flash-lite";
 
 /**
  * Primary model button selector.
@@ -34,27 +41,8 @@ export const OPTION_SEL = [
 ].join(", ");
 
 /**
- * Models (and the Extended thinking row) probed during picker round-trip
- * tests, in attempt order. Flash-Lite and Flash are free-tier; Pro requires
- * Google AI Plus. Labels carry version prefixes in the real picker (verified
- * July 2026 — "3.5 Flash-Lite", "3.6 Flash", "3.1 Pro"), so patterns match
- * loosely on the model name rather than the version number.
- *
- * `exclude` filters out an option whose text would otherwise also match
- * `pattern` — e.g. plain `/\bflash\b/i` matches inside "Flash-Lite" too,
- * since a hyphen is a word boundary.
- * @type {Array<{ label: string, pattern: RegExp, exclude?: RegExp }>}
- */
-export const PROBE_MODELS = [
-  { label: "Flash-Lite",         pattern: /flash[\s-]?lite/i },
-  { label: "Flash",              pattern: /\bflash\b/i, exclude: /lite/i },
-  { label: "Pro",                pattern: /\bpro\b/i },
-  { label: "Extended thinking",  pattern: /extended thinking/i },
-];
-
-/**
  * Skips the current test if the page did not land on gemini.google.com, or
- * if the model-picker trigger is not visible within the default timeout.
+ * if the model-picker trigger does not become visible within 20 s.
  * Covers the "not signed in" case where a login modal hides the UI.
  *
  * @param {import("@playwright/test").Page} page
@@ -67,7 +55,11 @@ export async function skipIfNotReady(page) {
       "Not signed in to Google — sign in to the e2e/.chrome-profile once interactively."
     );
   }
-  const visible = await page.locator(MODEL_BTN).isVisible().catch(() => false);
+  // Wait rather than check instantly — the composer renders a few seconds
+  // after the URL settles, and an instant check skips healthy runs.
+  const visible = await page.locator(MODEL_BTN).first()
+    .waitFor({ state: "visible", timeout: 20_000 })
+    .then(() => true, () => false);
   if (!visible) {
     test.skip(
       true,
@@ -75,6 +67,37 @@ export async function skipIfNotReady(page) {
       "or Gemini changed its layout."
     );
   }
+}
+
+/**
+ * Reports whether the Gemini page is a signed-out session (top-bar "Sign in"
+ * button). Waits briefly because the header renders after the URL settles.
+ *
+ * @param {import("@playwright/test").Page} page
+ * @returns {Promise<boolean>}
+ */
+export async function isSignedOut(page) {
+  return page.getByRole("button", { name: /^sign in$/i }).first()
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .then(() => true, () => false);
+}
+
+/**
+ * Skips the current test when the Gemini session cannot upload files —
+ * signed-out sessions show a "Sign in" button and disable every upload entry
+ * point, so an image test can only time out there. Detected without touching
+ * the composer, so it never interferes with content.js mid-upload.
+ *
+ * @param {import("@playwright/test").Page} page
+ * @returns {Promise<void>}
+ */
+export async function skipIfUploadsUnavailable(page) {
+  const signedOut = await isSignedOut(page);
+  test.skip(
+    signedOut,
+    "Gemini disables file uploads while signed out — sign in to e2e/.chrome-profile " +
+    "interactively (or set CHROME_PROFILE) to run real image-upload tests."
+  );
 }
 
 /**
@@ -213,7 +236,7 @@ export async function sendViaPopup(context, popup) {
 /**
  * Full popup → Gemini image upload pipeline:
  *   1. Closes existing Gemini tabs so popup uses chrome.tabs.create.
- *   2. Opens the extension popup.
+ *   2. Opens the extension popup and selects FREE_MODEL / standard thinking.
  *   3. Builds a canvas-generated image and drops it; waits for the file chip.
  *   4. Fills the message text.
  *   5. Clicks Send and captures the new Gemini tab.
@@ -229,6 +252,7 @@ export async function sendImageViaPopup(context, extensionId, { mimeType, filena
   await closeGeminiTabs(context);
 
   const popup = await openPopupWindow(context, extensionId);
+  await configurePopup(popup, { model: FREE_MODEL });
 
   const dt = await buildImageDataTransfer(popup, mimeType, filename);
   await dropImageOnPopup(popup, dt);
@@ -252,6 +276,8 @@ export async function sendImageViaPopup(context, extensionId, { mimeType, filena
  * @returns {Promise<void>}
  */
 export async function assertMessageOnGemini(geminiPage, message) {
-  await expect(geminiPage.getByText(message, { exact: false })).toBeVisible({ timeout: 40_000 });
+  // .first() — Gemini can echo the prompt in more than one place (user bubble,
+  // conversation title), which would otherwise be a strict-mode violation.
+  await expect(geminiPage.getByText(message, { exact: false }).first()).toBeVisible({ timeout: 40_000 });
   await expect(geminiPage.getByText("Image upload failed")).not.toBeVisible();
 }

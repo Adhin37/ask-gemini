@@ -24,10 +24,12 @@
 
 import { test, expect } from "@playwright/test";
 import { launchExtension } from "../helpers/extension.js";
-import { openPopupWindow } from "../helpers/open-popup.js";
+import { captureOnFailure } from "../helpers/debug.js";
+import { openPopupWindow, configurePopup } from "../helpers/open-popup.js";
 import { enableMockGeminiRoute } from "../helpers/mock-gemini.js";
 
 let context;
+captureOnFailure(() => context);
 let extensionId;
 
 test.beforeAll(async ({ playwright }) => {
@@ -309,16 +311,11 @@ test("popup — Extended thinking toggle sets the thinking level", async () => {
   const popup = await openPopupWindow(context, extensionId);
   await popup.waitForTimeout(800);
 
-  // Pin the model explicitly — a prior test in this file may have left
-  // askGeminiModel as "pro" in storage, and this test only wants to exercise
-  // the thinking toggle, not a model switch.
-  await popup.locator(".model-opt[data-model='flash']").click();
-  await popup.waitForTimeout(400);
+  // Start from a known state (a prior test may have left "pro" or "extended"
+  // in storage), then click the toggle once and assert it flips on.
+  await configurePopup(popup, { model: "flash", thinking: "standard" });
   await popup.locator("#thinkingToggle").click();
-  // Wait for the actual class toggle rather than a fixed delay — under load
-  // (e.g. the full e2e suite) a fixed wait can race the click handler's
-  // async chrome.storage.sync.set() and read back the toggle too early.
-  await expect(popup.locator("#thinkingToggle")).toHaveClass(/active/, { timeout: 3_000 });
+  await expect(popup.locator("#thinkingToggle")).toHaveClass(/\bactive\b/, { timeout: 3_000 });
 
   const thinkingLevel = await readPopupThinkingLevel(popup);
   expect(thinkingLevel).toBe("extended");
