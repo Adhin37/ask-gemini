@@ -22,7 +22,7 @@ jobs:
         run: apk add --no-cache git nodejs npm
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install npm dependencies
         run: npm ci
