@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## 🚀 Release v1.9.3 (2026-10-06)
+
+### ✨ Features
+* feat: upgrade version (1fed037)
+
+### ⚙️ Maintenance
+* chore: bump version to v1.9.2 [skip ci] (898627a)
+
+---
+### 📊 Release Stats
+* **Total Commits:** 3
+* **Contributors:** Adhin,github-actions[bot]
+* **Full Changelog:** [View Changes](https://github.com/Adhin37/ask-gemini/compare/v1.9.2...v1.9.3)
+
 ## 🚀 Release v1.9.2 (2026-10-06)
 
 ### 🐛 Bug Fixes
