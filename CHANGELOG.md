@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## 🚀 Release v1.9.2 (2026-10-06)
+
+### 🐛 Bug Fixes
+* fix: bad switch model (81793bd)
+* fix: e2e github (f615dd9)
+
+### ⚙️ Maintenance
+* chore: bump version to v1.9.1 [skip ci] (bab430d)
+
+---
+### 📊 Release Stats
+* **Total Commits:** 4
+* **Contributors:** Adhin,github-actions[bot]
+* **Full Changelog:** [View Changes](https://github.com/Adhin37/ask-gemini/compare/v1.9.1...v1.9.2)
+
 ## 🚀 Release v1.9.1 (2026-07-26)
 
 ### ✨ Features
