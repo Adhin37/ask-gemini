@@ -374,13 +374,20 @@ Use this checklist before every submission or update.
 
 ### Privacy & Data
 
-- [ ] **`chrome.storage.local`** — used for: pending message (cleared after
-  injection), prompt history (up to 20 entries, user-clearable)
-- [ ] **`chrome.storage.sync`** — used for: selected model (`flash` /
-  `thinking` / `pro`), UI theme, per-model prompt templates; syncs across
-  the user's Chrome profile — disclose this in the privacy policy
+- [ ] **`chrome.storage.local`** — used for: pending message, model,
+  thinking level and attached images (cleared after injection), prompt
+  history (up to 20 entries, opt-in, user-clearable)
+- [ ] **`chrome.storage.session`** — used for: unsent popup draft (in-memory,
+  cleared when the browser closes)
+- [ ] **`chrome.storage.sync`** — used for: selected model (`flash-lite` /
+  `flash` / `pro`), thinking level (`standard` / `extended`), UI theme,
+  per-model prompt templates, Prompt Engineering rules, context-menu prefix,
+  history opt-in; syncs across the user's Chrome profile — disclose this in
+  the privacy policy
 - [ ] Prompt injection sanitization is applied to all user-supplied text
   before storage (`INJECTION_PATTERNS`) — document this as a security measure
+- [ ] Attached images are only uploaded to Gemini by the user's own action
+  (Send) — never to any other server
 - [ ] Confirm no data is sent to any external or third-party server
 - [ ] Confirm no analytics, telemetry, or crash-reporting libraries are
   included
@@ -409,7 +416,7 @@ Based on official documentation and developer community reports:
 
 | Reason | How it applies to Ask Gemini |
 |---|---|
-| **Broad host permissions** | ✅ Not applicable — only `gemini.google.com` |
+| **Broad host permissions** | ✅ Not applicable — only `gemini.google.com` and `consent.google.com` |
 | **Missing description or icon** | Easy to fix before submission |
 | **Keyword spam in description** | Avoid repeating "Gemini", "AI", etc. excessively |
 | **Privacy field mismatch** | Ensure dashboard privacy fields match the README/policy |
