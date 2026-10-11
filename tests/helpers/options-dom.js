@@ -14,10 +14,10 @@ export function setupOptionsDom() {
       <button class="seg-btn" data-value="light">Light</button>
     </div>
 
-    <div id="modelControl">
-      <button class="seg-btn" data-value="flash-lite">Lite</button>
-      <button class="seg-btn" data-value="flash">Fast</button>
-      <button class="seg-btn" data-value="pro">Pro</button>
+    <div id="thinkingLevelControl">
+      <button class="seg-btn" data-value="low">Low</button>
+      <button class="seg-btn" data-value="medium">Medium</button>
+      <button class="seg-btn" data-value="high">High</button>
     </div>
 
     <div id="historyList"></div>
@@ -71,10 +71,10 @@ export function setupOptionsDom() {
     <span   id="shortcutDisplay"></span>
     <button id="shortcutEditBtn"></button>
 
-    <div id="tmplModelTabs">
-      <button class="tmpl-model-tab" data-model="flash-lite">Lite<span class="tmpl-tab-badge">0</span></button>
-      <button class="tmpl-model-tab" data-model="flash">Fast<span class="tmpl-tab-badge">0</span></button>
-      <button class="tmpl-model-tab" data-model="pro">Pro<span class="tmpl-tab-badge">0</span></button>
+    <div id="tmplLevelTabs">
+      <button class="tmpl-model-tab" data-level="low">Low<span class="tmpl-tab-badge">0</span></button>
+      <button class="tmpl-model-tab" data-level="medium">Medium<span class="tmpl-tab-badge">0</span></button>
+      <button class="tmpl-model-tab" data-level="high">High<span class="tmpl-tab-badge">0</span></button>
     </div>
 
     <input  id="promptEngToggle" type="checkbox" />

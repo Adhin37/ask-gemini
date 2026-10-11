@@ -4,7 +4,7 @@ import { setupOptionsDom, resetOptionsDom } from "../helpers/options-dom.js";
 let escapeHtml, escAttr, highlightMatch, formatTime, resolveTheme;
 let renderHistory, loadTemplates, loadContextMenuSettings;
 let updateCharCount, updateSummarizePrefixCharCount;
-let _setAllHistory, _setAllTemplates, _setCurrentTheme, _setCurrentModel;
+let _setAllHistory, _setAllTemplates, _setCurrentTheme, _setCurrentThinkingLevel;
 
 const DEFAULT_SUMMARIZE_PREFIX = "Summarize the following:\n\n";
 
@@ -16,7 +16,7 @@ beforeAll(async () => {
     escapeHtml, escAttr, highlightMatch, formatTime, resolveTheme,
     renderHistory, loadTemplates, loadContextMenuSettings,
     updateCharCount, updateSummarizePrefixCharCount,
-    _setAllHistory, _setAllTemplates, _setCurrentTheme, _setCurrentModel,
+    _setAllHistory, _setAllTemplates, _setCurrentTheme, _setCurrentThinkingLevel,
   } = globalThis.__TEST__);
 });
 
@@ -25,7 +25,7 @@ beforeEach(() => {
   _setAllHistory([]);
   _setAllTemplates([]);
   _setCurrentTheme("auto");
-  _setCurrentModel("flash");
+  _setCurrentThinkingLevel("medium");
 });
 
 // ════════════════════════════════════════════════════════════════════
@@ -176,23 +176,20 @@ describe("theme control", () => {
 });
 
 // ════════════════════════════════════════════════════════════════════
-// Model control
+// Thinking level control
 // ════════════════════════════════════════════════════════════════════
 
-describe("model control", () => {
-  it("clicking a different model button saves it to storage", async () => {
-    const proBtn = document.querySelector('#modelControl [data-value="pro"]');
-    proBtn.click();
+describe("thinking level control", () => {
+  it("clicking a different level button saves it to storage", async () => {
+    document.querySelector('#thinkingLevelControl [data-value="high"]').click();
     await Promise.resolve();
     expect(chrome.storage.sync.set).toHaveBeenCalledWith(
-      expect.objectContaining({ askGeminiModel: "pro" })
+      expect.objectContaining({ askGeminiThinkingLevel: "high" })
     );
   });
 
-  it("clicking the already-active model does not call storage.set", async () => {
-    // On init, applyModel("flash") is called → currentModel = "flash"
-    const flashBtn = document.querySelector('#modelControl [data-value="flash"]');
-    flashBtn.click();
+  it("clicking the already-active level does not call storage.set", async () => {
+    document.querySelector('#thinkingLevelControl [data-value="medium"]').click();
     await Promise.resolve();
     expect(chrome.storage.sync.set).not.toHaveBeenCalled();
   });
@@ -294,7 +291,7 @@ describe("loadTemplates", () => {
     expect(chrome.storage.sync.set).toHaveBeenCalledWith(
       expect.objectContaining({
         askGeminiTemplates: expect.objectContaining({
-          flash: expect.arrayContaining(["Summarize: "]),
+          medium: expect.arrayContaining(["Summarize: "]),
         }),
       })
     );
@@ -306,6 +303,19 @@ describe("loadTemplates", () => {
     });
     await loadTemplates();
     expect(document.querySelectorAll(".tmpl-card")).toHaveLength(2);
+  });
+
+  it("regroups pre-Auto per-model templates and opens the current level's tab", async () => {
+    chrome.storage.sync.get.mockResolvedValue({
+      askGeminiModel:     "pro",
+      askGeminiTemplates: { "flash-lite": ["L"], flash: ["F1", "F2"], pro: ["P1", "P2", "P3"] },
+    });
+    await loadTemplates();
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+      askGeminiTemplates: { low: ["L"], medium: ["F1", "F2"], high: ["P1", "P2", "P3"] },
+    });
+    expect(document.querySelectorAll(".tmpl-card")).toHaveLength(3);
+    expect(document.querySelector('.tmpl-model-tab[data-level="high"]').classList.contains("active")).toBe(true);
   });
 });
 

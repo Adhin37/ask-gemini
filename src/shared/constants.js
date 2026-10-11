@@ -9,19 +9,20 @@ export const MAX_HISTORY = 20;
 
 export const DEFAULT_SUMMARIZE_PREFIX_KEY = "default_summarize_prefix";
 
-export const DEFAULT_TEMPLATE_KEYS_BY_MODEL = {
-  "flash-lite": [
+/** Default template message keys per thinking level. */
+export const DEFAULT_TEMPLATE_KEYS_BY_LEVEL = {
+  low: [
     "default_template_flash_lite_quick",
     "default_template_flash_lite_tldr",
     "default_template_flash_lite_define",
   ],
-  flash: [
+  medium: [
     "default_template_flash_summarize",
     "default_template_flash_translate",
     "default_template_flash_explain",
     "default_template_flash_proscons",
   ],
-  pro: [
+  high: [
     "default_template_pro_deep",
     "default_template_pro_fix",
     "default_template_pro_compare",
@@ -29,14 +30,17 @@ export const DEFAULT_TEMPLATE_KEYS_BY_MODEL = {
   ],
 };
 
-/** Canonical model identifiers. */
-export const MODEL_IDS = ["flash-lite", "flash", "pro"];
-
-/** Canonical thinking level identifiers. */
-export const THINKING_LEVELS = ["standard", "extended"];
+/**
+ * Canonical thinking levels, in the order of the level rows in Gemini's mode
+ * picker (verified October 2026: Auto, then Low / Medium / High).
+ */
+export const THINKING_LEVELS = ["low", "medium", "high"];
 
 /** Default thinking level for new installs and storage migration. */
-export const DEFAULT_THINKING_LEVEL = "standard";
+export const DEFAULT_THINKING_LEVEL = "medium";
+
+/** Pre-Auto model ids mapped to the closest thinking level (storage migration). */
+export const LEGACY_MODEL_TO_LEVEL = { "flash-lite": "low", flash: "medium", pro: "high", thinking: "high" };
 
 export const PE_TEMPLATE_MAX = 400;
 export const PE_ROLE_MAX     = 240;

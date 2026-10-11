@@ -2,7 +2,7 @@
  * Scenario 03 — Drag & drop image + send (real Gemini)
  *
  * Uses the default e2e/.chrome-profile. Tests 1–2 are popup-only and always run.
- * Tests 3–6 send with FREE_MODEL and skip via skipIfUploadsUnavailable() when
+ * Tests 3–6 send with E2E_LEVEL and skip via skipIfUploadsUnavailable() when
  * the profile is signed out — Gemini disables every upload entry point then.
  *
  * Tests covered:
@@ -35,7 +35,7 @@ import { launchExtension } from "../helpers/extension.js";
 import { captureOnFailure } from "../helpers/debug.js";
 import { openPopupWindow, configurePopup } from "../helpers/open-popup.js";
 import {
-  FREE_MODEL,
+  E2E_LEVEL,
   skipIfNotReady,
   skipIfUploadsUnavailable,
   isSignedOut,
@@ -166,7 +166,7 @@ test("real Gemini — multi-file upload (PNG + WebP) via popup: both chips detec
   await closeGeminiTabs(context);
 
   const popup = await openPopupWindow(context, extensionId);
-  await configurePopup(popup, { model: FREE_MODEL });
+  await configurePopup(popup, { level: E2E_LEVEL });
 
   // Drop PNG — first chip
   await buildAndDropImage(popup, "image/png", "photo.png");

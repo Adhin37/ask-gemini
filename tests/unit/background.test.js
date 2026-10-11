@@ -7,8 +7,12 @@ let onMessage;
 let onStorageChanged;
 let onContextMenuClicked;
 let onInstalled;
+let _restorePendingResult;
+let PENDING_SINCE_KEY;
+let RESULT_TIMEOUT_MS;
 
 beforeAll(async () => {
+  globalThis.__TEST__ = {};
   // These must be set BEFORE the import so the implementations are in place
   // when background.js calls chrome.*.addListener() during module init.
   chrome.runtime.onMessage.addListener.mockImplementation(fn => { onMessage = fn; });
@@ -17,6 +21,7 @@ beforeAll(async () => {
   chrome.runtime.onInstalled.addListener.mockImplementation(fn => { onInstalled = fn; });
 
   await import("../../src/background/background.js");
+  ({ _restorePendingResult, PENDING_SINCE_KEY, RESULT_TIMEOUT_MS } = globalThis.__TEST__);
 });
 
 // After each test setup.js replaces globalThis.chrome with a fresh mock.
@@ -94,6 +99,96 @@ describe("badge — storage watcher", () => {
 // Welcome tab — onInstalled
 // ════════════════════════════════════════════════════════════════════
 
+// ════════════════════════════════════════════════════════════════════
+// Pending state — survives service-worker restarts
+// ════════════════════════════════════════════════════════════════════
+
+describe("badge — pending state in chrome.storage.session", () => {
+  it("queued badge stores the send start time", () => {
+    onStorageChanged({ pendingMessage: { newValue: "hello" } }, "local");
+    expect(chrome.storage.session._store.get(PENDING_SINCE_KEY)).toEqual(expect.any(Number));
+  });
+
+  it("success result clears the stored start time", () => {
+    chrome.storage.session._store.set(PENDING_SINCE_KEY, Date.now());
+    onMessage({ type: "injectionResult", success: true });
+    expect(chrome.storage.session._store.has(PENDING_SINCE_KEY)).toBe(false);
+  });
+
+  it("error result clears the stored start time", () => {
+    chrome.storage.session._store.set(PENDING_SINCE_KEY, Date.now());
+    onMessage({ type: "injectionResult", success: false });
+    expect(chrome.storage.session._store.has(PENDING_SINCE_KEY)).toBe(false);
+  });
+
+  it("restore does nothing when no send is pending", async () => {
+    await _restorePendingResult();
+    expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
+  });
+
+  it("restore shows the error badge when the timeout already expired", async () => {
+    chrome.storage.session._store.set(PENDING_SINCE_KEY, Date.now() - RESULT_TIMEOUT_MS - 1);
+    await _restorePendingResult();
+    expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: "!" });
+    expect(chrome.storage.session._store.has(PENDING_SINCE_KEY)).toBe(false);
+  });
+
+  it("restore re-arms the timeout for the remaining time", async () => {
+    vi.useFakeTimers();
+    chrome.storage.session._store.set(PENDING_SINCE_KEY, Date.now() - 20_000);
+    await _restorePendingResult();
+    expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(RESULT_TIMEOUT_MS - 20_000 - 1);
+    expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: "!" });
+    vi.useRealTimers();
+  });
+
+  it("restore keeps a result that arrived while it was reading storage", async () => {
+    vi.useFakeTimers();
+    chrome.storage.session._store.set(PENDING_SINCE_KEY, Date.now() - 20_000);
+    const restoring = _restorePendingResult();
+    onMessage({ type: "injectionResult", success: true });
+    await restoring;
+
+    vi.advanceTimersByTime(RESULT_TIMEOUT_MS);
+    expect(chrome.action.setBadgeText).not.toHaveBeenCalledWith({ text: "!" });
+    vi.useRealTimers();
+  });
+});
+
+describe("storage migration (onInstalled)", () => {
+  it("converts the model + thinking settings to a thinking level", async () => {
+    chrome.storage.sync.get.mockResolvedValue({ askGeminiModel: "flash", askGeminiThinkingLevel: "standard" });
+    await onInstalled({ reason: "update" });
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith({ askGeminiThinkingLevel: "medium" });
+    expect(chrome.storage.sync.remove).toHaveBeenCalledWith("askGeminiModel");
+  });
+
+  it("regroups per-model templates per level", async () => {
+    chrome.storage.sync.get.mockResolvedValue({
+      askGeminiThinkingLevel: "high",
+      askGeminiTemplates: { "flash-lite": ["a"], flash: ["b"], pro: ["c"] },
+    });
+    await onInstalled({ reason: "update" });
+    expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+      askGeminiTemplates: { low: ["a"], medium: ["b"], high: ["c"] },
+    });
+    expect(chrome.storage.sync.remove).not.toHaveBeenCalled();
+  });
+
+  it("leaves already-migrated settings untouched", async () => {
+    chrome.storage.sync.get.mockResolvedValue({
+      askGeminiThinkingLevel: "low",
+      askGeminiTemplates: { low: [], medium: ["b"], high: ["c"] },
+    });
+    await onInstalled({ reason: "update" });
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled();
+  });
+});
+
 describe("welcome tab (onInstalled)", () => {
   it("opens the welcome tab on fresh install", async () => {
     // onInstalled is async (it awaits the model/thinking-level migration's
@@ -165,9 +260,9 @@ describe("contextMenus.onClicked — navigation items", () => {
 
 describe("contextMenus.onClicked — ask-gemini-selection", () => {
   beforeEach(() => {
-    // Default storage response for model + prefix (read from sync in background.js)
+    // Default storage response for level + prefix (read from sync in background.js)
     chrome.storage.sync.get.mockResolvedValue({
-      askGeminiModel:           "flash",
+      askGeminiThinkingLevel:   "medium",
       askGeminiSummarizePrefix: "My prefix",
     });
   });
@@ -180,8 +275,8 @@ describe("contextMenus.onClicked — ask-gemini-selection", () => {
 
     expect(chrome.storage.local.set).toHaveBeenCalledWith(
       expect.objectContaining({
-        pendingMessage: "My prefix\n\ntest text",
-        pendingModel:   "flash",
+        pendingMessage:       "My prefix\n\ntest text",
+        pendingThinkingLevel: "medium",
       })
     );
     expect(chrome.tabs.create).toHaveBeenCalledWith({ url: "https://gemini.google.com/app" });
@@ -189,7 +284,7 @@ describe("contextMenus.onClicked — ask-gemini-selection", () => {
 
   it("trims trailing whitespace from prefix before joining", async () => {
     chrome.storage.sync.get.mockResolvedValue({
-      askGeminiModel:           "pro",
+      askGeminiThinkingLevel:   "high",
       askGeminiSummarizePrefix: "Clean up:   \n\n",
     });
 
@@ -203,7 +298,7 @@ describe("contextMenus.onClicked — ask-gemini-selection", () => {
   });
 
   it("uses default prefix when none is saved", async () => {
-    chrome.storage.sync.get.mockResolvedValue({ askGeminiModel: "flash" });
+    chrome.storage.sync.get.mockResolvedValue({ askGeminiThinkingLevel: "medium" });
 
     await onContextMenuClicked({
       menuItemId:    "ask-gemini-selection",
@@ -220,15 +315,9 @@ describe("contextMenus.onClicked — ask-gemini-selection", () => {
     expect(chrome.tabs.create).not.toHaveBeenCalled();
   });
 
-  it("passes the stored model to dispatchToGemini", async () => {
-    // "thinking" is a deliberately stale/legacy value here — this test checks
-    // that onContextMenuClicked forwards whatever askGeminiModel already holds
-    // verbatim (no validation), which is exactly what onInstalled's migration
-    // at background.js relies on when it rewrites old "thinking" values to
-    // "pro" + askGeminiThinkingLevel: "extended". It is not asserting that
-    // "thinking" is a currently valid model id.
+  it("passes the stored thinking level to dispatchToGemini", async () => {
     chrome.storage.sync.get.mockResolvedValue({
-      askGeminiModel:           "thinking",
+      askGeminiThinkingLevel:   "low",
       askGeminiSummarizePrefix: "Think about:",
     });
 
@@ -237,8 +326,20 @@ describe("contextMenus.onClicked — ask-gemini-selection", () => {
       selectionText: "a problem",
     });
 
-    expect(chrome.storage.local.set).toHaveBeenCalledWith(
-      expect.objectContaining({ pendingModel: "thinking" })
-    );
+    const payload = chrome.storage.local.set.mock.calls[0][0];
+    expect(payload.pendingThinkingLevel).toBe("low");
+    expect(payload).not.toHaveProperty("pendingModel");
+  });
+
+  it("maps pre-Auto settings that were not migrated yet", async () => {
+    // Pro + Extended thinking → High; a bare model id → its tier.
+    chrome.storage.sync.get.mockResolvedValue({ askGeminiModel: "pro", askGeminiThinkingLevel: "extended" });
+    await onContextMenuClicked({ menuItemId: "ask-gemini-selection", selectionText: "x" });
+    expect(chrome.storage.local.set.mock.calls[0][0].pendingThinkingLevel).toBe("high");
+
+    chrome.storage.local.set.mockClear();
+    chrome.storage.sync.get.mockResolvedValue({ askGeminiModel: "flash-lite", askGeminiThinkingLevel: "standard" });
+    await onContextMenuClicked({ menuItemId: "ask-gemini-selection", selectionText: "x" });
+    expect(chrome.storage.local.set.mock.calls[0][0].pendingThinkingLevel).toBe("low");
   });
 });

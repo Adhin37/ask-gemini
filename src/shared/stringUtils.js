@@ -43,28 +43,15 @@ export function plural(n, oneKey, otherKey, vars) {
 }
 
 /**
- * Returns the localized display name for a canonical model id.
- * @param {"flash-lite"|"flash"|"pro"|string} canonicalId
- * @returns {string}
- */
-export function localizeModelName(canonicalId) {
-  switch (canonicalId) {
-    case "flash-lite": return t("model_label_flash_lite");
-    case "flash":      return t("model_label_flash");
-    case "pro":        return t("model_label_pro");
-    default:           return canonicalId || "";
-  }
-}
-
-/**
  * Returns the localized display name for a canonical thinking level.
- * @param {"standard"|"extended"|string} level
+ * @param {"low"|"medium"|"high"|string} level
  * @returns {string}
  */
 export function localizeThinkingLevel(level) {
   switch (level) {
-    case "standard": return t("thinking_level_standard");
-    case "extended": return t("thinking_level_extended");
-    default:         return level || "";
+    case "low":    return t("thinking_level_low");
+    case "medium": return t("thinking_level_medium");
+    case "high":   return t("thinking_level_high");
+    default:       return level || "";
   }
 }

@@ -177,28 +177,28 @@ html, body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MODEL SWITCHER — Tier-colored design
-   — Fast (cyan) < Think (indigo) < Pro (gold)
+   THINKING-LEVEL SWITCHER — Tier-colored design
+   — Low (green) < Medium (cyan) < High (gold)
    — Inactive: tier bars show hierarchy at a glance.
    — Active: pill tinted to tier color, bars fully lit + glow.
    ═══════════════════════════════════════════════════════════════ */
 
-/* Per-model tier palette (used by bars + active state) */
-.model-opt[data-model="flash-lite"] {
+/* Per-level tier palette (used by bars + active state) */
+.model-opt[data-level="low"] {
   --tc: light-dark(#0e9f6e, #34d399);
   --ta: light-dark(rgba(14,159,110,0.12), rgba(52,211,153,0.14));
   --tg: light-dark(rgba(14,159,110,0.22), rgba(52,211,153,0.28));
   --tb: light-dark(rgba(14,159,110,0.55), rgba(52,211,153,0.5));
 }
 
-.model-opt[data-model="flash"] {
+.model-opt[data-level="medium"] {
   --tc: light-dark(#0891b2, #22d3ee);
   --ta: light-dark(rgba(8,145,178,0.12), rgba(34,211,238,0.14));
   --tg: light-dark(rgba(8,145,178,0.22), rgba(34,211,238,0.28));
   --tb: light-dark(rgba(8,145,178,0.55), rgba(34,211,238,0.5));
 }
 
-.model-opt[data-model="pro"] {
+.model-opt[data-level="high"] {
   --tc: light-dark(#d97706, #f59e0b);
   --ta: light-dark(rgba(217,119,6,0.12), rgba(245,158,11,0.14));
   --tg: light-dark(rgba(217,119,6,0.26), rgba(245,158,11,0.32));
@@ -262,50 +262,21 @@ html, body {
   box-shadow: 0 2px 10px var(--tg), inset 0 0 0 1px var(--tb);
 }
 
-/* Pro gets a subtle shimmer to signal premium */
+/* High gets a subtle shimmer to signal the deepest level */
 @keyframes proShimmer {
   0%   { box-shadow: 0 2px 10px var(--tg), inset 0 0 0 1px var(--tb); }
   50%  { box-shadow: 0 2px 16px rgba(245,158,11,0.5), inset 0 0 0 1px rgba(245,158,11,0.7); }
   100% { box-shadow: 0 2px 10px var(--tg), inset 0 0 0 1px var(--tb); }
 }
 
-.model-opt[data-model="pro"].active {
+.model-opt[data-level="high"].active {
   animation: proShimmer 2.4s ease-in-out infinite;
 }
 
 .model-opt.active .model-tail {
-  max-width: 36px;
+  max-width: 48px;
   opacity: 1;
   transition: max-width 0.22s ease, opacity 0.12s ease 0.12s;
-}
-
-/* ── Extended thinking toggle ─────────────────────────────────── */
-.thinking-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-dim);
-  cursor: pointer;
-  transition: background 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.18s;
-  flex-shrink: 0;
-}
-
-.thinking-toggle:hover {
-  background: light-dark(rgba(102,85,232,0.08), rgba(129,140,248,0.12));
-  border-color: light-dark(rgba(102,85,232,0.4), rgba(129,140,248,0.4));
-  color: light-dark(#6655e8, #818cf8);
-}
-
-.thinking-toggle.active {
-  background: light-dark(rgba(102,85,232,0.14), rgba(129,140,248,0.18));
-  border-color: light-dark(rgba(102,85,232,0.55), rgba(129,140,248,0.55));
-  color: light-dark(#6655e8, #818cf8);
-  box-shadow: 0 2px 10px light-dark(rgba(102,85,232,0.22), rgba(129,140,248,0.28));
 }
 
 /* ── Ko-fi ────────────────────────────────────────────────────── */

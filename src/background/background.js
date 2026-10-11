@@ -6,9 +6,11 @@ import {
   MAX_HISTORY,
   DEFAULT_SUMMARIZE_PREFIX_KEY,
   INJECTION_PATTERNS,
+  THINKING_LEVELS,
 } from "../shared/constants.js";
 import { buildPrompt, migrateTemplateSyntax } from "../shared/promptEngine.js";
 import { t } from "../shared/stringUtils.js";
+import { resolveThinkingLevel, migrateTemplateGroups } from "../shared/thinkingLevel.js";
 
 // ══════════════════════════════════════════════════════════════════
 // PROMPT INJECTION DETECTION
@@ -36,10 +38,18 @@ function _hasPromptInjection(text) {
 let _badgeClearTimer  = null;
 let _resultTimer      = null;
 let _hasPendingResult = false;
+// Bumped on every badge state change so an in-flight restore can tell
+// that a newer state was set while it was reading storage.
+let _badgeGeneration  = 0;
 
 // How long to wait for the content script to report back before
 // assuming something went wrong (network down, tab closed, etc.).
 const RESULT_TIMEOUT_MS = 30_000;
+
+// chrome.storage.session key holding the time (ms) a send started.
+// The service worker can be stopped while a send is pending, which drops
+// the in-memory timer above; this lets the next worker pick it back up.
+const PENDING_SINCE_KEY = "askGeminiPendingSince";
 
 /** Cancels any pending badge-clear timer. */
 function _cancelClear() {
@@ -61,13 +71,47 @@ function _clearBadgeAfter(ms) {
   }, ms);
 }
 
-/** Starts the timeout that fires setBadgeError if no injection result arrives. */
-function _startResultTimer() {
+/**
+ * Starts the timeout that fires setBadgeError if no injection result arrives.
+ * @param {number} [ms=RESULT_TIMEOUT_MS]
+ */
+function _startResultTimer(ms = RESULT_TIMEOUT_MS) {
   _clearResultTimer();
   _resultTimer = setTimeout(() => {
     _resultTimer = null;
     if (_hasPendingResult) setBadgeError();
-  }, RESULT_TIMEOUT_MS);
+  }, ms);
+}
+
+/**
+ * Persists (or clears) the pending-send start time in chrome.storage.session.
+ * @param {number|null} since  Timestamp in ms, or null to clear.
+ */
+function _persistPendingSince(since) {
+  const op = since === null
+    ? chrome.storage.session.remove(PENDING_SINCE_KEY)
+    : chrome.storage.session.set({ [PENDING_SINCE_KEY]: since });
+  Promise.resolve(op).catch(err => console.warn("[Ask Gemini] pending state not saved:", err?.message));
+}
+
+/**
+ * Restores the pending-send state after a service-worker restart: re-arms the
+ * result timeout for the time left, or shows the error badge if it has expired.
+ * @returns {Promise<void>}
+ */
+async function _restorePendingResult() {
+  const generation = _badgeGeneration;
+  const { [PENDING_SINCE_KEY]: since } = await chrome.storage.session.get(PENDING_SINCE_KEY);
+  // A badge state was set while we were reading: it is newer, keep it.
+  if (!since || generation !== _badgeGeneration) return;
+
+  const remaining = RESULT_TIMEOUT_MS - (Date.now() - since);
+  if (remaining <= 0) {
+    setBadgeError();
+    return;
+  }
+  _hasPendingResult = true;
+  _startResultTimer(remaining);
 }
 
 /** Clears the pending injection-result timeout. */
@@ -80,18 +124,22 @@ function _clearResultTimer() {
 
 /** Sets the badge to the "queued / sending" state (purple ↑). */
 function setBadgeQueued() {
+  _badgeGeneration++;
   _cancelClear();
   _hasPendingResult = true;
   _startResultTimer();
+  _persistPendingSince(Date.now());
   chrome.action.setBadgeBackgroundColor({ color: "#7c6af7" });
   chrome.action.setBadgeText({ text: "↑" });
 }
 
 /** Sets the badge to the success state (green ✓), clears after 2 s. */
 function setBadgeSuccess() {
+  _badgeGeneration++;
   _cancelClear();
   _clearResultTimer();
   _hasPendingResult = false;
+  _persistPendingSince(null);
   chrome.action.setBadgeBackgroundColor({ color: "#22c55e" });
   chrome.action.setBadgeText({ text: "✓" });
   _clearBadgeAfter(2_000);
@@ -99,13 +147,18 @@ function setBadgeSuccess() {
 
 /** Sets the badge to the error state (red !), clears after 6 s. */
 function setBadgeError() {
+  _badgeGeneration++;
   _cancelClear();
   _clearResultTimer();
   _hasPendingResult = false;
+  _persistPendingSince(null);
   chrome.action.setBadgeBackgroundColor({ color: "#ef4444" });
   chrome.action.setBadgeText({ text: "!" });
   _clearBadgeAfter(6_000);
 }
+
+// Runs on every service-worker start (install, browser start, or wake-up).
+_restorePendingResult().catch(err => console.warn("[Ask Gemini] pending state not restored:", err?.message));
 
 // Tabs that navigated to consent.google.com during a pending Ask Gemini
 // operation. Maps tabId → pending setTimeout ID (null while page is loading).
@@ -242,19 +295,17 @@ chrome.runtime.onStartup.addListener(registerMenus);
 let _fromContextMenu = false;
 
 /**
- * Shared helper: write the pending message, model, and thinking level to storage,
+ * Shared helper: write the pending message and thinking level to storage,
  * set the queued badge, and open (or focus) a Gemini tab.
  * @param {string} message
- * @param {string} model  canonical model id
- * @param {string} [thinkingLevel="standard"]  "standard" or "extended"
+ * @param {"low"|"medium"|"high"} thinkingLevel
  */
-async function dispatchToGemini(message, model, thinkingLevel = "standard") {
+async function dispatchToGemini(message, thinkingLevel) {
   setBadgeQueued();
   _fromContextMenu = true;
 
   await chrome.storage.local.set({
     pendingMessage:       message,
-    pendingModel:         model,
     pendingThinkingLevel: thinkingLevel,
   });
 
@@ -279,8 +330,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   // ── Ask Gemini with selection ─────────────────────────────────
   if (info.menuItemId === "ask-gemini-selection" && info.selectionText) {
     const {
-      askGeminiModel           = "flash",
-      askGeminiThinkingLevel   = "standard",
+      askGeminiModel,
+      askGeminiThinkingLevel,
       askGeminiSummarizePrefix = t(DEFAULT_SUMMARIZE_PREFIX_KEY),
       askGeminiPromptEng,
     } = await chrome.storage.sync.get([
@@ -329,7 +380,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       message = _UNTRUSTED_WRAPPER + message;
     }
 
-    await dispatchToGemini(message, askGeminiModel, askGeminiThinkingLevel);
+    await dispatchToGemini(message, resolveThinkingLevel(askGeminiThinkingLevel, askGeminiModel));
     return;
   }
 });
@@ -382,27 +433,26 @@ chrome.commands.onCommand.addListener((command) => {
 });
 
 chrome.runtime.onInstalled.addListener(async (details) => {
-  // ── Storage migration: "thinking" model → "pro" + extended thinking ──
-  // Runs on every install/update so orphaned values from before v2.0 are cleaned up.
+  // ── Storage migration: model choice → thinking level ──────────
+  // Gemini's Auto mode picker (October 2026) replaced Flash-Lite / Flash /
+  // Pro with Low / Medium / High thinking. Runs on every install/update so
+  // settings saved by older versions are converted once.
   const { askGeminiModel, askGeminiThinkingLevel, askGeminiTemplates } =
     await chrome.storage.sync.get(["askGeminiModel", "askGeminiThinkingLevel", "askGeminiTemplates"]);
 
-  if (askGeminiModel === "thinking") {
-    await chrome.storage.sync.set({ askGeminiModel: "pro", askGeminiThinkingLevel: "extended" });
-  } else if (!askGeminiThinkingLevel) {
-    await chrome.storage.sync.set({ askGeminiThinkingLevel: "standard" });
+  const level = resolveThinkingLevel(askGeminiThinkingLevel, askGeminiModel);
+  if (level !== askGeminiThinkingLevel) {
+    await chrome.storage.sync.set({ askGeminiThinkingLevel: level });
+  }
+  if (askGeminiModel !== undefined) {
+    await chrome.storage.sync.remove("askGeminiModel");
   }
 
-  // Remove the orphaned "thinking" template group so the options page doesn't
-  // show a ghost tab. Preserve any user-customised templates inside it by
-  // migrating them to the flash-lite group if flash-lite has none yet.
-  if (askGeminiTemplates?.thinking) {
-    const migrated = { ...askGeminiTemplates };
-    if (!migrated["flash-lite"] || migrated["flash-lite"].length === 0) {
-      migrated["flash-lite"] = migrated.thinking;
-    }
-    delete migrated.thinking;
-    await chrome.storage.sync.set({ askGeminiTemplates: migrated });
+  // Regroup templates per level. Groups with nothing stored are seeded with
+  // defaults by the options page / popup.
+  if (askGeminiTemplates && (Array.isArray(askGeminiTemplates) ||
+      Object.keys(askGeminiTemplates).some((k) => !THINKING_LEVELS.includes(k)))) {
+    await chrome.storage.sync.set({ askGeminiTemplates: migrateTemplateGroups(askGeminiTemplates) });
   }
 
   if (details.reason === "install") {
@@ -412,3 +462,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   }
   registerMenus();
 });
+
+if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
+  Object.assign(globalThis.__TEST__, { _restorePendingResult, PENDING_SINCE_KEY, RESULT_TIMEOUT_MS });
+}

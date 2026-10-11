@@ -165,7 +165,7 @@
         <div class="section-header">
           <div>
             <h1 class="section-title" data-i18n="options_templates_title">Templates</h1>
-            <p class="section-desc" data-i18n="options_templates_desc">Per-model prompt snippets — trigger them with <kbd class="inline-kbd">/</kbd> or the grid button in the popup. Each model has its own list.</p>
+            <p class="section-desc" data-i18n="options_templates_desc">Per-level prompt snippets — trigger them with <kbd class="inline-kbd">/</kbd> or the grid button in the popup. Each thinking level has its own list.</p>
           </div>
           <button class="btn-ghost" id="addTemplateBtn">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
@@ -176,16 +176,16 @@
           </button>
         </div>
 
-        <!-- Model tabs — labels filled by applyI18n() via data-i18n -->
-        <div class="tmpl-model-tabs" id="tmplModelTabs">
-          <button class="tmpl-model-tab" data-model="flash-lite">
-            <span data-i18n="model_label_flash_lite">Flash Lite</span> <span class="tmpl-tab-badge">0</span>
+        <!-- Thinking-level tabs — labels filled by applyI18n() via data-i18n -->
+        <div class="tmpl-model-tabs" id="tmplLevelTabs">
+          <button class="tmpl-model-tab" data-level="low">
+            <span data-i18n="thinking_level_low">Low</span> <span class="tmpl-tab-badge">0</span>
           </button>
-          <button class="tmpl-model-tab active" data-model="flash">
-            <span data-i18n="model_label_flash">Flash</span> <span class="tmpl-tab-badge">0</span>
+          <button class="tmpl-model-tab active" data-level="medium">
+            <span data-i18n="thinking_level_medium">Medium</span> <span class="tmpl-tab-badge">0</span>
           </button>
-          <button class="tmpl-model-tab" data-model="pro">
-            <span data-i18n="model_label_pro">Pro</span> <span class="tmpl-tab-badge">0</span>
+          <button class="tmpl-model-tab" data-level="high">
+            <span data-i18n="thinking_level_high">High</span> <span class="tmpl-tab-badge">0</span>
           </button>
         </div>
 
@@ -221,7 +221,7 @@
         <div class="section-header">
           <div>
             <h1 class="section-title" data-i18n="options_appearance_title">Appearance</h1>
-            <p class="section-desc" data-i18n="options_appearance_desc">Theme and model preferences, synced across popup and this page.</p>
+            <p class="section-desc" data-i18n="options_appearance_desc">Theme and thinking level preferences, synced across popup and this page.</p>
           </div>
         </div>
 
@@ -271,37 +271,18 @@
           <div class="pref-row">
             <div class="pref-info">
               <span class="pref-label">
-                <span data-i18n="options_model_label">Default Gemini model</span>
-                <span class="hint-wrap">
-                  <span class="hint-icon">?</span>
-                  <span class="hint-tooltip" data-i18n="options_model_hint"></span>
-                </span>
-              </span>
-              <span class="pref-sub" data-i18n="options_model_sub">Which model to target when sending a prompt from the popup</span>
-            </div>
-            <div class="seg-control" id="modelControl">
-              <button class="seg-btn" data-value="flash-lite" data-i18n="model_label_flash_lite">Flash Lite</button>
-              <button class="seg-btn" data-value="flash" data-i18n="model_label_flash">Flash</button>
-              <button class="seg-btn" data-value="pro" data-i18n="model_label_pro">Pro</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="pref-row">
-            <div class="pref-info">
-              <span class="pref-label">
                 <span data-i18n="options_thinking_level_label">Default thinking level</span>
                 <span class="hint-wrap">
                   <span class="hint-icon">?</span>
                   <span class="hint-tooltip" data-i18n="options_thinking_level_hint"></span>
                 </span>
               </span>
-              <span class="pref-sub" data-i18n="options_thinking_level_sub">Standard uses normal reasoning; Extended enables deeper, slower thinking</span>
+              <span class="pref-sub" data-i18n="options_thinking_level_sub">How long Gemini thinks before answering</span>
             </div>
             <div class="seg-control" id="thinkingLevelControl">
-              <button class="seg-btn" data-value="standard" data-i18n="thinking_level_standard">Standard</button>
-              <button class="seg-btn" data-value="extended" data-i18n="thinking_level_extended">Extended</button>
+              <button class="seg-btn" data-value="low" data-i18n="thinking_level_low">Low</button>
+              <button class="seg-btn" data-value="medium" data-i18n="thinking_level_medium">Medium</button>
+              <button class="seg-btn" data-value="high" data-i18n="thinking_level_high">High</button>
             </div>
           </div>
         </div>

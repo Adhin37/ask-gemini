@@ -1,19 +1,21 @@
 // ── options.js ────────────────────────────────────────────────
-// Settings page: history, templates, appearance (theme + model),
+// Settings page: history, templates, appearance (theme + thinking level),
 // context menu actions, shortcut, about
 
 import {
   GEMINI_URL,
   DEFAULT_SUMMARIZE_PREFIX_KEY,
-  DEFAULT_TEMPLATE_KEYS_BY_MODEL,
+  DEFAULT_TEMPLATE_KEYS_BY_LEVEL,
   DEFAULT_PROMPT_RULES,
   PE_TEMPLATE_MAX,
   PE_ROLE_MAX,
   PE_VARIABLES,
   DEFAULT_PE_ROLE_KEY,
-  MODEL_IDS,
+  THINKING_LEVELS,
+  DEFAULT_THINKING_LEVEL,
 } from "../shared/constants.js";
-import { t, localizeModelName } from "../shared/stringUtils.js";
+import { t, localizeThinkingLevel } from "../shared/stringUtils.js";
+import { resolveThinkingLevel, migrateTemplateGroups } from "../shared/thinkingLevel.js";
 import { applyI18n } from "../shared/i18nDom.js";
 import { detectContext, expandVariables, migrateTemplateSyntax } from "../shared/promptEngine.js";
 
@@ -147,43 +149,21 @@ document.getElementById("themeControl")?.addEventListener("click", async (e) => 
 });
 
 // ══════════════════════════════════════════════════════════════════
-// 5. MODEL PREFERENCE
+// 5. THINKING LEVEL PREFERENCE
 // ══════════════════════════════════════════════════════════════════
 
-let currentModel = "flash";
-let currentThinkingLevel = "standard";
-
-/**
- * Sets the active model and updates the model segment control.
- * @param {"flash-lite"|"flash"|"pro"} model
- */
-function applyModel(model) {
-  currentModel = model || "flash";
-  document.querySelectorAll("#modelControl .seg-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.value === currentModel);
-  });
-}
+let currentThinkingLevel = DEFAULT_THINKING_LEVEL;
 
 /**
  * Sets the active thinking level and updates the thinking-level segment control.
- * @param {"standard"|"extended"} level
+ * @param {"low"|"medium"|"high"} level
  */
 function applyThinkingLevel(level) {
-  currentThinkingLevel = level || "standard";
+  currentThinkingLevel = level || DEFAULT_THINKING_LEVEL;
   document.querySelectorAll("#thinkingLevelControl .seg-btn").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.value === currentThinkingLevel);
   });
 }
-
-document.getElementById("modelControl")?.addEventListener("click", async (e) => {
-  const btn = e.target.closest(".seg-btn");
-  if (!btn) return;
-  const val = btn.dataset.value;
-  if (val === currentModel) return;
-  await chrome.storage.sync.set({ askGeminiModel: val });
-  applyModel(val);
-  showToast(t("options_toast_model_set", { model: localizeModelName(val) }));
-});
 
 document.getElementById("thinkingLevelControl")?.addEventListener("click", async (e) => {
   const btn = e.target.closest(".seg-btn");
@@ -192,6 +172,7 @@ document.getElementById("thinkingLevelControl")?.addEventListener("click", async
   if (val === currentThinkingLevel) return;
   await chrome.storage.sync.set({ askGeminiThinkingLevel: val });
   applyThinkingLevel(val);
+  showToast(t("options_toast_level_set", { level: localizeThinkingLevel(val) }));
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -398,10 +379,8 @@ historyEnabledToggle.addEventListener("change", async () => {
 });
 
 // ══════════════════════════════════════════════════════════════════
-// 7. TEMPLATES  (per-model)
+// 7. TEMPLATES  (per thinking level)
 // ══════════════════════════════════════════════════════════════════
-
-const TMPL_MODELS = MODEL_IDS;
 
 const addTemplateBtn    = document.getElementById("addTemplateBtn");
 const tmplFormCard      = document.getElementById("tmplFormCard");
@@ -416,78 +395,63 @@ const tmplDeleteOverlay = document.getElementById("tmplDeleteOverlay");
 const tmplDeleteBody    = document.getElementById("tmplDeleteBody");
 const tmplDeleteCancel  = document.getElementById("tmplDeleteCancel");
 const tmplDeleteConfirm = document.getElementById("tmplDeleteConfirm");
-const tmplModelTabs     = document.getElementById("tmplModelTabs");
+const tmplLevelTabs     = document.getElementById("tmplLevelTabs");
 
-let allTemplatesByModel = Object.fromEntries(MODEL_IDS.map((m) => [m, []]));
-let activeTemplateModel = "flash";
+let allTemplatesByLevel = Object.fromEntries(THINKING_LEVELS.map((l) => [l, []]));
+let activeTemplateLevel = DEFAULT_THINKING_LEVEL;
 let editingIndex        = -1;
 let pendingDeleteIndex  = -1;
 
 /**
- * Returns the template array for the currently active model tab.
+ * Returns the template array for the currently active level tab.
  * @returns {string[]}
  */
-function getActiveTemplates() { return allTemplatesByModel[activeTemplateModel] || []; }
+function getActiveTemplates() { return allTemplatesByLevel[activeTemplateLevel] || []; }
 
-/** Persists `allTemplatesByModel` to sync storage. */
+/** Persists `allTemplatesByLevel` to sync storage. */
 async function saveTemplates() {
-  await chrome.storage.sync.set({ askGeminiTemplates: allTemplatesByModel });
+  await chrome.storage.sync.set({ askGeminiTemplates: allTemplatesByLevel });
 }
 
-/** Loads per-model templates from sync storage, migrating legacy flat arrays if needed. */
+/**
+ * Loads per-level templates from sync storage, regrouping pre-Auto per-model
+ * (or flat) templates and seeding missing levels with defaults.
+ */
 async function loadTemplates() {
-  const { askGeminiTemplates, askGeminiModel } = await chrome.storage.sync.get(["askGeminiTemplates", "askGeminiModel"]);
+  const { askGeminiTemplates, askGeminiThinkingLevel, askGeminiModel } =
+    await chrome.storage.sync.get(["askGeminiTemplates", "askGeminiThinkingLevel", "askGeminiModel"]);
 
-  // Default active tab to current model pref
-  if (askGeminiModel && TMPL_MODELS.includes(askGeminiModel)) {
-    activeTemplateModel = askGeminiModel;
-  }
+  // Default active tab to the current thinking level pref
+  activeTemplateLevel = resolveThinkingLevel(askGeminiThinkingLevel, askGeminiModel);
 
-  const _defaultTplFlashLite = DEFAULT_TEMPLATE_KEYS_BY_MODEL["flash-lite"].map(k => t(k));
-  const _defaultTplFlash     = DEFAULT_TEMPLATE_KEYS_BY_MODEL.flash.map(k => t(k));
-  const _defaultTplPro       = DEFAULT_TEMPLATE_KEYS_BY_MODEL.pro.map(k => t(k));
+  const groups = migrateTemplateGroups(askGeminiTemplates);
+  allTemplatesByLevel = Object.fromEntries(THINKING_LEVELS.map((level) => [
+    level,
+    groups[level] ?? DEFAULT_TEMPLATE_KEYS_BY_LEVEL[level].map(k => t(k)),
+  ]));
 
-  if (!askGeminiTemplates) {
-    // First run — seed all models with defaults
-    allTemplatesByModel = {
-      "flash-lite": [..._defaultTplFlashLite],
-      flash:        [..._defaultTplFlash],
-      pro:          [..._defaultTplPro],
-    };
-    await saveTemplates();
-  } else if (Array.isArray(askGeminiTemplates)) {
-    // Migration: old flat array → assign to flash, seed others
-    allTemplatesByModel = {
-      "flash-lite": [..._defaultTplFlashLite],
-      flash:        askGeminiTemplates,
-      pro:          [..._defaultTplPro],
-    };
-    await saveTemplates();
-  } else {
-    // Normal load — ensure all model keys exist; migrate away from legacy "thinking" key
-    const legacyThinking = askGeminiTemplates.thinking;
-    allTemplatesByModel = {
-      "flash-lite": askGeminiTemplates["flash-lite"] ?? (legacyThinking ?? [..._defaultTplFlashLite]),
-      flash:        askGeminiTemplates.flash          ?? [..._defaultTplFlash],
-      pro:          askGeminiTemplates.pro            ?? [..._defaultTplPro],
-    };
-  }
+  // Persist on first run and after regrouping older shapes.
+  const stored = askGeminiTemplates;
+  const isCurrentShape = stored && !Array.isArray(stored) &&
+    THINKING_LEVELS.every((l) => Array.isArray(stored[l])) &&
+    Object.keys(stored).every((k) => THINKING_LEVELS.includes(k));
+  if (!isCurrentShape) await saveTemplates();
 
-  renderModelTabs();
+  renderLevelTabs();
   renderTemplates();
 }
 
-/** Updates model tab active states and badge counts. */
-function renderModelTabs() {
-  tmplModelTabs.querySelectorAll(".tmpl-model-tab").forEach(btn => {
-    const model = btn.dataset.model;
-    btn.classList.toggle("active", model === activeTemplateModel);
+/** Updates level tab active states and badge counts. */
+function renderLevelTabs() {
+  tmplLevelTabs.querySelectorAll(".tmpl-model-tab").forEach(btn => {
+    const level = btn.dataset.level;
+    btn.classList.toggle("active", level === activeTemplateLevel);
     const badge = btn.querySelector(".tmpl-tab-badge");
-    if (badge) badge.textContent = (allTemplatesByModel[model] || []).length;
+    if (badge) badge.textContent = (allTemplatesByLevel[level] || []).length;
   });
 }
 
-/** Re-renders the template card list for the active model. */
+/** Re-renders the template card list for the active level. */
 function renderTemplates() {
   tmplCardList.replaceChildren();
   const templates = getActiveTemplates();
@@ -539,9 +503,9 @@ function renderTemplates() {
 }
 
 // Tab switching
-tmplModelTabs.addEventListener("click", (e) => {
+tmplLevelTabs.addEventListener("click", (e) => {
   const btn = e.target.closest(".tmpl-model-tab");
-  if (!btn || btn.dataset.model === activeTemplateModel) return;
+  if (!btn || btn.dataset.level === activeTemplateLevel) return;
 
   // Close form if open
   if (tmplFormCard.style.display !== "none") {
@@ -550,14 +514,14 @@ tmplModelTabs.addEventListener("click", (e) => {
     editingIndex = -1;
   }
 
-  activeTemplateModel = btn.dataset.model;
-  renderModelTabs();
+  activeTemplateLevel = btn.dataset.level;
+  renderLevelTabs();
   renderTemplates();
 });
 
 addTemplateBtn.addEventListener("click", () => {
   editingIndex = -1;
-  tmplFormLabel.textContent = t("options_tmpl_form_new", { model: localizeModelName(activeTemplateModel) });
+  tmplFormLabel.textContent = t("options_tmpl_form_new", { level: localizeThinkingLevel(activeTemplateLevel) });
   tmplTextarea.value = "";
   tmplSaveBtn.disabled = true;
   updateCharCount();
@@ -572,7 +536,7 @@ addTemplateBtn.addEventListener("click", () => {
  */
 function openEditForm(idx) {
   editingIndex = idx;
-  tmplFormLabel.textContent = t("options_tmpl_form_edit", { n: idx + 1, model: localizeModelName(activeTemplateModel) });
+  tmplFormLabel.textContent = t("options_tmpl_form_edit", { n: idx + 1, level: localizeThinkingLevel(activeTemplateLevel) });
   tmplTextarea.value = getActiveTemplates()[idx];
   updateCharCount();
   tmplSaveBtn.disabled = tmplTextarea.value.trim().length === 0;
@@ -611,14 +575,14 @@ tmplSaveBtn.addEventListener("click", async () => {
   } else {
     templates.push(val);
   }
-  allTemplatesByModel[activeTemplateModel] = templates;
+  allTemplatesByLevel[activeTemplateLevel] = templates;
 
   await saveTemplates();
   tmplFormCard.style.display = "none";
   tmplTextarea.value = "";
   const wasEditing = editingIndex >= 0;
   editingIndex = -1;
-  renderModelTabs();
+  renderLevelTabs();
   renderTemplates();
   showToast(wasEditing ? t("options_toast_tmpl_updated") : t("options_toast_tmpl_saved"));
 });
@@ -650,11 +614,11 @@ tmplDeleteConfirm.addEventListener("click", async () => {
   if (pendingDeleteIndex < 0) return;
   const templates = getActiveTemplates();
   templates.splice(pendingDeleteIndex, 1);
-  allTemplatesByModel[activeTemplateModel] = templates;
+  allTemplatesByLevel[activeTemplateLevel] = templates;
   await saveTemplates();
   tmplDeleteOverlay.classList.remove("visible");
   pendingDeleteIndex = -1;
-  renderModelTabs();
+  renderLevelTabs();
   renderTemplates();
   showToast(t("options_toast_tmpl_deleted"));
 });
@@ -1343,10 +1307,9 @@ function showToast(msg) {
   document.querySelectorAll(".hint-tooltip").forEach((el) => {
     el.textContent = el.textContent.replace(/([.!?]) /g, "$1\n");
   });
-  const data = await chrome.storage.sync.get(["askGeminiTheme", "askGeminiModel", "askGeminiThinkingLevel"]);
+  const data = await chrome.storage.sync.get(["askGeminiTheme", "askGeminiThinkingLevel", "askGeminiModel"]);
   applyTheme(data.askGeminiTheme || "auto");
-  applyModel(data.askGeminiModel || "flash");
-  applyThinkingLevel(data.askGeminiThinkingLevel || "standard");
+  applyThinkingLevel(resolveThinkingLevel(data.askGeminiThinkingLevel, data.askGeminiModel));
   await loadShortcut();
   await loadHistory();
   await loadHistoryEnabled();
@@ -1380,10 +1343,10 @@ if (typeof globalThis !== "undefined" && globalThis.__TEST__) {
     renderHistory, renderTemplates, loadHistory, loadTemplates, loadContextMenuSettings, loadPromptEngSettings,
     updateCharCount, updateSummarizePrefixCharCount,
     _setAllHistory:          (h) => { allHistory          = h; },
-    _setAllTemplatesByModel: (t) => { allTemplatesByModel = t; },
-    _setAllTemplates:        (t) => { allTemplatesByModel = t; },
-    _setActiveTemplateModel: (m) => { activeTemplateModel = m; },
+    _setAllTemplatesByLevel: (t) => { allTemplatesByLevel = t; },
+    _setAllTemplates:        (t) => { allTemplatesByLevel = t; },
+    _setActiveTemplateLevel: (l) => { activeTemplateLevel = l; },
     _setCurrentTheme:        (v) => { currentTheme        = v; },
-    _setCurrentModel:        (v) => { currentModel        = v; },
+    _setCurrentThinkingLevel: (v) => { currentThinkingLevel = v; },
   });
 }

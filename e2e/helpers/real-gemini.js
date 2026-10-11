@@ -7,8 +7,7 @@
  * Uses the default e2e/.chrome-profile, which is normally signed out. Signed-out
  * Gemini (verified October 2026) only enables Flash-Lite with standard thinking
  * and disables every file-upload entry point ("Sign in to try tools"). Real-Gemini
- * tests therefore send with FREE_MODEL; Flash / Pro / Extended thinking live in
- * the *-mock specs. Image-upload tests skip via skipIfUploadsUnavailable() unless
+ * tests therefore send with E2E_LEVEL. Image-upload tests skip via skipIfUploadsUnavailable() unless
  * the profile is signed in (sign in once interactively, or point CHROME_PROFILE
  * at a signed-in profile).
  */
@@ -17,8 +16,12 @@ import { test, expect } from "@playwright/test";
 import { openPopupWindow, configurePopup } from "./open-popup.js";
 import { buildImageDataTransfer, dropImageOnPopup } from "./images.js";
 
-/** The only model a signed-out Gemini session can use. */
-export const FREE_MODEL = "flash-lite";
+/**
+ * Thinking level the real-Gemini specs send with. A signed-out session has no
+ * level rows (models only, Flash-Lite enabled), so content.js skips it; a
+ * signed-in session gets Low, the cheapest level.
+ */
+export const E2E_LEVEL = "low";
 
 /**
  * Primary model button selector.
@@ -236,7 +239,7 @@ export async function sendViaPopup(context, popup) {
 /**
  * Full popup → Gemini image upload pipeline:
  *   1. Closes existing Gemini tabs so popup uses chrome.tabs.create.
- *   2. Opens the extension popup and selects FREE_MODEL / standard thinking.
+ *   2. Opens the extension popup and selects E2E_LEVEL.
  *   3. Builds a canvas-generated image and drops it; waits for the file chip.
  *   4. Fills the message text.
  *   5. Clicks Send and captures the new Gemini tab.
@@ -252,7 +255,7 @@ export async function sendImageViaPopup(context, extensionId, { mimeType, filena
   await closeGeminiTabs(context);
 
   const popup = await openPopupWindow(context, extensionId);
-  await configurePopup(popup, { model: FREE_MODEL });
+  await configurePopup(popup, { level: E2E_LEVEL });
 
   const dt = await buildImageDataTransfer(popup, mimeType, filename);
   await dropImageOnPopup(popup, dt);

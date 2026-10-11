@@ -169,93 +169,32 @@
     .send-button:not([disabled]) .icon-send { display: flex; }
     .send-button:not([disabled]) .icon-mic  { display: none; }
 
-    /* ── Model menu panel ─────────────────────────────────────────────
-       Mirrors Angular Material's .mat-mdc-menu-panel overlay.
-       Appended to <body> when open, removed when closed.
-       content.js detects closure via: !document.querySelector("button.mat-mdc-menu-item") */
-    .mat-mdc-menu-panel {
+    /* ── Mode picker (verified October 2026) ─────────────────────────
+       Mirrors the real <gem-menu data-test-id="gem-mode-menu"> overlay:
+       appended to <body> when open, removed when closed. */
+    gem-menu {
+      display: block; padding: 6px 0;
       background: #2d2d31; border-radius: 16px;
-      min-width: 260px; overflow: hidden;
+      min-width: 220px; overflow: hidden;
       box-shadow: 0 8px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08);
       z-index: 1000;
     }
-
-    .mat-mdc-menu-group-label {
-      padding: 12px 16px 6px;
-      font-size: 11px; font-weight: 600;
-      color: var(--text-dim); letter-spacing: 0.3px; text-transform: none;
+    gem-menu-item { display: block; cursor: pointer; }
+    gem-menu-item:hover { background: rgba(255,255,255,0.07); }
+    gem-menu-item[aria-disabled="true"] { opacity: 0.45; cursor: default; }
+    gem-menu-item-content {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 16px;
     }
-
-    /* Real Gemini uses button.mat-mdc-menu-item for each option */
-    .mat-mdc-menu-item {
-      display: flex; align-items: center; justify-content: space-between;
-      width: 100%; padding: 10px 16px;
-      background: transparent; border: none; color: var(--text);
-      cursor: pointer; text-align: left; gap: 12px;
-      font-family: "Google Sans", Roboto, sans-serif;
-      transition: background 0.12s;
+    .leading-container {
+      width: 18px; flex-shrink: 0; color: var(--text);
+      display: flex; align-items: center;
     }
-    .mat-mdc-menu-item:hover { background: rgba(255,255,255,0.07); }
-
-    .model-item-content { flex: 1; }
-    .model-item-title {
-      font-size: 14px; font-weight: 500; color: var(--text);
-      display: block;
-    }
-    .model-item-desc {
-      font-size: 11.5px; color: var(--text-dim); margin-top: 2px;
-      display: block;
-    }
-
-    /* Blue circle checkmark — shown only on selected option */
-    .model-item-check {
-      width: 20px; height: 20px; border-radius: 50%;
-      background: var(--accent);
-      display: none; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .model-item-check svg { display: block; }
-    .mat-mdc-menu-item[aria-selected="true"] .model-item-check { display: flex; }
-
-    /* Disabled (quota-locked) option — mirrors real Gemini's locked model appearance */
-    .mat-mdc-menu-item[disabled],
-    .mat-mdc-menu-item[aria-disabled="true"] {
-      opacity: 0.45;
-      cursor: default;
-    }
-    .mat-mdc-menu-item[disabled] .model-item-title,
-    .mat-mdc-menu-item[aria-disabled="true"] .model-item-title {
-      color: var(--text-dim);
-    }
-
-    /* Divider between the model rows and the Extended thinking row —
-       mirrors the real picker's flat checkmark list with a separator. */
-    .mat-mdc-menu-divider {
-      height: 1px; margin: 4px 0; border: none;
-      background: var(--border);
-    }
-
-    /* "New" badge shown next to the Flash row, matching the real picker */
-    .model-item-badge {
-      font-size: 10px; font-weight: 600; color: var(--accent);
-      border: 1px solid var(--accent); border-radius: 999px;
-      padding: 1px 7px; flex-shrink: 0;
-    }
-
-    /* Upgrade row at the bottom of the picker */
-    .model-upgrade-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 16px 12px; border-top: 1px solid var(--border);
-      gap: 12px;
-    }
-    .model-upgrade-title { font-size: 13px; font-weight: 500; color: var(--text); }
-    .model-upgrade-desc  { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
-    .upgrade-inline-btn {
-      background: transparent; border: 1px solid rgba(100,200,230,0.5);
-      color: #7dd3f7; padding: 4px 12px; border-radius: 12px;
-      font: 500 12px "Google Sans", sans-serif; cursor: pointer;
-      white-space: nowrap; flex-shrink: 0;
-    }
+    .label-container { flex: 1; display: flex; flex-direction: column; }
+    .label-container .label { font-size: 14px; color: var(--text); }
+    .label-container .sublabel { font-size: 12px; color: var(--text-dim); margin-top: 1px; }
+    mat-divider { display: block; height: 1px; margin: 4px 0; background: var(--border); }
+    .picker-secondary-text { color: var(--text-dim); margin-left: 4px; }
 
     /* ── Chips ── */
     .chips-row {
@@ -364,26 +303,21 @@
 
           <div class="controls-right">
             <!--
-              Model picker trigger.
-              Selectors used by content.js (in priority order):
-                1. button[data-test-id="bard-mode-menu-button"]  (primary)
-                2. button.input-area-switch                       (fallback)
-              Label read via: [data-test-id="logo-pill-label-container"] > span
-
-              Matches the real Gemini trigger (verified July 2026): no
-              secondary-text span any more — the pill shows one plain
-              `<span>` that reads either the current model's short name
-              ("Flash-Lite" / "Flash" / "Pro") or, when Extended thinking is
-              the active mode instead of a model, "Extended thinking".
+              Mode picker trigger. Matches the real Gemini trigger (verified
+              October 2026): signed in it always reads "Gemini Auto" — the
+              thinking level is only visible on the selected menu row. The
+              signed-out variant (__testSignedOut) reads "Flash-Lite".
             -->
             <button
               class="input-area-switch"
               data-test-id="bard-mode-menu-button"
-              aria-label="Open mode picker"
+              aria-label="Open mode picker, currently Gemini Auto"
+              aria-haspopup="true"
+              aria-expanded="false"
               id="modelTrigger"
             >
-              <div data-test-id="logo-pill-label-container" id="modelLabel">
-                <span class="picker-primary-text" id="modelName">Flash</span>
+              <div data-test-id="logo-pill-label-container" class="logo-pill-label-container" id="modelLabel">
+                <span class="picker-primary-text" id="modelName">Gemini</span><span class="picker-secondary-text" id="modelSub">Auto</span>
               </div>
               <!-- Chevron -->
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -415,87 +349,46 @@
 </div><!-- .shell -->
 
 <!--
-  Model picker dropdown panel.
-  Mirrors Angular Material's .mat-mdc-menu-panel overlay:
-  - detached from DOM when closed (so document.querySelector("button.mat-mdc-menu-item") → null)
-  - appended to <body> when open
-  This lets content.js reliably detect that the dropdown closed via:
-    !OPTION_SELECTORS.some(s => document.querySelector(s))
+  Mode picker overlay, copied from the real Gemini DOM (verified October 2026):
+  one model row ("Auto", carries data-mode-id) then the Low / Medium / High
+  thinking-level rows (no data-mode-id). The selected rows carry the
+  "selected" class and a check icon. Detached from the DOM when closed, so
+  content.js sees the rows disappear. Like the real menu, it closes on an
+  Escape dispatched on the menu itself, not on document.
+  The rows are rebuilt by the script below (renderMenu), this markup is the
+  signed-in default.
 -->
-<div class="mat-mdc-menu-panel" id="modelMenu" role="menu" aria-label="Select model">
-
-  <!-- Group label — matches real Gemini's model group header -->
-  <div class="mat-mdc-menu-group-label" aria-hidden="true">Gemini</div>
-
-  <!--
-    Model options: button.mat-mdc-menu-item[role="menuitem"]
-    content.js OPTION_SELECTORS[0] = "button.mat-mdc-menu-item"
-    matchesTarget() uses opt.innerText.split('\n')[0] for the title line.
-    Block <span> elements produce the newline that separates title from description.
-    Order: Flash-Lite → Flash → Pro → (divider) → Extended thinking
-    (matches real Gemini's picker, verified July 2026 — titles/descriptions
-    are the real menu-item copy; the trigger's own label omits the version
-    prefix, see #modelName below).
-  -->
-  <button class="mat-mdc-menu-item" role="menuitem" aria-selected="false" data-model="flash-lite" id="opt-flash-lite">
-    <div class="model-item-content">
-      <span class="model-item-title">3.5 Flash-Lite</span>
-      <span class="model-item-desc">Fastest answers</span>
-    </div>
-    <span class="model-item-check" aria-hidden="true">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </span>
-  </button>
-
-  <button class="mat-mdc-menu-item" role="menuitem" aria-selected="true" data-model="flash" id="opt-flash">
-    <div class="model-item-content">
-      <span class="model-item-title">3.6 Flash</span>
-      <span class="model-item-desc">All-around help</span>
-    </div>
-    <span class="model-item-badge">New</span>
-    <span class="model-item-check" aria-hidden="true">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </span>
-  </button>
-
-  <button class="mat-mdc-menu-item" role="menuitem" aria-selected="false" data-model="pro" id="opt-pro">
-    <div class="model-item-content">
-      <span class="model-item-title">3.1 Pro</span>
-      <span class="model-item-desc">Advanced math &amp; code</span>
-    </div>
-    <span class="model-item-check" aria-hidden="true">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </span>
-  </button>
-
-  <hr class="mat-mdc-menu-divider" aria-hidden="true" />
-
-  <!--
-    Extended thinking — a sibling row in the same checkmark list, mutually
-    exclusive with the three models above (selecting it clears every model's
-    checkmark and vice versa). Uses data-mode instead of data-model so the
-    click handler and classifyOption's structural guards can tell it apart.
-  -->
-  <button class="mat-mdc-menu-item" role="menuitem" aria-selected="false" data-mode="extended" id="opt-extended-thinking">
-    <div class="model-item-content">
-      <span class="model-item-title">Extended thinking</span>
-      <span class="model-item-desc">Complex problem solving</span>
-    </div>
-    <span class="model-item-check" aria-hidden="true">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </span>
-  </button>
-
-  <!-- Upgrade row — matches the "Google AI Plus" entry in the real picker -->
-  <div class="model-upgrade-row">
-    <div>
-      <div class="model-upgrade-title">Google AI Plus</div>
-      <div class="model-upgrade-desc">Get more access to models and features</div>
-    </div>
-    <button class="upgrade-inline-btn">Upgrade</button>
-  </div>
-
-</div><!-- #modelMenu (detached from DOM; appended to body on open) -->
+<gem-menu role="menu" data-test-id="gem-mode-menu" id="modelMenu" tabindex="-1">
+  <gem-menu-item role="menuitem" data-mode-id="cf41b0e0dd7d53e5" data-test-id="bard-mode-option-cf41b0e0dd7d53e5" aria-disabled="false" class="selected">
+    <gem-menu-item-content class="checkmark-only">
+      <div class="leading-container"><gem-icon aria-label="Selected"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></gem-icon></div>
+      <div class="label-container"><span class="label"> Auto </span><div class="sublabel">Gemini 3 models</div></div>
+      <div class="trailing-container"></div>
+    </gem-menu-item-content>
+  </gem-menu-item>
+  <mat-divider role="separator"></mat-divider>
+  <gem-menu-item role="menuitem" aria-disabled="false" class="selected">
+    <gem-menu-item-content class="checkmark-only">
+      <div class="leading-container"><gem-icon aria-label="Selected"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></gem-icon></div>
+      <div class="label-container"><span class="label"> Low </span><div class="sublabel">Quick and efficient</div></div>
+      <div class="trailing-container"></div>
+    </gem-menu-item-content>
+  </gem-menu-item>
+  <gem-menu-item role="menuitem" aria-disabled="false">
+    <gem-menu-item-content class="checkmark-only">
+      <div class="leading-container"></div>
+      <div class="label-container"><span class="label"> Medium </span><div class="sublabel">Balanced depth</div></div>
+      <div class="trailing-container"></div>
+    </gem-menu-item-content>
+  </gem-menu-item>
+  <gem-menu-item role="menuitem" aria-disabled="false">
+    <gem-menu-item-content class="checkmark-only">
+      <div class="leading-container"></div>
+      <div class="label-container"><span class="label"> High </span><div class="sublabel">Extra thorough</div></div>
+      <div class="trailing-container"></div>
+    </gem-menu-item-content>
+  </gem-menu-item>
+</gem-menu>
 
 <script>
   const editor       = document.querySelector(".ql-editor");
@@ -507,22 +400,97 @@
   const modelMenu    = document.getElementById("modelMenu");
   const modelName    = document.getElementById("modelName");
 
-  // ── Model picker ──────────────────────────────────────────────────
+  // ── Mode picker ────────────────────────────────────────────────
   //
-  // Angular Material overlays work by appending the panel to <body> on open
-  // and removing it on close.  content.js detects the "closed" state with:
-  //   !OPTION_SELECTORS.some(s => document.querySelector(s))
-  // where OPTION_SELECTORS[0] = "button.mat-mdc-menu-item".
-  // So we MUST detach the panel from DOM when it is not visible.
+  // Signed in (default): Auto + Low / Medium / High, Low selected (Gemini's
+  // default). Test hooks, set via Playwright addInitScript() before any inline
+  // script runs:
+  //   __testInitialLevel = "low" | "medium" | "high"  — level selected on load
+  //   __testLockedLevels = "high,medium"              — rows rendered aria-disabled
+  //   __testSignedOut    = "true"                     — signed-out picker: models
+  //                        only (Flash-Lite enabled, Flash / Pro disabled, plus
+  //                        the "Sign in" row), no level rows
   //
-  // IMPORTANT: event listeners must be attached to the modelMenu element
-  // directly (via delegation) BEFORE detaching from the DOM.
-  // document.querySelectorAll() won't find detached elements, so direct
-  // forEach on option buttons won't work after detachment.
+  // The active level is mirrored on <html data-mock-level> so tests can assert
+  // it without opening the picker (the real trigger never shows the level).
+  const LEVELS = [
+    { id: "low",    label: "Low",    sub: "Quick and efficient" },
+    { id: "medium", label: "Medium", sub: "Balanced depth" },
+    { id: "high",   label: "High",   sub: "Extra thorough" },
+  ];
+  const AUTO_MODE_ID = "cf41b0e0dd7d53e5";
+  const CHECK_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+  const signedOut    = sessionStorage.getItem("__testSignedOut") === "true";
+  const lockedLevels = new Set((sessionStorage.getItem("__testLockedLevels") || "").split(",").map(s => s.trim()).filter(Boolean));
+  let activeLevel    = LEVELS.some(l => l.id === sessionStorage.getItem("__testInitialLevel"))
+    ? sessionStorage.getItem("__testInitialLevel")
+    : "low";
   let menuOpen = false;
 
+  /** Builds one <gem-menu-item> row with the real markup. */
+  function makeRow({ label, sub, selected = false, disabled = false, attrs = {} }) {
+    const row = document.createElement("gem-menu-item");
+    row.setAttribute("role", "menuitem");
+    row.setAttribute("aria-disabled", String(disabled));
+    for (const [k, v] of Object.entries(attrs)) row.setAttribute(k, v);
+    if (selected) row.classList.add("selected");
+    const content = document.createElement("gem-menu-item-content");
+    content.className = "checkmark-only";
+    const lead = document.createElement("div");
+    lead.className = "leading-container";
+    if (selected) lead.innerHTML = `<gem-icon aria-label="Selected">${CHECK_SVG}</gem-icon>`;
+    const labels = document.createElement("div");
+    labels.className = "label-container";
+    const l = document.createElement("span");
+    l.className = "label";
+    l.textContent = ` ${label} `;
+    const s = document.createElement("div");
+    s.className = "sublabel";
+    s.textContent = sub;
+    labels.append(l, s);
+    const trail = document.createElement("div");
+    trail.className = "trailing-container";
+    content.append(lead, labels, trail);
+    row.append(content);
+    return row;
+  }
+
+  /** Re-renders the menu rows from the current state. */
+  function renderMenu() {
+    modelMenu.replaceChildren();
+    if (signedOut) {
+      modelMenu.append(
+        makeRow({ label: "3.5 Flash-Lite", sub: "Fastest answers", selected: true,
+          attrs: { "data-mode-id": AUTO_MODE_ID, "data-test-id": `bard-mode-option-${AUTO_MODE_ID}` } }),
+        makeRow({ label: "3.6 Flash", sub: "All-around help", disabled: true,
+          attrs: { "data-mode-id": "", "data-test-id": "bard-mode-option-" } }),
+        makeRow({ label: "3.1 Pro", sub: "Advanced reasoning", disabled: true,
+          attrs: { "data-mode-id": "", "data-test-id": "bard-mode-option-" } }),
+        makeRow({ label: "Sign in for all models", sub: "Try the latest Flash",
+          attrs: { "data-test-id": "mode-picker-sign-in-button" } }),
+      );
+      return;
+    }
+    modelMenu.append(
+      makeRow({ label: "Auto", sub: "Gemini 3 models", selected: true,
+        attrs: { "data-mode-id": AUTO_MODE_ID, "data-test-id": `bard-mode-option-${AUTO_MODE_ID}` } }),
+      Object.assign(document.createElement("mat-divider"), { role: "separator" }),
+      ...LEVELS.map(({ id, label, sub }) => {
+        const row = makeRow({ label, sub, selected: id === activeLevel, disabled: lockedLevels.has(id) });
+        row.dataset.mockLevel = id; // test-only, content.js never reads it
+        return row;
+      }),
+    );
+  }
+
+  /** Mirrors the active level on <html> for test assertions. */
+  function publishLevel() {
+    document.documentElement.dataset.mockLevel = signedOut ? "" : activeLevel;
+  }
+
   function positionAndOpen() {
+    renderMenu();
     const rect = modelTrigger.getBoundingClientRect();
     Object.assign(modelMenu.style, {
       position: "fixed",
@@ -530,97 +498,45 @@
       bottom:   Math.max(0, window.innerHeight - rect.top + 6) + "px",
     });
     document.body.appendChild(modelMenu);
+    modelTrigger.setAttribute("aria-expanded", "true");
     menuOpen = true;
   }
 
   function closeMenu() {
     if (modelMenu.parentNode) modelMenu.parentNode.removeChild(modelMenu);
+    modelTrigger.setAttribute("aria-expanded", "false");
     menuOpen = false;
   }
 
-  // All checkmark rows in the list — the three models plus the mutually
-  // exclusive "Extended thinking" row (data-mode instead of data-model).
-  const ALL_OPTIONS_SEL = ".mat-mdc-menu-item[data-model], .mat-mdc-menu-item[data-mode]";
-  const MODEL_LABELS = { "flash-lite": "Flash-Lite", flash: "Flash", pro: "Pro" };
-
-  /**
-   * Returns the canonical id this row represents: a model id, or "extended"
-   * for the Extended thinking row.
-   */
-  function optionId(o) {
-    return o.dataset.model || o.dataset.mode;
-  }
-
-  // Use event delegation on modelMenu — listener stays attached even when the
-  // element is detached from document (Angular Material does the same).
+  // Delegated listeners on the menu itself stay attached while it is detached.
   modelMenu.addEventListener("click", (e) => {
     e.stopPropagation();
-    const opt = e.target.closest(ALL_OPTIONS_SEL);
-    if (!opt) return; // click on non-option (e.g. upgrade row)
-    if (opt.hasAttribute("disabled") || opt.getAttribute("aria-disabled") === "true") return;
-
-    const id = optionId(opt);
-
-    // Update aria-selected on every row (models and Extended thinking are
-    // mutually exclusive, so selecting one clears the other's checkmark) —
-    // querySelectorAll on the detached element itself works fine since we're
-    // querying within modelMenu.
-    modelMenu.querySelectorAll(ALL_OPTIONS_SEL).forEach(o => {
-      o.setAttribute("aria-selected", o === opt ? "true" : "false");
-    });
-
+    const row = e.target.closest("gem-menu-item");
+    if (!row || row.getAttribute("aria-disabled") === "true") return;
+    if (row.dataset.mockLevel) {
+      activeLevel = row.dataset.mockLevel;
+      // Simulate Angular's async change detection
+      setTimeout(publishLevel, 250);
+    }
     closeMenu();
-
-    // Simulate Angular's async change-detection cycle —
-    // the trigger label updates after a short delay, exactly as on the real page.
-    setTimeout(() => {
-      modelName.textContent = id === "extended" ? "Extended thinking" : (MODEL_LABELS[id] || "Flash");
-    }, 250);
   });
 
-  // Test hook: read the desired initial model from sessionStorage before
-  // attaching the detach/reattach overlay logic.
-  // Tests set this via Playwright's addInitScript(), which runs before any
-  // inline page script. The real Gemini retains model selection server-side
-  // across sessions; this simulates that without changing the URL.
-  (function applyTestInitialModel() {
-    const m = sessionStorage.getItem("__testInitialModel");
-    if (!m || m === "flash") return;
-    if (!MODEL_LABELS[m]) return;
-    modelName.textContent = MODEL_LABELS[m];
-    // modelMenu is still in DOM here (detach happens below)
-    modelMenu.querySelectorAll(ALL_OPTIONS_SEL).forEach(o => {
-      o.setAttribute("aria-selected", optionId(o) === m ? "true" : "false");
-    });
-  })();
+  // Real gem-menu: Escape only works when dispatched on the menu element.
+  modelMenu.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+  });
 
-  // Test hook: mark specific options as disabled (quota / sign-in simulation).
-  // Tests set "__testLockedModels" to a comma-separated list of ids, e.g.
-  // "pro,extended" — "extended" locks the Extended thinking row, any model id
-  // locks that model. Mirrors the real Gemini DOM: disabled="true"
-  // aria-disabled="true" on the button element.
-  (function applyTestLockedModels() {
-    const raw = sessionStorage.getItem("__testLockedModels");
-    if (!raw) return;
-    const locked = new Set(raw.split(",").map(s => s.trim()));
-    modelMenu.querySelectorAll(ALL_OPTIONS_SEL).forEach(o => {
-      if (locked.has(optionId(o))) {
-        o.setAttribute("disabled", "true");
-        o.setAttribute("aria-disabled", "true");
-      }
-    });
-  })();
-
-  // Detach AFTER attaching the delegated listener — menu starts closed.
-  modelMenu.parentNode.removeChild(modelMenu);
+  if (signedOut) {
+    modelName.textContent = "Flash-Lite";
+    document.getElementById("modelSub").remove();
+    modelTrigger.setAttribute("aria-label", "Open mode picker, currently Flash-Lite");
+  }
+  publishLevel();
+  closeMenu(); // menu starts detached
 
   modelTrigger.addEventListener("click", (e) => {
     e.stopPropagation();
     menuOpen ? closeMenu() : positionAndOpen();
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && menuOpen) closeMenu();
   });
 
   // Close on outside click (stopPropagation inside modelMenu prevents false close)

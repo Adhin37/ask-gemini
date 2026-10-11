@@ -5,7 +5,7 @@
 [![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-1.3.1-yellow?style=flat-square&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/ask-gemini/fjjilejcmcominckkkfboobnaplbkdfd?authuser=0&hl=en-GB)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-support_me-FF5E5B?style=flat-square&logo=kofi&logoColor=white)](https://ko-fi.com/adhin/tip)
 
-Instantly send questions to Google Gemini right from your browser toolbar, a keyboard shortcut or the right-click menu — with model choice, image attachments and reusable prompt templates.
+Instantly send questions to Google Gemini right from your browser toolbar, a keyboard shortcut or the right-click menu — with a thinking-level choice, image attachments and reusable prompt templates.
 
 ![Promo banner](src/assets/ask-gemini-marquee-1400x560.png)
 
@@ -18,9 +18,9 @@ Instantly send questions to Google Gemini right from your browser toolbar, a key
 | **Left-click** the extension icon (or **Ctrl+Shift+L** / **Cmd+Shift+L**) | Opens the popup — type your question, press **Enter** or click **Ask** |
 | **Right-click** the extension icon or a page | Context menu → *Open Gemini* (goes directly, no popup) |
 | **Right-click selected text** on any page | *Ask Gemini: "…"* — opens Gemini pre-filled with your selection |
-| **Model switcher** in the popup | Choose Flash-Lite, Flash or Pro, plus a Standard / Extended thinking level |
+| **Thinking level** in the popup | Choose Low, Medium or High thinking (Gemini Auto picks the model) |
 | **Attach images** (button or drag & drop) | Images are uploaded to Gemini together with your question |
-| **Templates** | Insert reusable prompts per model; manage them in Settings |
+| **Templates** | Insert reusable prompts per thinking level; manage them in Settings |
 | **Settings page** | Prompt history, templates, appearance, context-menu behaviour, Prompt Engineering rules (variables like `{{selection}}`, `{{url}}`, `{{domain}}`, `{{title}}`, `{{lang}}`, `{{length}}`) and keyboard shortcut |
 | **Ko-fi button** | Support the developer at ko-fi.com/adhin/tip |
 
@@ -45,9 +45,9 @@ The interface is available in English, German, Spanish, French and Simplified Ch
 
 ## How the message injection works
 
-1. Your question (and any attached images) is saved to `chrome.storage.local` along with your selected model and thinking level.
+1. Your question (and any attached images) is saved to `chrome.storage.local` along with your selected thinking level.
 2. Gemini opens (or an existing tab refreshes to a fresh session).
-3. The content script (`content.js`) runs on `gemini.google.com`, reads the stored message and model, optionally switches the Gemini model and thinking level, uploads attached images, then injects the message into Gemini's input field and fires a submit event.
+3. The content script (`content.js`) runs on `gemini.google.com`, reads the stored message and thinking level, selects that level (Low / Medium / High) in Gemini's mode picker (the model itself stays on Gemini Auto), uploads attached images, then injects the message into Gemini's input field and fires a submit event.
 
 ```mermaid
 sequenceDiagram
@@ -58,15 +58,15 @@ sequenceDiagram
     participant Tab as gemini.google.com
     participant CS as content.js
 
-    User->>Entry: Question (+ images, model, thinking level)
-    Entry->>Storage: Save pendingMessage, pendingModel, pendingThinkingLevel, pendingFiles
+    User->>Entry: Question (+ images, thinking level)
+    Entry->>Storage: Save pendingMessage, pendingThinkingLevel, pendingFiles
     Entry->>Tab: Open or refresh Gemini tab
     opt Redirected to consent.google.com
         BG->>Tab: Auto-accept consent
     end
     Tab->>CS: Inject at document_idle
     CS->>Storage: Read pending data
-    CS->>Tab: Switch model / thinking level
+    CS->>Tab: Select thinking level
     CS->>Tab: Upload images
     CS->>Tab: Inject message and submit
     CS-->>BG: injectionResult
@@ -131,10 +131,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 | Permission | Why |
 |---|---|
-| `storage` | Stores your question and model preference to pass them to the Gemini tab, and persists settings across browser restarts |
+| `storage` | Stores your question and thinking-level preference to pass them to the Gemini tab, and persists settings across browser restarts |
 | `contextMenus` | Adds the right-click "Open Gemini" / "Ask Gemini" menu items |
-| `tabs` | Opens / focuses the Gemini tab |
 | `scripting` | Reads the selected text on the current page to auto-fill the popup |
-| `activeTab` | Required alongside `scripting` for selected-text access |
+| `activeTab` | Grants temporary access to the current page when you click the toolbar icon, use the shortcut or the context menu - used to read the selected text and page title |
 | `host_permissions: gemini.google.com` | Allows the content script to run on Gemini |
 | `host_permissions: consent.google.com` | Lets the extension continue past Google's cookie-consent redirect when sending a question |

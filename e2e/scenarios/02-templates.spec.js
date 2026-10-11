@@ -1,8 +1,8 @@
 /**
  * Scenario 02 — Templates and autocomplete (real Gemini)
  *
- * Uses the default e2e/.chrome-profile. Sends with FREE_MODEL (Flash-Lite), so
- * the templates exercised are the Flash-Lite defaults ("Quick answer: ",
+ * Uses the default e2e/.chrome-profile. Sends with E2E_LEVEL (Low), so
+ * the templates exercised are the Low-level defaults ("Quick answer: ",
  * "TL;DR: ", "Define: "). The Gemini step skips gracefully via skipIfNotReady()
  * when Gemini is unreachable.
  *
@@ -15,7 +15,7 @@ import { launchExtension } from "../helpers/extension.js";
 import { captureOnFailure } from "../helpers/debug.js";
 import { openPopupWindow, configurePopup } from "../helpers/open-popup.js";
 import {
-  FREE_MODEL,
+  E2E_LEVEL,
   skipIfNotReady,
   sendViaPopup,
   assertMessageOnGemini,
@@ -39,8 +39,8 @@ test("popup — template dropdown and autocomplete", async () => {
   const popup = await openPopupWindow(context, extensionId);
   const input = popup.locator("#questionInput");
 
-  // Flash-Lite templates back both the dropdown and the "/def" autocomplete.
-  await configurePopup(popup, { model: FREE_MODEL });
+  // Low-level templates back both the dropdown and the "/def" autocomplete.
+  await configurePopup(popup, { level: E2E_LEVEL });
 
   // ── Template grid dropdown ─────────────────────────────────────────
   // The trigger toggles, so only click while closed and retry until open —

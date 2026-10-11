@@ -354,7 +354,7 @@ Use this checklist before every submission or update.
 - [ ] `version` is bumped from the previously published version
 - [ ] `name` and `description` are accurate and up to date
 - [ ] Only the minimum required permissions are declared:
-  `storage`, `contextMenus`, `tabs`, `scripting`, `activeTab`
+  `storage`, `contextMenus`, `scripting`, `activeTab`
 - [ ] `host_permissions` limited to `https://gemini.google.com/*` and
   `https://consent.google.com/*` (Google's consent interstitial — required
   to complete navigation to Gemini in some regions)
@@ -379,9 +379,9 @@ Use this checklist before every submission or update.
   history (up to 20 entries, opt-in, user-clearable)
 - [ ] **`chrome.storage.session`** — used for: unsent popup draft (in-memory,
   cleared when the browser closes)
-- [ ] **`chrome.storage.sync`** — used for: selected model (`flash-lite` /
-  `flash` / `pro`), thinking level (`standard` / `extended`), UI theme,
-  per-model prompt templates, Prompt Engineering rules, context-menu prefix,
+- [ ] **`chrome.storage.sync`** — used for: thinking level (`low` /
+  `medium` / `high`), UI theme,
+  per-level prompt templates, Prompt Engineering rules, context-menu prefix,
   history opt-in; syncs across the user's Chrome profile — disclose this in
   the privacy policy
 - [ ] Prompt injection sanitization is applied to all user-supplied text

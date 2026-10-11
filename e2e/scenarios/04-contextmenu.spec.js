@@ -23,7 +23,7 @@ import { fileURLToPath } from "url";
 import { launchExtension } from "../helpers/extension.js";
 import { captureOnFailure } from "../helpers/debug.js";
 import {
-  FREE_MODEL,
+  E2E_LEVEL,
   skipIfNotReady,
   closeGeminiTabs,
   assertMessageOnGemini,
@@ -87,10 +87,10 @@ test("context menu — select text then Ask Gemini", async () => {
   const [geminiPage] = await Promise.all([
     context.waitForEvent("page", { timeout: 25_000 }),
     context.serviceWorkers()[0].evaluate(
-      ({ msg, mdl, lvl }) => chrome.storage.local
-        .set({ pendingMessage: msg, pendingModel: mdl, pendingThinkingLevel: lvl })
+      ({ msg, lvl }) => chrome.storage.local
+        .set({ pendingMessage: msg, pendingThinkingLevel: lvl })
         .then(() => chrome.tabs.create({ url: "https://gemini.google.com/app" })),
-      { msg: message, mdl: FREE_MODEL, lvl: "standard" }
+      { msg: message, lvl: E2E_LEVEL }
     ),
   ]);
 

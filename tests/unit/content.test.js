@@ -1,14 +1,13 @@
-import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
 
 // ── Load content.js once ─────────────────────────────────────────────
 // The IIFE at the top of content.js calls chrome.storage.local.get immediately.
 // Because get() resolves to {} (no pendingMessage), the IIFE returns early
 // without touching the DOM.  The test hook at the bottom of content.js then
 // populates globalThis.__TEST__ with the pure functions we want to test.
-let classifyModelText;
-let matchesTarget;
-let classifyOption;
-let isThinkingText;
+let findLevelRows;
+let findLevelRow;
+let ensureThinkingLevel;
 let waitForElement;
 let waitForCondition;
 let revealFileInput;
@@ -18,165 +17,158 @@ beforeAll(async () => {
   globalThis.__TEST__ = {};
   await import("../../src/content/content.js");
   ({
-    classifyModelText, matchesTarget, classifyOption, isThinkingText,
+    findLevelRows, findLevelRow, ensureThinkingLevel,
     waitForElement, waitForCondition, revealFileInput, uploadErrorMessage,
   } = globalThis.__TEST__);
 });
 
 // ════════════════════════════════════════════════════════════════════
-// classifyModelText
-// Labels verified against the real Gemini picker, July 2026: "3.5 Flash-Lite",
-// "3.6 Flash", "3.1 Pro". There is no "thinking" model id any more — Extended
-// thinking is a separate, mutually exclusive picker row (see isThinkingText).
+// Mode picker — thinking level
+// Markup mirrors the real Gemini picker, verified October 2026: one "Auto"
+// model row carrying data-mode-id, then Low / Medium / High rows without it.
+// Signed out, the picker still lists models only (plus a sign-in row).
 // ════════════════════════════════════════════════════════════════════
 
-describe("classifyModelText", () => {
-  it.each([
-    ["Gemini Flash",          "flash"],
-    ["Flash",                 "flash"],
-    ["3.6 Flash",             "flash"],
-    ["Quick answer",          "flash"],
-    ["Fast",                  "flash"],
-  ])('"%s" → "flash"', (input, expected) => {
-    expect(classifyModelText(input)).toBe(expected);
-  });
-
-  it.each([
-    ["3.5 Flash-Lite",        "flash-lite"],
-    ["Flash Lite",            "flash-lite"],   // legacy label, no hyphen
-    ["Flash-Lite",            "flash-lite"],
-  ])('"%s" → "flash-lite"', (input, expected) => {
-    expect(classifyModelText(input)).toBe(expected);
-  });
-
-  it.each([
-    ["Gemini Pro",            "pro"],
-    ["Pro",                   "pro"],
-    ["3.1 Pro",               "pro"],
-    ["Advanced",              "pro"],
-    ["Gemini Advanced",       "pro"],
-  ])('"%s" → "pro"', (input, expected) => {
-    expect(classifyModelText(input)).toBe(expected);
-  });
-
-  it.each([
-    ["Something entirely unknown",                          null],
-    // Dropped version-number heuristics — no longer sufficient on their own.
-    ["Gemini 1.5",                                           null],
-    ["Gemini 2.5",                                           null],
-    ["Default model",                                        null],
-    // The "Extended thinking" row must never resolve to a model, even though
-    // its sublabel "Complex problem solving" contains the substring "pro"
-    // (inside "problem") — this was a real bug caught while building this out.
-    ["Extended thinking\nComplex problem solving",           null],
-    // The signed-out "Sign in" row mentions "Flash" in its sublabel and must
-    // not be misclassified as the Flash model — another real bug caught here.
-    ["Sign in for all models\nTry the latest Flash",         null],
-  ])('"%s" → null', (input, expected) => {
-    expect(classifyModelText(input)).toBe(expected);
-  });
-
-  it('is case-insensitive', () => {
-    expect(classifyModelText("GEMINI FLASH")).toBe("flash");
-    expect(classifyModelText("3.5 FLASH-LITE")).toBe("flash-lite");
-  });
-});
-
-// ════════════════════════════════════════════════════════════════════
-// isThinkingText
-// ════════════════════════════════════════════════════════════════════
-
-describe("isThinkingText", () => {
-  it.each([
-    "Extended thinking",
-    "extend",
-    "deep",
-    "think",
-    "reasoning",
-  ])('"%s" is thinking text', (input) => {
-    expect(isThinkingText(input)).toBe(true);
-  });
-
-  it.each([
-    "Complex problem solving",   // no "think"/"extend"/"deep"/"reason" alone
-    "3.6 Flash",
-    "3.1 Pro",
-    "",
-  ])('"%s" is not thinking text', (input) => {
-    expect(isThinkingText(input)).toBe(false);
-  });
-});
-
-// ════════════════════════════════════════════════════════════════════
-// matchesTarget
-// ════════════════════════════════════════════════════════════════════
-
-describe("matchesTarget", () => {
-  describe('target "flash"', () => {
-    it("matches Flash label",        () => expect(matchesTarget("3.6 Flash",      "flash")).toBe(true));
-    it("matches Fast label",         () => expect(matchesTarget("Fast model",      "flash")).toBe(true));
-    it("matches Quick label",        () => expect(matchesTarget("Quick",           "flash")).toBe(true));
-    it("rejects Pro label",          () => expect(matchesTarget("3.1 Pro",         "flash")).toBe(false));
-    it("rejects Flash-Lite label",   () => expect(matchesTarget("3.5 Flash-Lite",  "flash")).toBe(false));
-    it("rejects Extended thinking",  () => expect(matchesTarget("Extended thinking\nComplex problem solving", "flash")).toBe(false));
-  });
-
-  describe('target "flash-lite"', () => {
-    it("matches Flash-Lite label",   () => expect(matchesTarget("3.5 Flash-Lite",  "flash-lite")).toBe(true));
-    it("rejects Flash label",        () => expect(matchesTarget("3.6 Flash",       "flash-lite")).toBe(false));
-  });
-
-  describe('target "pro"', () => {
-    it("matches Pro label",          () => expect(matchesTarget("3.1 Pro",         "pro")).toBe(true));
-    it("matches Advanced label",     () => expect(matchesTarget("Advanced",        "pro")).toBe(true));
-    it("rejects Flash label",        () => expect(matchesTarget("3.6 Flash",       "pro")).toBe(false));
-    it("rejects plain text",         () => expect(matchesTarget("something else",  "pro")).toBe(false));
-    it("rejects Extended thinking",  () => expect(matchesTarget("Extended thinking\nComplex problem solving", "pro")).toBe(false));
-  });
-
-  it("returns false for unknown target", () => {
-    expect(matchesTarget("Flash", "unknown")).toBe(false);
-  });
-});
-
-// ════════════════════════════════════════════════════════════════════
-// classifyOption
-// ════════════════════════════════════════════════════════════════════
-
-/** Builds a bare element with the given textContent and optional dataset. */
-function optionEl(text, dataset = {}) {
-  const el = document.createElement("button");
-  el.textContent = text;
-  Object.assign(el.dataset, dataset);
+/**
+ * Builds a <gem-menu-item> row.
+ * @param {string} label
+ * @param {{ modeId?: string, testId?: string, selected?: boolean, disabled?: boolean }} [opts]
+ */
+function row(label, { modeId, testId, selected = false, disabled = false } = {}) {
+  const el = document.createElement("gem-menu-item");
+  el.setAttribute("role", "menuitem");
+  if (modeId !== undefined) el.setAttribute("data-mode-id", modeId);
+  if (testId) el.dataset.testId = testId;
+  if (selected) el.classList.add("selected");
+  el.setAttribute("aria-disabled", String(disabled));
+  const lbl = document.createElement("span");
+  lbl.className = "label";
+  lbl.textContent = ` ${label} `;
+  el.append(lbl);
   return el;
 }
 
-describe("classifyOption", () => {
-  it("classifies via text before consulting index", () => {
-    const el = optionEl("3.6 Flash\nAll-around help");
-    expect(classifyOption(el, 1)).toBe("flash");
+/** Returns the rows of the current Gemini picker with `selectedLevel` checked. */
+function autoPickerRows(selectedLevel = "Low", { disabled = [] } = {}) {
+  return [
+    row("Auto", { modeId: "cf41b0e0dd7d53e5", testId: "bard-mode-option-cf41b0e0dd7d53e5", selected: true }),
+    ...["Low", "Medium", "High"].map((l) => row(l, { selected: l === selectedLevel, disabled: disabled.includes(l) })),
+  ];
+}
+
+/** Returns the rows of the signed-out picker (models only). */
+function signedOutRows() {
+  return [
+    row("3.5 Flash-Lite", { modeId: "cf41b0e0dd7d53e5", testId: "bard-mode-option-cf41b0e0dd7d53e5", selected: true }),
+    row("3.6 Flash", { modeId: "", testId: "bard-mode-option-", disabled: true }),
+    row("3.1 Pro", { modeId: "", testId: "bard-mode-option-", disabled: true }),
+    row("Sign in for all models", { testId: "mode-picker-sign-in-button" }),
+  ];
+}
+
+describe("findLevelRows", () => {
+  it("returns the Low / Medium / High rows and skips the Auto row", () => {
+    const levels = findLevelRows(autoPickerRows());
+    expect(levels.map((r) => r.textContent.trim())).toEqual(["Low", "Medium", "High"]);
   });
 
-  it("falls back to index when text is unclassifiable", () => {
-    const el = optionEl("");
-    expect(classifyOption(el, 0)).toBe("flash-lite");
-    expect(classifyOption(el, 1)).toBe("flash");
-    expect(classifyOption(el, 2)).toBe("pro");
+  it("returns nothing for the signed-out models-only picker", () => {
+    expect(findLevelRows(signedOutRows())).toEqual([]);
+  });
+});
+
+describe("findLevelRow", () => {
+  it("matches by position, so localised labels work", () => {
+    const levels = ["Niedrig", "Mittel", "Hoch"].map((l) => row(l));
+    expect(findLevelRow(levels, "low").textContent.trim()).toBe("Niedrig");
+    expect(findLevelRow(levels, "medium").textContent.trim()).toBe("Mittel");
+    expect(findLevelRow(levels, "high").textContent.trim()).toBe("Hoch");
   });
 
-  it("never classifies the signed-out sign-in row as a model, regardless of index", () => {
-    const el = optionEl(
-      "Sign in for all models\nTry the latest Flash",
-      { testId: "mode-picker-sign-in-button" }
-    );
-    expect(classifyOption(el, 3)).toBeNull();
-    expect(classifyOption(el, 1)).toBeNull(); // structural guard wins even at a model's index
+  it("falls back to the English label when the row count is unexpected", () => {
+    const levels = [row("Medium"), row("High")];
+    expect(findLevelRow(levels, "high").textContent.trim()).toBe("High");
+    expect(findLevelRow(levels, "low")).toBeNull();
+  });
+});
+
+describe("ensureThinkingLevel", () => {
+  let trigger;
+
+  /**
+   * Mounts a trigger whose click opens a picker built by `makeRows`, and a
+   * row click / Escape on the menu that closes it.
+   */
+  function mountPicker(makeRows) {
+    document.body.replaceChildren();
+    trigger = document.createElement("button");
+    trigger.dataset.testId = "bard-mode-menu-button";
+    trigger.addEventListener("click", () => {
+      const menu = document.createElement("gem-menu");
+      menu.dataset.testId = "gem-mode-menu";
+      menu.setAttribute("role", "menu");
+      menu.append(...makeRows());
+      menu.addEventListener("click", (e) => {
+        if (e.target.closest("gem-menu-item")) menu.remove();
+      });
+      menu.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") menu.remove();
+      });
+      document.body.append(menu);
+    });
+    document.body.append(trigger);
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // jsdom has no layout, so scrollIntoView is missing.
+    Element.prototype.scrollIntoView ??= () => {};
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    document.body.replaceChildren();
   });
 
-  it("never classifies the Extended thinking row as a model, even at a model index", () => {
-    const el = optionEl("Extended thinking\nComplex problem solving");
-    expect(classifyOption(el, -1)).toBeNull();
-    expect(classifyOption(el, 2)).toBeNull(); // text guard beats the index-2="pro" fallback
+  /** Runs ensureThinkingLevel to completion under fake timers. */
+  async function run(level) {
+    const p = ensureThinkingLevel(level);
+    await vi.runAllTimersAsync();
+    return p;
+  }
+
+  it("clicks the requested row when another level is selected", async () => {
+    const clicked = [];
+    mountPicker(() => {
+      const rows = autoPickerRows("Low");
+      rows.forEach((r) => r.addEventListener("click", () => clicked.push(r.textContent.trim())));
+      return rows;
+    });
+    expect(await run("high")).toBe("switched");
+    expect(clicked).toEqual(["High"]);
+    expect(document.querySelector("gem-menu")).toBeNull();
+  });
+
+  it("leaves an already-selected level alone and closes the picker", async () => {
+    mountPicker(() => autoPickerRows("Medium"));
+    expect(await run("medium")).toBe("already");
+    expect(document.querySelector("gem-menu")).toBeNull();
+  });
+
+  it("reports a locked level without clicking it", async () => {
+    mountPicker(() => autoPickerRows("Low", { disabled: ["High"] }));
+    expect(await run("high")).toBe("disabled");
+    expect(document.querySelector("gem-menu")).toBeNull();
+  });
+
+  it("reports the signed-out picker as unsupported", async () => {
+    mountPicker(signedOutRows);
+    expect(await run("low")).toBe("unsupported");
+    expect(document.querySelector("gem-menu")).toBeNull();
+  });
+
+  it("returns not-found when there is no picker trigger", async () => {
+    document.body.replaceChildren();
+    expect(await run("low")).toBe("not-found");
   });
 });
 

@@ -1,13 +1,15 @@
 // ── popup.js ──────────────────────────────────────────────────
-// Model switcher (Flash/Pro/Think), inline autocomplete, theme, history
+// Thinking-level switcher (Low/Medium/High), inline autocomplete, theme, history
 
 import {
   GEMINI_URL,
   MAX_HISTORY,
-  DEFAULT_TEMPLATE_KEYS_BY_MODEL,
+  DEFAULT_TEMPLATE_KEYS_BY_LEVEL,
+  DEFAULT_THINKING_LEVEL,
   INJECTION_PATTERNS,
 } from "../shared/constants.js";
-import { t, plural } from "../shared/stringUtils.js";
+import { t, plural, localizeThinkingLevel } from "../shared/stringUtils.js";
+import { resolveThinkingLevel, migrateTemplateGroups } from "../shared/thinkingLevel.js";
 import { applyI18n } from "../shared/i18nDom.js";
 
 const MAX_CHARS = 2000;
@@ -132,48 +134,42 @@ function applyTheme(pref) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// 2. MODEL SWITCHER  (flash-lite | flash | pro) + thinking toggle
+// 2. THINKING-LEVEL SWITCHER  (low | medium | high)
 // ══════════════════════════════════════════════════════════════════
 
-let currentModel = "flash";
-let currentThinkingLevel = "standard";
-
-const thinkingToggle = document.getElementById("thinkingToggle");
+let currentLevel = DEFAULT_THINKING_LEVEL;
 
 /**
- * Sets the active model and updates the model-switcher button states.
- * @param {"flash-lite"|"flash"|"pro"} model
+ * Sets the active thinking level and updates the switcher button states.
+ * @param {"low"|"medium"|"high"} level
  */
-function applyModel(model) {
-  currentModel = model || "flash";
-  document.querySelectorAll(".model-opt").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.model === currentModel);
+function applyLevel(level) {
+  currentLevel = level || DEFAULT_THINKING_LEVEL;
+  modelSwitcher.querySelectorAll(".model-opt").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.level === currentLevel);
   });
 }
 
 /**
- * Sets the active thinking level and updates the toggle button state.
- * @param {"standard"|"extended"} level
+ * Fills each switcher button's always-visible first letter and expanding
+ * tail from the localized level name.
  */
-function applyThinkingLevel(level) {
-  currentThinkingLevel = level || "standard";
-  thinkingToggle?.classList.toggle("active", currentThinkingLevel === "extended");
+function renderLevelLabels() {
+  modelSwitcher.querySelectorAll(".model-opt").forEach(btn => {
+    const [first = "", ...rest] = Array.from(localizeThinkingLevel(btn.dataset.level));
+    btn.querySelector(".model-char").textContent = first;
+    btn.querySelector(".model-tail").textContent = rest.join("");
+  });
 }
 
 modelSwitcher.addEventListener("click", async (e) => {
   const btn = e.target.closest(".model-opt");
-  if (!btn || btn.dataset.model === currentModel) return;
-  await chrome.storage.sync.set({ askGeminiModel: btn.dataset.model });
-  applyModel(btn.dataset.model);
-  await loadTemplatesForModel(btn.dataset.model);
+  if (!btn || btn.dataset.level === currentLevel) return;
+  await chrome.storage.sync.set({ askGeminiThinkingLevel: btn.dataset.level });
+  applyLevel(btn.dataset.level);
+  await loadTemplatesForLevel(btn.dataset.level);
   renderDropdownList();
   dismissAC();
-});
-
-thinkingToggle?.addEventListener("click", async () => {
-  const next = currentThinkingLevel === "extended" ? "standard" : "extended";
-  await chrome.storage.sync.set({ askGeminiThinkingLevel: next });
-  applyThinkingLevel(next);
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -183,21 +179,15 @@ thinkingToggle?.addEventListener("click", async () => {
 let templates = [];
 
 /**
- * Loads the template list for the given model from storage into `templates`.
- * @param {"flash-lite"|"flash"|"pro"} model
+ * Loads the template list for the given thinking level from storage into
+ * `templates`, reading pre-Auto per-model groups through the migration helper.
+ * @param {"low"|"medium"|"high"} level
  */
-async function loadTemplatesForModel(model) {
+async function loadTemplatesForLevel(level) {
   const { askGeminiTemplates } = await chrome.storage.sync.get("askGeminiTemplates");
-  const defaultKeys = DEFAULT_TEMPLATE_KEYS_BY_MODEL[model] || DEFAULT_TEMPLATE_KEYS_BY_MODEL.flash;
-  const defaults = defaultKeys.map(k => t(k));
-  if (!askGeminiTemplates) {
-    templates = [...defaults];
-  } else if (Array.isArray(askGeminiTemplates)) {
-    // Migration compat: old flat array belongs to flash
-    templates = model === "flash" ? askGeminiTemplates : [...defaults];
-  } else {
-    templates = askGeminiTemplates[model] ?? [...defaults];
-  }
+  const groups = migrateTemplateGroups(askGeminiTemplates);
+  const defaultKeys = DEFAULT_TEMPLATE_KEYS_BY_LEVEL[level] || DEFAULT_TEMPLATE_KEYS_BY_LEVEL[DEFAULT_THINKING_LEVEL];
+  templates = groups[level] ?? defaultKeys.map(k => t(k));
 }
 
 /** Re-renders the template dropdown list from the current `templates` array. */
@@ -830,7 +820,7 @@ async function askGemini() {
   dismissAC();
 
   try {
-    const storagePayload = { pendingMessage: message, pendingModel: currentModel, pendingThinkingLevel: currentThinkingLevel };
+    const storagePayload = { pendingMessage: message, pendingThinkingLevel: currentLevel };
 
     if (attachedFiles.length > 0) {
       storagePayload.pendingFiles = await Promise.all(
@@ -915,13 +905,13 @@ sendBtn.disabled = true;
 applyI18n();
 
 (async () => {
-  const data = await chrome.storage.sync.get(["askGeminiTheme", "askGeminiModel", "askGeminiThinkingLevel"]);
+  const data = await chrome.storage.sync.get(["askGeminiTheme", "askGeminiThinkingLevel", "askGeminiModel"]);
 
   applyTheme(data.askGeminiTheme || "auto");
-  applyModel(data.askGeminiModel || "flash");
-  applyThinkingLevel(data.askGeminiThinkingLevel || "standard");
+  renderLevelLabels();
+  applyLevel(resolveThinkingLevel(data.askGeminiThinkingLevel, data.askGeminiModel));
 
-  await loadTemplatesForModel(currentModel);
+  await loadTemplatesForLevel(currentLevel);
   renderDropdownList();
 
   // Priority: selection > draft.

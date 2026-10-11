@@ -8,7 +8,8 @@
  * Uses the default e2e/.chrome-profile, which is normally signed out (verified
  * October 2026): only Flash-Lite with standard thinking is enabled and the
  * other picker rows are aria-disabled. So this spec sends once with
- * FREE_MODEL and only interacts with Flash-Lite — it never clicks locked rows.
+ * E2E_LEVEL (skipped by content.js: the signed-out picker has no level rows)
+ * and only interacts with Flash-Lite — it never clicks locked rows.
  * Flash / Pro / Extended-thinking switching and locked-model fallback live in
  * 01-model-switch-mock.spec.js.
  *
@@ -26,7 +27,7 @@ import { launchExtension } from "../helpers/extension.js";
 import { captureOnFailure } from "../helpers/debug.js";
 import { openPopupWindow, configurePopup } from "../helpers/open-popup.js";
 import {
-  FREE_MODEL,
+  E2E_LEVEL,
   MODEL_BTN,
   OPTION_SEL,
   skipIfNotReady,
@@ -54,7 +55,7 @@ test.beforeAll(async ({ playwright }) => {
   await closeGeminiTabs(context);
 
   const popup = await openPopupWindow(context, extensionId);
-  await configurePopup(popup, { model: FREE_MODEL });
+  await configurePopup(popup, { level: E2E_LEVEL });
   await popup.locator("#questionInput").fill(PROBE_MESSAGE);
   await expect(popup.locator("#sendBtn")).not.toBeDisabled({ timeout: 3_000 });
 

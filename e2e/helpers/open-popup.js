@@ -22,8 +22,8 @@ export async function openPopupWindow(context, extensionId) {
   ]);
 
   await popup.waitForLoadState("domcontentloaded");
-  // Wait for popup.js's async init to finish — it marks the stored model
-  // active and focuses the input as its last step. Before that the static
+  // Wait for popup.js's async init to finish — it marks the stored thinking
+  // level active and focuses the input as its last step. Before that the static
   // HTML is showing (Send enabled, default hint), so an early drop/assert
   // races the init under load.
   await popup.waitForFunction(() =>
@@ -35,22 +35,16 @@ export async function openPopupWindow(context, extensionId) {
 }
 
 /**
- * Puts the popup into a known model / thinking-level state and waits until
- * the UI reflects it. Clicks only when the current state differs, so the
- * result never depends on what an earlier test left in storage.
+ * Puts the popup into a known thinking-level state and waits until the UI
+ * reflects it. Clicks only when the current state differs, so the result
+ * never depends on what an earlier test left in storage.
  *
  * @param {import("@playwright/test").Page} popup
- * @param {{ model?: "flash-lite"|"flash"|"pro", thinking?: "standard"|"extended" }} [opts]
+ * @param {{ level?: "low"|"medium"|"high" }} [opts]
  * @returns {Promise<void>}
  */
-export async function configurePopup(popup, { model = "flash-lite", thinking = "standard" } = {}) {
-  const modelBtn = popup.locator(`.model-opt[data-model='${model}']`);
-  if (!(await modelBtn.getAttribute("class"))?.includes("active")) await modelBtn.click();
-  await expect(modelBtn).toHaveClass(/\bactive\b/);
-
-  const toggle = popup.locator("#thinkingToggle");
-  const isExtended = (await toggle.getAttribute("class"))?.includes("active");
-  if (isExtended !== (thinking === "extended")) await toggle.click();
-  if (thinking === "extended") await expect(toggle).toHaveClass(/\bactive\b/);
-  else await expect(toggle).not.toHaveClass(/\bactive\b/);
+export async function configurePopup(popup, { level = "low" } = {}) {
+  const levelBtn = popup.locator(`.model-opt[data-level='${level}']`);
+  if (!(await levelBtn.getAttribute("class"))?.includes("active")) await levelBtn.click();
+  await expect(levelBtn).toHaveClass(/\bactive\b/);
 }

@@ -6,8 +6,8 @@
  * returns the local mock-gemini.html fixture.
  *
  * Used by the *-mock.spec.js scenario files that test behaviour which
- * cannot run against a free real-Gemini account (premium model switching,
- * locked-model fallback, upload-failure simulation).
+ * cannot run against a free real-Gemini account (thinking-level switching,
+ * locked levels, signed-out picker, upload-failure simulation).
  */
 
 import fs from "fs";

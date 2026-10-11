@@ -2,7 +2,32 @@
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["@playwright/mcp@latest", "--headless"]
+      "args": [
+        "@playwright/mcp@latest",
+        "--headless"
+      ]
     }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__chrome-devtools__(new_page|navigate_page|evaluate_script|install_extension|uninstall_extension|reload_extension|trigger_extension_action)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/chrome-debug-guard.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/chrome-debug-guard.sh"
+          }
+        ]
+      }
+    ]
   }
 }

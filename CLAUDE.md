@@ -5,7 +5,7 @@
 - **Name:** Ask Gemini
 - **Version:** see `manifest.json` (bumped automatically by the release workflow on `vX.Y.Z` tags — never edit by hand)
 - **Tech Stack:** Chrome Extension Manifest V3 (MV3), Vanilla JavaScript, CSS, HTML
-- **Core Function:** Captures user input via a popup, keyboard shortcut (`Ctrl+Shift+L`) or context menu and injects it into `gemini.google.com`, optionally switching model / thinking level, attaching images and applying prompt templates / Prompt Engineering rules
+- **Core Function:** Captures user input via a popup, keyboard shortcut (`Ctrl+Shift+L`) or context menu and injects it into `gemini.google.com`, optionally setting Gemini's thinking level (Low / Medium / High), attaching images and applying prompt templates / Prompt Engineering rules
 - **Toolchain:** Node 24 (CI), esbuild, ESLint 10, Stylelint 16, HTMLHint, Vitest 5 + jsdom (unit), Playwright (e2e)
 
 ## File Structure
@@ -17,7 +17,8 @@ package.sh                            # builds dist/ask-gemini-extension.zip for
 generate-changelog.sh                 # release notes helper (used by release workflow)
 src/
   shared/constants.js                 # ES-module exports shared by background, popup, options
-  shared/stringUtils.js               # t(), plural(), localizeModelName() — i18n helpers
+  shared/stringUtils.js               # t(), plural(), localizeThinkingLevel() — i18n helpers
+  shared/thinkingLevel.js             # resolveThinkingLevel(), migrateTemplateGroups() — pre-Auto settings migration
   shared/i18nDom.js                   # applyI18n() — substitutes data-i18n / data-i18n-attr at runtime
   shared/promptEngine.js              # Prompt Engineering rules — expandVariables() and rule matching
   shared/base.css                     # Shared base styles
@@ -40,9 +41,9 @@ e2e/                                  # Playwright scenarios, helpers, fixtures,
 ## Architecture Rules
 
 ### State Management
-- Use `chrome.storage.local` to pass data between popup/background and content script (`pendingMessage`, `pendingModel`, `pendingThinkingLevel`, `pendingFiles`) and for prompt history (`askGeminiHistory`).
-- Use `chrome.storage.sync` for user settings (`askGeminiModel`, `askGeminiThinkingLevel`, `askGeminiTemplates`, `askGeminiPromptEng`, `askGeminiSummarizePrefix`, `askGeminiHistoryEnabled`, ...).
-- `chrome.storage.session` holds the unsent popup draft (`askGeminiDraft`).
+- Use `chrome.storage.local` to pass data between popup/background and content script (`pendingMessage`, `pendingThinkingLevel`, `pendingFiles`) and for prompt history (`askGeminiHistory`).
+- Use `chrome.storage.sync` for user settings (`askGeminiThinkingLevel`, `askGeminiTemplates` grouped per level, `askGeminiPromptEng`, `askGeminiSummarizePrefix`, `askGeminiHistoryEnabled`, ...).
+- `chrome.storage.session` holds the unsent popup draft (`askGeminiDraft`) and the start time of a pending send (`askGeminiPendingSince`), so the service worker can restore its 30 s result timeout after being stopped.
 - Do not use `sessionStorage`, `localStorage`, or global variables across script boundaries.
 
 ### Content Script (`content.js`)
@@ -52,12 +53,19 @@ e2e/                                  # Playwright scenarios, helpers, fixtures,
 - Include fallback logic (clipboard / manual paste prompt) if the DOM structure changes.
 - Keep this script lightweight — it runs on every Gemini tab load.
 
+### Gemini mode picker (verified October 2026)
+- Signed in, the picker (`button[data-test-id="bard-mode-menu-button"]` → `gem-menu[data-test-id="gem-mode-menu"]`) lists one model row, **Auto** ("Gemini 3 models", carries `data-mode-id`), then **Low / Medium / High** thinking rows without `data-mode-id`. The extension no longer picks a model; it only sets the level (`ensureThinkingLevel()`, matched by row position because labels are localised).
+- The trigger always reads "Gemini Auto". The active level is only visible as the `selected` class on its row.
+- The `gem-menu` closes on an Escape dispatched on the menu element, not on `document`.
+- Signed out, the picker still lists models only (Flash-Lite enabled, Flash / Pro disabled, plus a sign-in row) and has no level rows, so the level is skipped (`"unsupported"`).
+- Settings from older versions (`askGeminiModel` + `standard`/`extended`) are converted by `resolveThinkingLevel()`: extended → high, otherwise flash-lite → low, flash → medium, pro → high. The `onInstalled` migration rewrites storage and removes `askGeminiModel`.
+
 ### Background Script (`background.js`)
 - MV3 Service Worker only — no `background.html` or persistent background page.
 - Handles context menu creation, the `open_popup` command, toolbar badge state (sending / success / error via `injectionResult` messages), storage migrations on install/update, and auto-accepting the `consent.google.com` redirect for a pending message.
 
 ### Permissions
-- Declared in `manifest.json`: `storage`, `contextMenus`, `tabs`, `scripting`, `activeTab`
+- Declared in `manifest.json`: `storage`, `contextMenus`, `scripting`, `activeTab` (no `tabs`: the `chrome.tabs` calls used need no permission, Gemini/consent tab URLs come from the host permissions, and other pages are reached through the `activeTab` grant)
 - Host permissions: `https://gemini.google.com/*`, `https://consent.google.com/*` (consent-page auto-accept)
 - Do not request additional permissions without updating the manifest and this file.
 
@@ -213,12 +221,12 @@ Tests live in `e2e/scenarios/` (Playwright, single worker, video always on). Fir
 Every e2e test must exercise the complete extension pipeline from end to end. The purpose of e2e is to verify that the whole system works together — popup UI, extension logic, and Gemini — not individual pieces in isolation (that is what unit tests are for).
 
 **What a full-pipeline test looks like:**
-1. User opens the extension popup → interacts with the popup UI (fills text, drops files, selects a model, clicks Send)
+1. User opens the extension popup → interacts with the popup UI (fills text, drops files, selects a thinking level, clicks Send)
 2. `popup.js` validates the input, writes to `chrome.storage.local`, and opens/focuses the Gemini tab
 3. `content.js` injects on `gemini.google.com`, reads storage, uploads files if present, injects the message
 
 **What is forbidden:**
-- Writing `pendingMessage`, `pendingFiles`, or `pendingModel` directly into `chrome.storage.local` via `context.serviceWorkers()[0].evaluate(...)` to simulate what the popup would do — this bypasses popup validation and the popup UI entirely
+- Writing `pendingMessage`, `pendingFiles`, or `pendingThinkingLevel` directly into `chrome.storage.local` via `context.serviceWorkers()[0].evaluate(...)` to simulate what the popup would do — this bypasses popup validation and the popup UI entirely
 - Opening Gemini tabs directly via `chrome.tabs.create` without going through the popup (see the one accepted exception below)
 - Importing or re-using mock Gemini fixtures (`mock-gemini.js`) for any test that could instead run against real Gemini
 
@@ -229,13 +237,13 @@ Playwright cannot drive native OS context menus, so `context.serviceWorkers()[0]
 
 ### Real Gemini is the default
 
-All scenario files without a `-mock` suffix run against the live `gemini.google.com`. The `-mock` suffix is reserved for the scenarios that genuinely cannot run on the e2e profile: Flash / Pro / Extended-thinking switching and locked-model fallback simulation. Do not add mock Gemini routes to non-mock spec files.
+All scenario files without a `-mock` suffix run against the live `gemini.google.com`. The `-mock` suffix is reserved for the scenarios that genuinely cannot run on the e2e profile: thinking-level switching (the signed-out picker has no level rows) and upload-failure simulation. `e2e/fixtures/mock-gemini.html` copies the real Auto + Low / Medium / High picker markup; its sessionStorage hooks are `__testInitialLevel`, `__testLockedLevels` and `__testSignedOut` (models-only picker), and it mirrors the active level on `<html data-mock-level>`. Do not add mock Gemini routes to non-mock spec files.
 
 ### The e2e profile is signed out
 
 `e2e/.chrome-profile` is normally a signed-out Gemini session (verified October 2026). Signed out, Gemini only enables **Flash-Lite with standard thinking**, and every file-upload entry point is disabled ("Sign in to try tools"). Consequences:
 
-- Real-Gemini specs send with `FREE_MODEL` (`"flash-lite"`) from `e2e/helpers/real-gemini.js` and never click locked picker rows.
+- Real-Gemini specs send with `E2E_LEVEL` (`"low"`) from `e2e/helpers/real-gemini.js` (content.js skips it on the signed-out picker) and never click locked picker rows.
 - Real image-upload tests skip via `skipIfUploadsUnavailable()` while signed out. The signed-out path itself is tested: `content.js` refuses the upload with a sign-in banner.
 - To run uploads for real, sign in to the profile once interactively, or point `CHROME_PROFILE` at a signed-in profile.
 
@@ -243,7 +251,7 @@ All scenario files without a `-mock` suffix run against the live `gemini.google.
 
 - `launchExtension()` clears all extension storage at launch. The profile is persistent, so settings from a previous run would otherwise leak in. Google sign-in is untouched.
 - `openPopupWindow()` waits for `popup.js` to finish its async init before returning. Tests that act on the static HTML too early are flaky.
-- `configurePopup(popup, { model, thinking })` puts the popup into a known model / thinking state. Use it instead of clicking `.model-opt` or `#thinkingToggle` directly, because the toggle flips whatever state storage holds.
+- `configurePopup(popup, { level })` puts the popup into a known thinking-level state. Use it instead of clicking `.model-opt[data-level]` directly, so the result does not depend on what storage holds.
 - Prefer state-based waits (`expect(...).toHaveClass/toHaveValue`) over `waitForTimeout`. Keep fixed waits only for pacing the recording.
 
 ### Debugging e2e failures

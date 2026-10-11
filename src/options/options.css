@@ -824,26 +824,26 @@ kbd {
 .seg-btn.active svg { opacity: 1; }
 
 /* ═══════════════════════════════════════════════════════════════
-   MODEL CONTROL — Tier-colored design (mirrors popup switcher)
-   Fast (cyan) < Think (indigo) < Pro (gold)
+   THINKING LEVEL CONTROL — Tier-colored design (mirrors popup switcher)
+   Low (green) < Medium (cyan) < High (gold)
    ═══════════════════════════════════════════════════════════════ */
 
 /* Per-tier palettes */
-#modelControl .seg-btn[data-value="flash"] {
+#thinkingLevelControl .seg-btn[data-value="medium"] {
   --tc: light-dark(#0891b2, #22d3ee);
   --ta: light-dark(rgba(8,145,178,0.12), rgba(34,211,238,0.14));
   --tg: light-dark(rgba(8,145,178,0.22), rgba(34,211,238,0.28));
   --tb: light-dark(rgba(8,145,178,0.55), rgba(34,211,238,0.5));
 }
 
-#modelControl .seg-btn[data-value="thinking"] {
-  --tc: light-dark(#6655e8, #818cf8);
-  --ta: light-dark(rgba(102,85,232,0.12), rgba(129,140,248,0.14));
-  --tg: light-dark(rgba(102,85,232,0.22), rgba(129,140,248,0.28));
-  --tb: light-dark(rgba(102,85,232,0.55), rgba(129,140,248,0.5));
+#thinkingLevelControl .seg-btn[data-value="low"] {
+  --tc: light-dark(#0e9f6e, #34d399);
+  --ta: light-dark(rgba(14,159,110,0.12), rgba(52,211,153,0.14));
+  --tg: light-dark(rgba(14,159,110,0.22), rgba(52,211,153,0.28));
+  --tb: light-dark(rgba(14,159,110,0.55), rgba(52,211,153,0.5));
 }
 
-#modelControl .seg-btn[data-value="pro"] {
+#thinkingLevelControl .seg-btn[data-value="high"] {
   --tc: light-dark(#d97706, #f59e0b);
   --ta: light-dark(rgba(217,119,6,0.12), rgba(245,158,11,0.14));
   --tg: light-dark(rgba(217,119,6,0.26), rgba(245,158,11,0.32));
@@ -851,24 +851,24 @@ kbd {
 }
 
 /* Hover: tint toward tier */
-#modelControl .seg-btn:hover:not(.active) {
+#thinkingLevelControl .seg-btn:hover:not(.active) {
   color: var(--tc);
   background: var(--ta);
 }
 
 /* Active: override generic accent pill with tier colors */
-#modelControl .seg-btn.active {
+#thinkingLevelControl .seg-btn.active {
   background: var(--ta);
   color: var(--tc);
   box-shadow: 0 2px 10px var(--tg), inset 0 0 0 1px var(--tb);
 }
 
-@keyframes proShimmerOpts {
+@keyframes highShimmerOpts {
   0%   { box-shadow: 0 2px 10px var(--tg), inset 0 0 0 1px var(--tb); }
   50%  { box-shadow: 0 2px 18px rgba(245,158,11,0.5), inset 0 0 0 1px rgba(245,158,11,0.7); }
   100% { box-shadow: 0 2px 10px var(--tg), inset 0 0 0 1px var(--tb); }
 }
-#modelControl .seg-btn[data-value="pro"].active { animation: proShimmerOpts 2.4s ease-in-out infinite; }
+#thinkingLevelControl .seg-btn[data-value="high"].active { animation: highShimmerOpts 2.4s ease-in-out infinite; }
 
 
 /* ── About ───────────────────────────────────────────────────────── */
