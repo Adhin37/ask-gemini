@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## 🚀 Release v1.9.4 (2026-10-11)
+
+### 🐛 Bug Fixes
+* fix: gemini web page update (0e35a03)
+* fix: e2e (c17ba26)
+
+### ⚙️ Maintenance
+* chore: bump version to v1.9.3 [skip ci] (25d4c2f)
+
+---
+### 📊 Release Stats
+* **Total Commits:** 3
+* **Contributors:** Adhin,github-actions[bot]
+* **Full Changelog:** [View Changes](https://github.com/Adhin37/ask-gemini/compare/v1.9.3...v1.9.4)
+
 ## 🚀 Release v1.9.3 (2026-10-06)
 
 ### ✨ Features
