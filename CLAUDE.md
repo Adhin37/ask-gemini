@@ -48,16 +48,16 @@ e2e/                                  # Playwright scenarios, helpers, fixtures,
 
 ### Content Script (`content.js`)
 - Targets `https://gemini.google.com/*`, injected at `document_idle`.
-- Gemini uses a React-based DOM — always check if the input field is rendered before interacting with it.
+- Gemini uses an Angular-based DOM (Angular Material overlays, `gem-*` custom elements) — always check if the input field is rendered before interacting with it.
 - Injection logic: read from `chrome.storage.local` → locate the Gemini textarea → simulate input/submit events.
-- Include fallback logic (clipboard / manual paste prompt) if the DOM structure changes.
+- Keep the fallbacks: submit with Enter when the send button is not ready, and paste files through a synthetic `ClipboardEvent` when no file input is found. Selector lists (`OPTION_SELECTORS`, `SEND_SELECTORS`, …) try several selectors in order — extend them instead of replacing them when the DOM changes.
 - Keep this script lightweight — it runs on every Gemini tab load.
 
 ### Gemini mode picker (verified October 2026)
 - Signed in, the picker (`button[data-test-id="bard-mode-menu-button"]` → `gem-menu[data-test-id="gem-mode-menu"]`) lists one model row, **Auto** ("Gemini 3 models", carries `data-mode-id`), then **Low / Medium / High** thinking rows without `data-mode-id`. The extension no longer picks a model; it only sets the level (`ensureThinkingLevel()`, matched by row position because labels are localised).
 - The trigger always reads "Gemini Auto". The active level is only visible as the `selected` class on its row.
 - The `gem-menu` closes on an Escape dispatched on the menu element, not on `document`.
-- Signed out, the picker still lists models only (Flash-Lite enabled, Flash / Pro disabled, plus a sign-in row) and has no level rows, so the level is skipped (`"unsupported"`).
+- Signed out (October 2026), the picker still shows the old models-only list (Flash-Lite enabled, Flash / Pro disabled, plus a sign-in row) with no level rows, so the level is skipped (`"unsupported"`). This is expected to be replaced by the Auto picker; when it is, `ensureThinkingLevel()` applies as is, and the signed-out special cases (the `"unsupported"` branch, the `__testSignedOut` mock, the signed-out notes in the e2e sections) can go.
 - Settings from older versions (`askGeminiModel` + `standard`/`extended`) are converted by `resolveThinkingLevel()`: extended → high, otherwise flash-lite → low, flash → medium, pro → high. The `onInstalled` migration rewrites storage and removes `askGeminiModel`.
 
 ### Background Script (`background.js`)
@@ -241,7 +241,7 @@ All scenario files without a `-mock` suffix run against the live `gemini.google.
 
 ### The e2e profile is signed out
 
-`e2e/.chrome-profile` is normally a signed-out Gemini session (verified October 2026). Signed out, Gemini only enables **Flash-Lite with standard thinking**, and every file-upload entry point is disabled ("Sign in to try tools"). Consequences:
+`e2e/.chrome-profile` is normally a signed-out Gemini session (verified October 2026). Signed out, Gemini currently still shows the old model picker with only **Flash-Lite** enabled (no thinking-level rows; expected to change to Auto + levels), and every file-upload entry point is disabled ("Sign in to try tools"). Consequences:
 
 - Real-Gemini specs send with `E2E_LEVEL` (`"low"`) from `e2e/helpers/real-gemini.js` (content.js skips it on the signed-out picker) and never click locked picker rows.
 - Real image-upload tests skip via `skipIfUploadsUnavailable()` while signed out. The signed-out path itself is tested: `content.js` refuses the upload with a sign-in banner.
@@ -269,28 +269,27 @@ While iterating on a fix, run only the scenario file being fixed (e.g. `npx play
 ### Sending data from popup → content script via storage
 ```js
 // popup.js
-chrome.storage.local.set({ pendingQuery: text }, () => {
+chrome.storage.local.set({ pendingMessage: text }, () => {
   if (chrome.runtime.lastError) console.error(chrome.runtime.lastError);
   // then open/focus the Gemini tab
 });
 
 // content.js
-chrome.storage.local.get(['pendingQuery'], ({ pendingQuery }) => {
+chrome.storage.local.get(["pendingMessage"], ({ pendingMessage }) => {
   if (chrome.runtime.lastError) return;
-  if (pendingQuery) injectQuery(pendingQuery);
+  if (pendingMessage) injectMessage(pendingMessage);
 });
 ```
 
 ### Safe DOM injection (no innerHTML)
 ```js
-const el = document.createElement('p');
+const el = document.createElement("p");
 el.textContent = userInput; // never el.innerHTML
 container.appendChild(el);
 ```
 
 ### Context menu registration (background.js)
 ```js
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({ id: 'ask-gemini', title: 'Ask Gemini: "%s"', contexts: ['selection'] });
-});
+// Called from onInstalled and onStartup. The title goes through t(); `%s` stays verbatim inside the message.
+chrome.contextMenus.create({ id: "ask-gemini-selection", title: t("bg_menu_ask_selection"), contexts: ["selection"] });
 ```

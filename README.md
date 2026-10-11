@@ -18,7 +18,7 @@ Instantly send questions to Google Gemini right from your browser toolbar, a key
 | **Left-click** the extension icon (or **Ctrl+Shift+L** / **Cmd+Shift+L**) | Opens the popup — type your question, press **Enter** or click **Ask** |
 | **Right-click** the extension icon or a page | Context menu → *Open Gemini* (goes directly, no popup) |
 | **Right-click selected text** on any page | *Ask Gemini: "…"* — opens Gemini pre-filled with your selection |
-| **Thinking level** in the popup | Choose Low, Medium or High thinking (Gemini Auto picks the model) |
+| **Thinking level** in the popup | Choose Low, Medium or High thinking (Gemini Auto picks the model). Where Gemini's picker has no level rows (currently, when signed out), the level is skipped and Gemini's default is used |
 | **Attach images** (button or drag & drop) | Images are uploaded to Gemini together with your question |
 | **Templates** | Insert reusable prompts per thinking level; manage them in Settings |
 | **Settings page** | Prompt history, templates, appearance, context-menu behaviour, Prompt Engineering rules (variables like `{{selection}}`, `{{url}}`, `{{domain}}`, `{{title}}`, `{{lang}}`, `{{length}}`) and keyboard shortcut |
@@ -73,7 +73,7 @@ sequenceDiagram
     BG-->>User: Toolbar badge (sending / success / error)
 ```
 
-> **Note:** Gemini is a complex React SPA. If the message isn't auto-submitted on the first try (Google occasionally changes their DOM), you can still paste it manually — your question is always in your clipboard flow via storage.
+> **Note:** Gemini is a complex Angular SPA and Google occasionally changes its DOM. If the thinking level can't be set, the message is still sent with Gemini's current level; if the input field can't be found, the toolbar badge shows an error.
 
 ---
 
