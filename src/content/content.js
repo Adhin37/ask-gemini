@@ -483,17 +483,39 @@ function findMenuRows() {
 }
 
 /**
- * Picks the thinking-level rows out of the picker rows. Gemini (verified
- * October 2026) lists one model row ("Auto", carrying `data-mode-id`)
- * followed by Low / Medium / High rows without that attribute. The
- * signed-out picker still lists models only (each row has `data-mode-id`,
- * plus the "Sign in" prompt), so it yields no level rows.
+ * Returns the "Thinking level" row that opens the level submenu, or null.
+ * Gemini (verified October 2026, second layout) lists the model rows (Auto
+ * plus upsell rows) and then this row (`value="thinking_level"`,
+ * `aria-haspopup="true"`, `aria-controls` → the submenu's id).
+ * @param {Element[]} rows
+ * @returns {Element|null}
+ */
+function findLevelSubmenuRow(rows) {
+  return (
+    rows.find((r) => r.getAttribute("value") === "thinking_level") ||
+    rows.find((r) => r.getAttribute("aria-haspopup") === "true" && r.hasAttribute("aria-controls")) ||
+    null
+  );
+}
+
+/**
+ * Picks the thinking-level rows out of the picker rows. Current layout: the
+ * Low / Medium / High rows live in the submenu that the "Thinking level" row
+ * controls (mounted, hidden, while the picker is open). Earlier layout: they
+ * followed the "Auto" row directly, without `data-mode-id`. The signed-out
+ * picker lists models only (each row has `data-mode-id`, plus the "Sign in"
+ * prompt), so it yields no level rows.
  * @param {Element[]} rows
  * @returns {Element[]} level rows in Low, Medium, High order
  */
 function findLevelRows(rows) {
+  const parentRow = findLevelSubmenuRow(rows);
+  const submenu = parentRow && document.getElementById(parentRow.getAttribute("aria-controls"));
+  if (submenu) return [...submenu.querySelectorAll('gem-menu-item, [role="menuitem"]')];
   return rows.filter((r) =>
-    !r.hasAttribute("data-mode-id") && !(r.dataset.testId || "").includes("sign-in")
+    !r.hasAttribute("data-mode-id") &&
+    r.getAttribute("aria-haspopup") !== "true" &&
+    !(r.dataset.testId || "").includes("sign-in")
   );
 }
 
@@ -561,7 +583,8 @@ async function closeModePicker() {
 
 /**
  * Opens the mode picker and selects the row for `level` unless it is already
- * selected. Gemini closes the picker itself after a row is clicked.
+ * selected, expanding the "Thinking level" submenu first when there is one.
+ * Gemini closes the whole picker itself after a level row is clicked.
  *
  * - `"already"`     – the level was already active
  * - `"switched"`    – the row was clicked
@@ -599,6 +622,14 @@ async function ensureThinkingLevel(level) {
   if (status) {
     await closeModePicker();
     return status;
+  }
+
+  // Expand the "Thinking level" submenu first, as a user would. Clicking the
+  // hidden row also works today, but a hover-only submenu would not.
+  const parentRow = findLevelSubmenuRow(rows);
+  if (parentRow && parentRow.getAttribute("aria-expanded") !== "true") {
+    parentRow.click();
+    await waitForCondition(() => parentRow.getAttribute("aria-expanded") === "true", 1_000);
   }
 
   console.debug(`[Ask Gemini] Clicking level row "${rowLabel(row)}" for level="${level}"`);

@@ -194,6 +194,14 @@
     .label-container .label { font-size: 14px; color: var(--text); }
     .label-container .sublabel { font-size: 12px; color: var(--text-dim); margin-top: 1px; }
     mat-divider { display: block; height: 1px; margin: 4px 0; background: var(--border); }
+    /* "Thinking level" submenu: nested in the picker, shown to its right. */
+    gem-menu-item[aria-haspopup="true"] { position: relative; }
+    gem-menu#levelSubmenu {
+      position: absolute; left: calc(100% + 6px); bottom: 0;
+      overflow: visible;
+    }
+    gem-menu#levelSubmenu[data-visible="false"] { display: none; }
+    #modelMenu { overflow: visible; }
     .picker-secondary-text { color: var(--text-dim); margin-left: 4px; }
 
     /* ── Chips ── */
@@ -350,45 +358,17 @@
 
 <!--
   Mode picker overlay, copied from the real Gemini DOM (verified October 2026):
-  one model row ("Auto", carries data-mode-id) then the Low / Medium / High
-  thinking-level rows (no data-mode-id). The selected rows carry the
-  "selected" class and a check icon. Detached from the DOM when closed, so
-  content.js sees the rows disappear. Like the real menu, it closes on an
-  Escape dispatched on the menu itself, not on document.
-  The rows are rebuilt by the script below (renderMenu), this markup is the
-  signed-in default.
+  model rows carrying data-mode-id ("Auto", then the locked "3.1 Pro" and
+  "4 Argon" upsell rows), then a "Thinking level" row (value="thinking_level",
+  aria-haspopup="true", aria-controls) whose nested submenu holds the Low /
+  Medium / High rows. The submenu is mounted but hidden (data-visible="false")
+  until the row is clicked. The selected rows carry the "selected" class and a
+  check icon. Clicking a level row closes the whole picker. Detached from the
+  DOM when closed, so content.js sees the rows disappear. Like the real menu,
+  it closes on an Escape dispatched on the menu itself, not on document.
+  The rows are built by the script below (renderMenu).
 -->
-<gem-menu role="menu" data-test-id="gem-mode-menu" id="modelMenu" tabindex="-1">
-  <gem-menu-item role="menuitem" data-mode-id="cf41b0e0dd7d53e5" data-test-id="bard-mode-option-cf41b0e0dd7d53e5" aria-disabled="false" class="selected">
-    <gem-menu-item-content class="checkmark-only">
-      <div class="leading-container"><gem-icon aria-label="Selected"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></gem-icon></div>
-      <div class="label-container"><span class="label"> Auto </span><div class="sublabel">Gemini 3 models</div></div>
-      <div class="trailing-container"></div>
-    </gem-menu-item-content>
-  </gem-menu-item>
-  <mat-divider role="separator"></mat-divider>
-  <gem-menu-item role="menuitem" aria-disabled="false" class="selected">
-    <gem-menu-item-content class="checkmark-only">
-      <div class="leading-container"><gem-icon aria-label="Selected"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></gem-icon></div>
-      <div class="label-container"><span class="label"> Low </span><div class="sublabel">Quick and efficient</div></div>
-      <div class="trailing-container"></div>
-    </gem-menu-item-content>
-  </gem-menu-item>
-  <gem-menu-item role="menuitem" aria-disabled="false">
-    <gem-menu-item-content class="checkmark-only">
-      <div class="leading-container"></div>
-      <div class="label-container"><span class="label"> Medium </span><div class="sublabel">Balanced depth</div></div>
-      <div class="trailing-container"></div>
-    </gem-menu-item-content>
-  </gem-menu-item>
-  <gem-menu-item role="menuitem" aria-disabled="false">
-    <gem-menu-item-content class="checkmark-only">
-      <div class="leading-container"></div>
-      <div class="label-container"><span class="label"> High </span><div class="sublabel">Extra thorough</div></div>
-      <div class="trailing-container"></div>
-    </gem-menu-item-content>
-  </gem-menu-item>
-</gem-menu>
+<gem-menu role="menu" data-test-id="gem-mode-menu" id="modelMenu" tabindex="-1"></gem-menu>
 
 <script>
   const editor       = document.querySelector(".ql-editor");
@@ -402,9 +382,9 @@
 
   // ── Mode picker ────────────────────────────────────────────────
   //
-  // Signed in (default): Auto + Low / Medium / High, Low selected (Gemini's
-  // default). Test hooks, set via Playwright addInitScript() before any inline
-  // script runs:
+  // Signed in (default): Auto + upsell rows + "Thinking level" submenu with
+  // Low / Medium / High, Low selected (Gemini's default). Test hooks, set via
+  // Playwright addInitScript() before any inline script runs:
   //   __testInitialLevel = "low" | "medium" | "high"  — level selected on load
   //   __testLockedLevels = "high,medium"              — rows rendered aria-disabled
   //   __testSignedOut    = "true"                     — signed-out picker: models
@@ -448,7 +428,8 @@
     const s = document.createElement("div");
     s.className = "sublabel";
     s.textContent = sub;
-    labels.append(l, s);
+    labels.append(l);
+    if (sub) labels.append(s);
     const trail = document.createElement("div");
     trail.className = "trailing-container";
     content.append(lead, labels, trail);
@@ -472,15 +453,27 @@
       );
       return;
     }
+    const levelMenu = document.createElement("gem-menu");
+    levelMenu.id = "levelSubmenu";
+    levelMenu.setAttribute("role", "menu");
+    levelMenu.dataset.visible = "false";
+    levelMenu.append(...LEVELS.map(({ id, label, sub }) => {
+      const row = makeRow({ label, sub, selected: id === activeLevel, disabled: lockedLevels.has(id) });
+      row.dataset.mockLevel = id; // test-only, content.js never reads it
+      return row;
+    }));
+    const levelParent = makeRow({ label: "Thinking level", sub: "",
+      attrs: { value: "thinking_level", "aria-haspopup": "true", "aria-expanded": "false", "aria-controls": "levelSubmenu" } });
     modelMenu.append(
       makeRow({ label: "Auto", sub: "Gemini 3 models", selected: true,
         attrs: { "data-mode-id": AUTO_MODE_ID, "data-test-id": `bard-mode-option-${AUTO_MODE_ID}` } }),
+      makeRow({ label: "3.1 Pro", sub: "Advanced reasoning",
+        attrs: { "data-mode-id": "upsell_MODE_CATEGORY_PRO", "data-test-id": "bard-mode-option-upsell_MODE_CATEGORY_PRO" } }),
+      makeRow({ label: "4 Argon", sub: "Complex tasks",
+        attrs: { "data-mode-id": "upsell_MODE_CATEGORY_ULTRA", "data-test-id": "bard-mode-option-upsell_MODE_CATEGORY_ULTRA" } }),
       Object.assign(document.createElement("mat-divider"), { role: "separator" }),
-      ...LEVELS.map(({ id, label, sub }) => {
-        const row = makeRow({ label, sub, selected: id === activeLevel, disabled: lockedLevels.has(id) });
-        row.dataset.mockLevel = id; // test-only, content.js never reads it
-        return row;
-      }),
+      levelParent,
+      levelMenu,
     );
   }
 
@@ -513,6 +506,15 @@
     e.stopPropagation();
     const row = e.target.closest("gem-menu-item");
     if (!row || row.getAttribute("aria-disabled") === "true") return;
+    // "Thinking level" only toggles its submenu.
+    if (row.getAttribute("aria-haspopup") === "true") {
+      const expanded = row.getAttribute("aria-expanded") === "true";
+      row.setAttribute("aria-expanded", String(!expanded));
+      document.getElementById(row.getAttribute("aria-controls")).dataset.visible = String(!expanded);
+      return;
+    }
+    // Upsell rows open a paywall on the real page; the mock ignores them.
+    if ((row.getAttribute("data-mode-id") || "").startsWith("upsell_")) return;
     if (row.dataset.mockLevel) {
       activeLevel = row.dataset.mockLevel;
       // Simulate Angular's async change detection

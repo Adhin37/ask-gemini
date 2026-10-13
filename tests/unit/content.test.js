@@ -24,9 +24,11 @@ beforeAll(async () => {
 
 // ════════════════════════════════════════════════════════════════════
 // Mode picker — thinking level
-// Markup mirrors the real Gemini picker, verified October 2026: one "Auto"
-// model row carrying data-mode-id, then Low / Medium / High rows without it.
-// Signed out, the picker still lists models only (plus a sign-in row).
+// Markup mirrors the real Gemini picker, verified October 2026: model rows
+// carrying data-mode-id (Auto, then upsell rows), then a "Thinking level" row
+// whose submenu (aria-controls) holds Low / Medium / High. An earlier layout
+// listed the level rows right after "Auto"; it stays supported. Signed out,
+// the picker still lists models only (plus a sign-in row).
 // ════════════════════════════════════════════════════════════════════
 
 /**
@@ -48,11 +50,43 @@ function row(label, { modeId, testId, selected = false, disabled = false } = {})
   return el;
 }
 
-/** Returns the rows of the current Gemini picker with `selectedLevel` checked. */
+/** Low / Medium / High rows with `selectedLevel` checked. */
+function levelRows(selectedLevel, disabled) {
+  return ["Low", "Medium", "High"].map((l) => row(l, { selected: l === selectedLevel, disabled: disabled.includes(l) }));
+}
+
+/**
+ * Returns the nodes of the current Gemini picker: model rows, the "Thinking
+ * level" row, and its (hidden) submenu with `selectedLevel` checked.
+ */
 function autoPickerRows(selectedLevel = "Low", { disabled = [] } = {}) {
+  const parent = row("Thinking level");
+  parent.setAttribute("value", "thinking_level");
+  parent.setAttribute("aria-haspopup", "true");
+  parent.setAttribute("aria-expanded", "false");
+  parent.setAttribute("aria-controls", "test-level-submenu");
+  const submenu = document.createElement("gem-menu");
+  submenu.id = "test-level-submenu";
+  submenu.setAttribute("role", "menu");
+  submenu.dataset.visible = "false";
+  submenu.append(...levelRows(selectedLevel, disabled));
+  parent.addEventListener("click", () => {
+    parent.setAttribute("aria-expanded", "true");
+    submenu.dataset.visible = "true";
+  });
   return [
     row("Auto", { modeId: "cf41b0e0dd7d53e5", testId: "bard-mode-option-cf41b0e0dd7d53e5", selected: true }),
-    ...["Low", "Medium", "High"].map((l) => row(l, { selected: l === selectedLevel, disabled: disabled.includes(l) })),
+    row("3.1 Pro", { modeId: "upsell_MODE_CATEGORY_PRO", testId: "bard-mode-option-upsell_MODE_CATEGORY_PRO" }),
+    parent,
+    submenu,
+  ];
+}
+
+/** Returns the rows of the earlier flat layout (levels right after "Auto"). */
+function flatPickerRows(selectedLevel = "Low", { disabled = [] } = {}) {
+  return [
+    row("Auto", { modeId: "cf41b0e0dd7d53e5", testId: "bard-mode-option-cf41b0e0dd7d53e5", selected: true }),
+    ...levelRows(selectedLevel, disabled),
   ];
 }
 
@@ -66,14 +100,30 @@ function signedOutRows() {
   ];
 }
 
+/** Mounts `nodes` in a picker menu and returns its rows, as findMenuRows() would. */
+function mountRows(nodes) {
+  const menu = document.createElement("gem-menu");
+  menu.dataset.testId = "gem-mode-menu";
+  menu.append(...nodes);
+  document.body.replaceChildren(menu);
+  return [...menu.querySelectorAll("gem-menu-item")];
+}
+
 describe("findLevelRows", () => {
-  it("returns the Low / Medium / High rows and skips the Auto row", () => {
-    const levels = findLevelRows(autoPickerRows());
+  afterEach(() => document.body.replaceChildren());
+
+  it("returns the Low / Medium / High rows of the Thinking level submenu", () => {
+    const levels = findLevelRows(mountRows(autoPickerRows()));
+    expect(levels.map((r) => r.textContent.trim())).toEqual(["Low", "Medium", "High"]);
+  });
+
+  it("returns the level rows of the flat layout and skips the Auto row", () => {
+    const levels = findLevelRows(mountRows(flatPickerRows()));
     expect(levels.map((r) => r.textContent.trim())).toEqual(["Low", "Medium", "High"]);
   });
 
   it("returns nothing for the signed-out models-only picker", () => {
-    expect(findLevelRows(signedOutRows())).toEqual([]);
+    expect(findLevelRows(mountRows(signedOutRows()))).toEqual([]);
   });
 });
 
@@ -109,7 +159,9 @@ describe("ensureThinkingLevel", () => {
       menu.setAttribute("role", "menu");
       menu.append(...makeRows());
       menu.addEventListener("click", (e) => {
-        if (e.target.closest("gem-menu-item")) menu.remove();
+        const item = e.target.closest("gem-menu-item");
+        // The "Thinking level" row only expands its submenu.
+        if (item && item.getAttribute("aria-haspopup") !== "true") menu.remove();
       });
       menu.addEventListener("keydown", (e) => {
         if (e.key === "Escape") menu.remove();
@@ -136,10 +188,23 @@ describe("ensureThinkingLevel", () => {
     return p;
   }
 
-  it("clicks the requested row when another level is selected", async () => {
+  it("expands the Thinking level submenu before clicking the row", async () => {
+    const events = [];
+    mountPicker(() => {
+      const nodes = autoPickerRows("Low");
+      const rows = nodes.flatMap((n) => n.matches("gem-menu-item") ? [n] : [...n.querySelectorAll("gem-menu-item")]);
+      rows.forEach((r) => r.addEventListener("click", () => events.push(r.textContent.trim())));
+      return nodes;
+    });
+    expect(await run("medium")).toBe("switched");
+    expect(events).toEqual(["Thinking level", "Medium"]);
+    expect(document.querySelector("gem-menu")).toBeNull();
+  });
+
+  it("switches on the flat layout without a submenu", async () => {
     const clicked = [];
     mountPicker(() => {
-      const rows = autoPickerRows("Low");
+      const rows = flatPickerRows("Low");
       rows.forEach((r) => r.addEventListener("click", () => clicked.push(r.textContent.trim())));
       return rows;
     });

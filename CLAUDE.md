@@ -54,7 +54,7 @@ e2e/                                  # Playwright scenarios, helpers, fixtures,
 - Keep this script lightweight — it runs on every Gemini tab load.
 
 ### Gemini mode picker (verified October 2026)
-- Signed in, the picker (`button[data-test-id="bard-mode-menu-button"]` → `gem-menu[data-test-id="gem-mode-menu"]`) lists one model row, **Auto** ("Gemini 3 models", carries `data-mode-id`), then **Low / Medium / High** thinking rows without `data-mode-id`. The extension no longer picks a model; it only sets the level (`ensureThinkingLevel()`, matched by row position because labels are localised).
+- Signed in, the picker (`button[data-test-id="bard-mode-menu-button"]` → `gem-menu[data-test-id="gem-mode-menu"]`) lists the model rows, which carry `data-mode-id` (**Auto** "Gemini 3 models", then locked upsell rows such as "3.1 Pro" and "4 Argon" whose ids start with `upsell_`), then a **Thinking level** row (`value="thinking_level"`, `aria-haspopup="true"`, `aria-controls` → a nested submenu `gem-menu`). The submenu holds **Low / Medium / High**; it is mounted (hidden) as soon as the picker opens. `ensureThinkingLevel()` expands it, then clicks the level row, matched by position because labels are localised. Clicking a level row closes the whole picker. The extension no longer picks a model; it only sets the level. The earlier layout (level rows directly after Auto, no submenu) is still handled by `findLevelRows()`.
 - The trigger always reads "Gemini Auto". The active level is only visible as the `selected` class on its row.
 - The `gem-menu` closes on an Escape dispatched on the menu element, not on `document`.
 - Signed out (October 2026), the picker still shows the old models-only list (Flash-Lite enabled, Flash / Pro disabled, plus a sign-in row) with no level rows, so the level is skipped (`"unsupported"`). This is expected to be replaced by the Auto picker; when it is, `ensureThinkingLevel()` applies as is, and the signed-out special cases (the `"unsupported"` branch, the `__testSignedOut` mock, the signed-out notes in the e2e sections) can go.
@@ -237,7 +237,7 @@ Playwright cannot drive native OS context menus, so `context.serviceWorkers()[0]
 
 ### Real Gemini is the default
 
-All scenario files without a `-mock` suffix run against the live `gemini.google.com`. The `-mock` suffix is reserved for the scenarios that genuinely cannot run on the e2e profile: thinking-level switching (the signed-out picker has no level rows) and upload-failure simulation. `e2e/fixtures/mock-gemini.html` copies the real Auto + Low / Medium / High picker markup; its sessionStorage hooks are `__testInitialLevel`, `__testLockedLevels` and `__testSignedOut` (models-only picker), and it mirrors the active level on `<html data-mock-level>`. Do not add mock Gemini routes to non-mock spec files.
+All scenario files without a `-mock` suffix run against the live `gemini.google.com`. The `-mock` suffix is reserved for the scenarios that genuinely cannot run on the e2e profile: thinking-level switching (the signed-out picker has no level rows) and upload-failure simulation. `e2e/fixtures/mock-gemini.html` copies the real picker markup (Auto, upsell rows, "Thinking level" submenu with Low / Medium / High); its sessionStorage hooks are `__testInitialLevel`, `__testLockedLevels` and `__testSignedOut` (models-only picker), and it mirrors the active level on `<html data-mock-level>`. Do not add mock Gemini routes to non-mock spec files.
 
 ### The e2e profile is signed out
 

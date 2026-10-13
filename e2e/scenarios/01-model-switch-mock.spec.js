@@ -1,10 +1,10 @@
 /**
  * Scenario 01 (mock) — Thinking-level switching on Gemini's mode picker
  *
- * The real picker (verified October 2026) shows one "Auto" model row and
- * Low / Medium / High thinking rows, but only when signed in. The e2e
- * profile is signed out, so these paths run against the mock Gemini
- * fixture, which copies the real picker markup and adds sessionStorage
+ * The real picker (verified October 2026) shows the "Auto" model row and a
+ * "Thinking level" submenu with Low / Medium / High, but only when signed
+ * in. The e2e profile is signed out, so these paths run against the mock
+ * Gemini fixture, which copies the real picker markup and adds sessionStorage
  * hooks (__testInitialLevel, __testLockedLevels, __testSignedOut). The
  * mock mirrors the active level on <html data-mock-level>, because the
  * real trigger always reads "Gemini Auto".
